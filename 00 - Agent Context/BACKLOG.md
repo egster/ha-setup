@@ -1,129 +1,162 @@
 # Improvement Backlog
 
-*Priority order within each tier is a starting point — Edgar to confirm.*
-
 _Last reviewed: 2026-04-16_
 
 ---
 
-## 🔴 High Priority
+## 🚨 In Progress
 
-### 1. Vacation Mode — Fix scene persistence (restart survival)
+### Deploy Zocci + Beamer fixes (Gate 3)
+**Added**: 2026-04-16
+**Status**: Package files written + committed, code-reviewed (APPROVED). Gate 3 deploy pending.
+**What's ready**:
+- `config/packages/zocci.yaml` — two automations + new `input_number.zocci_coffees_at_last_clean` helper
+- `config/packages/beamer_uplight_front.yaml` — one automation with 10s debounce fix
+- Backup: `ff623c85` (pre-deploy, 2026-04-16)
+**What still needs to happen** (in order):
+1. Delete 3 UI-managed automations: `automation.zocci_mark_clean_done`, `automation.zocci_deep_clean_reminder`, `automation.beamer_uplight_front`
+2. Run `./deploy.sh config/packages/zocci.yaml` then `./deploy.sh config/packages/beamer_uplight_front.yaml`
+3. After reload, verify automations live via `ha_config_get_automation`
+4. Bootstrap: `input_number.set_value` on `input_number.zocci_coffees_at_last_clean` → `61` (current coffee count); `input_boolean.turn_off` on `input_boolean.zocci_deep_clean_needed` (clear stuck state)
+5. Verify + traces + health check per Gate 3 Steps 6–11
+**Root causes** (for context):
+- Zocci: `count % 50 == 0` was oblivious to when cleaning happened. Fix anchors to count-at-last-clean.
+- Beamer: 20ms `playing→off→playing` flicker at 2026-04-15 18:44:34 caused `mode:single` to drop the re-trigger. Fix debounces both triggers 10s.
+**Effort**: ~10 min in Claude Code (SSH works there).
+
+---
+
+## 🏠 Automations & Logic
+
+### 🔴 High
+
+#### Vacation Mode — Fix scene persistence (restart survival)
 **Why**: `scene.vacation_mode_heating_restore` is created dynamically via `scene.create` and does not survive an HA restart. If HA reboots while Edgar is away, the Deactivate automation can't restore heating temperatures.
 **Fix**: Replace the scene snapshot in `automation.vacation_mode_activate` with 3 `input_text` helpers (`input_text.vacation_restore_office`, `_living_room`, `_kitchen`). Activate writes the current temperature as a string; Deactivate reads it back with `| float`. These persist across restarts.
 **Effort**: ~20 min. Must be done before vacation mode is used for real.
 
----
+### 🟡 Medium
 
-## 🟡 Medium Priority
+#### Kitchen Remote Mapping — Blueprint fix
+**Problem**: `UndefinedError: 'dict object' has no attribute 'args'` in the `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml` blueprint. RWL022 device IEEE: `00:17:88:01:0c:2a:11:6f`.
+**Fix**: Read blueprint YAML via File Editor, update `trigger.event.data.args` to use `trigger.event.data.get('args', {})`.
 
-### 2. BubbleDash v3 — Decide Direction
-**Context**: v1 (basic tiles) and v2 (accent colors, sub-buttons, popups, temp strip, Home tab) have shipped. Edgar is still not satisfied but hasn't named a specific problem. Before building v3, nail down *what's wrong* — aesthetic, information density, interaction pattern, or something else entirely.
+#### Living Room Remote — Investigate
+**Problem**: `automation.living_room_remote_mapping` has no traces since 2025-12-08.
+**Fix**: Confirm whether the remote is still in use or if the device itself has dropped off Zigbee.
 
-**Brainstormed directions** (pick a lane before building anything):
+### 🟢 Low / Nice to Have
 
-**A. Visual polish / theming**
-- Apply a consistent theme: frosted glass overlays, custom background image, dark/warm palette. Bubble Card supports CSS variables — a `card_mod` or `theme` pass could transform the look without touching the structure.
-- Try a pre-built HA theme (e.g. iOS/Material Dark) as a baseline to see if the visual style is the issue.
+#### Bedtime / Morning Routines
+Given the presence of Panasonic AC in every room + full lighting control, a bedtime scene (lower temps, dim lights) and morning scene (warm up rooms, sunrise-style lighting) could be high value. Would use the existing remote infrastructure or a dashboard button.
 
-**B. Richer lighting control**
-- Add colour temperature / RGB sliders directly on the main tile (not inside popup) for the rooms Edgar uses most (Kitchen, Living Room, Office).
-- Scene buttons inside light popups: Bright, Work, Evening, Movie — call `scene.turn_on` with preset values.
-- Occupancy-aware state: tile changes colour when room is occupied (use `state_background` in Bubble Card based on motion sensor state).
+#### Beamer Automation — Extend to More Lights
+Currently only Uplight Front. Consider extending to Uplight Back Left/Right, possibly dim Triple Light. Could also add: sunset condition (skip daytime), brightness/colour temp target.
 
-**C. Heating UX — more useful temperature strip**
-- The current strip shows `current_temperature` via attribute. Confirm it actually renders correctly in Bubble Card v3.1.6 (may show the climate mode string "heat" instead of the number). If broken, replace with `sensor.*` entities from the Panasonic integration that expose temperature directly.
-- Add a setpoint adjustment shortcut on the tile itself (not just inside popup) — Bubble Card `climate` card_type natively supports +/- adjustment on tap-hold.
-
-**D. Home tab — make it genuinely useful**
-- Add last-automation-triggered info (logbook style card or last_triggered attribute from automation entities).
-- Add a "Lights currently on" summary — template sensor counting active lights, displayed prominently.
-- Replace the static system glance with a Bubble Card separator + state buttons so WAN/HA-update status uses accent color for at-a-glance health.
-- Add Jona's presence (if/when a device tracker is added for him).
-
-**E. Structural rethink — fewer taps to control**
-- Challenge: most actions currently need 2 taps (tile → popup → control). For the highest-frequency actions (Kitchen main light, Living Room dimmer, Office desk), consider promoting a brightness slider *directly* on the tile face via a long-press or second sub-button instead of requiring the popup.
-- Alternatively: consider a "Favourites" view as the default tab (replaces Lighting as the landing tab) with 6–8 hand-picked controls that cover 80% of daily use.
-
-**F. Appliances dedicated section**
-- Move Zocci out of Home tab into a dedicated row in a "Kitchen" section, or create a compact Appliances tab (Zocci, Miele oven, warming drawer, AC).
-- Add `sensor.zocci_coffee_target_temperature` and `number.zocci_steam_level` for quick in-popup tweaks.
-
-**Before starting v3**: Spend 2 days using v2 as-is and note the specific friction points. Vague "not happy" is expensive to fix well.
+#### Bedroom Automation
+No motion light in the master bedroom currently (lights are on the wall switch → Hue bulbs switched off = unavailable). Bedroom remote mapping exists. Is there anything else wanted here?
 
 ---
 
-### 3. Floor Structure — Add Floors
+## 🖥️ Dashboard (BubbleDash)
+
+*Inspiration: [jlnbln/My-HA-Dashboard](https://github.com/jlnbln/My-HA-Dashboard) — Rounded-Bubble theme, navbar-card, room-first layout, chip summary row.*
+
+### 🔴 High
+
+#### BD-1 — Apply Rounded-Bubble theme
+**What**: Install [rounded-bubble.yaml](https://github.com/jlnbln/My-HA-Dashboard/blob/main/rounded-bubble.yaml) as a HA theme. Sets Poppins font, full contrast scale, correct Bubble Card CSS variables (`bubble-border-radius`, `bubble-main-background-color`, etc.).
+**Why**: Highest visual ROI — transforms the look with zero structural changes to the dashboard.
+**Effort**: ~30 min (HACS theme install + set theme on dashboard).
+
+#### BD-2 — Kiosk mode
+**What**: Install `kiosk-mode` from HACS + `input_boolean.kiosk_mode` helper. Hides HA header/sidebar chrome. Toggle off in edit mode.
+**Why**: Makes BubbleDash feel like a native app rather than a browser page.
+**Effort**: ~15 min.
+
+### 🟡 Medium
+
+#### BD-3 — Lights-on summary chip
+**What**: Template sensor counting `states.light | selectattr('state', 'eq', 'on') | count`. Display as a Bubble Card `chip` at the top of the Lighting view.
+**Why**: At-a-glance status without opening a tab.
+**Effort**: ~20 min (template sensor + chip card).
+**Note**: Template sensor adds to recorder — check if InfluxDB already has it first.
+
+#### BD-4 — Scene buttons in Living Room popup
+**What**: Add 4 preset buttons inside `#lights-livingroom` popup: **Bright / Relax / Movie / Off**. Movie dims mains, turns on uplights. Calls `light.turn_on` with preset brightness/color_temp values — no scene entity needed.
+**Why**: Single-tap mood switching without leaving the dashboard.
+**Effort**: ~30 min.
+
+#### BD-5 — Color temperature sliders in popups
+**What**: Add a `color_temp` slider row to Kitchen, Office, and Living Room popups. Bubble Card supports this natively via `button_type: slider` with `attribute: color_temp`.
+**Why**: Currently on/off + brightness only — color temp is a daily control that requires going to the full entity page.
+**Effort**: ~45 min.
+
+#### BD-6 — Favourites landing tab
+**What**: New tab as the default view with 6–8 hand-picked controls: Kitchen main, Living Room table lamp, Office desk, all-off button, current heating overview, movie scene button. Replaces Lighting as the landing tab.
+**Why**: 80% of daily use in one screen, zero extra taps.
+**Effort**: ~45 min.
+
+### 🟢 Low / Nice to Have
+
+#### BD-7 — `navbar-card` for mobile
+**What**: Install `navbar-card` from HACS. Replaces top tab bar with a bottom navigation bar — thumbs reach it naturally on phone.
+**Why**: Material/iOS-style nav UX. Worth it if BubbleDash is used primarily on phone.
+**Effort**: ~1 hr (HACS install + nav config). Decide based on primary device.
+
+#### BD-8 — Room-first structural rethink
+**What**: Replace 4 entity-type tabs (Lighting / Heating / Media / Home) with room-based cards on a single view. Each room = one Bubble Card opening a popup with lights + AC + media together.
+**Why**: The inspiration's key structural difference — fewer mental context switches.
+**Effort**: ~2 hrs. Major restructure; do BD-1 through BD-6 first and live with them before committing.
+
+---
+
+## 🏗️ Structure & Housekeeping
+
+### 🟡 Medium
+
+#### Floor Structure — Add Floors
 **Goal**: Organise areas into floors for better navigation and future floor-based automations.
 **Proposed structure**:
 - Ground Floor: Kitchen, Living Room, Office, Entrance, Garage, Pantry (sub of Kitchen)
 - First Floor: Bedroom, Upstairs, Hall (corridor), Jona's Room (Jonathan), Stairs
 - Outdoor: Outdoor, Garden
-
 **Blocker**: Hall is not yet a formal area. Lennard's room doesn't exist yet.
 
----
-
-### 4. Rename "Entrance Motion Lights" Automation
-**Entity ID**: `automation.new_automation` — clearly a placeholder from when it was created.
-**Fix**: Rename to `Entrance Motion Light` and assign to the Motion Lights category.
-**Effort**: 5 minutes.
-
----
-
-### 5. "Hall" — Create as Formal Area
+#### "Hall" — Create as Formal Area
 **Current state**: Hall Motion Light automation works, but "Hall" isn't a defined HA area. The lights (`light.upstairs_hall_lights`) sit in the Upstairs area.
 **Fix**: Create a "Hall" area (upstairs bedroom corridor), reassign `light.philips_1746430p7`, `light.philips_1746430p7_2`, and the Eve motion sensor to it.
 
+#### Rename "Entrance Motion Lights" Automation
+**Entity ID**: `automation.new_automation` — placeholder name from creation.
+**Fix**: Rename to `Entrance Motion Light` and assign to the Motion Lights category.
+**Effort**: 5 minutes.
+
+### 🟢 Low / Nice to Have
+
+#### "Tradfi 1" — Identify & Clean Up
+Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find it physically or remove the entity.
+
+#### Entity ID Typo Fix
+`light.kitchen_rigth` → rename to correct spelling. Minor but causes confusion in dashboard YAML.
+
+#### Zigbee Mesh Health
+With several unavailable entities, worth checking for Zigbee range issues — especially for the IKEA Tradfi 1 and bedroom bulbs. HA's ZHA integration has a network map worth reviewing.
+
 ---
 
-### 6. Kitchen Remote Mapping — Blueprint fix
-**Problem**: `UndefinedError: 'dict object' has no attribute 'args'` in the `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml` blueprint. RWL022 device IEEE: `00:17:88:01:0c:2a:11:6f`.
-**Fix**: Read blueprint YAML via File Editor, update `trigger.event.data.args` to use `trigger.event.data.get('args', {})`.
+## 🔧 Infrastructure & Tooling
 
----
+### 🟡 Medium
 
-### 7. Living Room Remote — Investigate
-**Problem**: `automation.living_room_remote_mapping` has no traces since 2025-12-08.
-**Fix**: Confirm whether the remote is still in use or if the device itself has dropped off Zigbee.
-
----
-
-### 8. Test `ha-code-reviewer` agent in real Gate 2 flow
+#### Test `ha-code-reviewer` agent in real Gate 2 flow
 **Added**: 2026-04-14
-**Why**: The improved `ha-code-reviewer.md` agent (code-review + setup-review modes, HA-specific template rules, WebFetch allowlist, three hard rules for setup-review) was drafted and smoke-tested via `general-purpose` proxy. Still needs:
-1. **Real Gate 2 test via Claude Code** — `.claude/agents/*.md` subagent type isn't loaded in Cowork; the agent only invokes natively from Claude Code. Run at least one real code-review cycle on a new automation and one setup-review pass from Claude Code to confirm fidelity.
-2. ✅ **Reconcile instruction files** — INSTRUCTIONS.md now has the new Gate 1–3 flow with `ha-code-reviewer`. Single source of truth.
-3. ✅ **Retire legacy critic files** — `gate2-approach-critic.md` and `gate3-plan-critic.md` moved to `Archive/`.
-4. **Regression-review dormant automations** — once the agent is live, run `MODE: setup-review` quarterly. Track findings in CHANGELOG.
-**Effort**: S (30 min remaining — items 1 and 4 only).
-
----
-
-## 🟢 Low Priority / Nice to Have
-
-### 9. Bedroom Automation
-- No motion light in the master bedroom currently (lights are on the wall switch → Hue bulbs switched off = unavailable)
-- Bedroom remote mapping exists. Is there anything else wanted here?
-
-### 10. "Tradfi 1" — Identify & Clean Up
-- Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find it or remove the entity.
-
-### 11. Entity ID Typo Fix
-- `light.kitchen_rigth` → rename to correct spelling. Minor but causes confusion.
-
----
-
-## 💡 Agent Suggestions (Not Yet Discussed)
-
-### A. Bedtime / Morning Routines
-Given the presence of Panasonic AC in every room + full lighting control, a bedtime scene (lower temps, dim lights) and morning scene (warm up rooms, sunrise-style lighting) could be high value. Would use the existing remote infrastructure or a dashboard button.
-
-### B. Zigbee Mesh Health
-With several unavailable entities, it's worth checking if there are Zigbee range issues — especially for the IKEA Tradfi 1 and bedroom bulbs. HA's ZHA integration has a network map worth reviewing.
-
-### C. Beamer Automation — Extend to More Lights
-Currently only Uplight Front. Consider extending to Uplight Back Left/Right, possibly dim Triple Light. Could also add: sunset condition (skip daytime), brightness/colour temp target.
+**Why**: Agent drafted and smoke-tested via `general-purpose` proxy. Still needs a real Gate 2 run from Claude Code (`.claude/agents/*.md` subagents don't load in Cowork).
+**Remaining work**:
+1. Run one real code-review cycle on a new automation from Claude Code
+2. Run one `MODE: setup-review` pass from Claude Code
+3. Schedule quarterly setup-review runs; track findings in CHANGELOG
+**Effort**: ~30 min.
 
 ---
 

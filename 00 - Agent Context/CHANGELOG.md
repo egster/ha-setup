@@ -5,6 +5,23 @@
 ---
 
 
+## 2026-04-16 — Zocci + Beamer QC: root cause analysis, fix, code review (Gate 1+2 complete)
+
+### What was done
+- **Root cause analysis** (Gate 1): Zocci stuck boolean traced to blind `count%50` logic ignoring when cleaning happened; beamer uplight failure traced to 20ms state flicker (`playing→off→playing` at 2026-04-15 18:44:34) + `mode:single` dropping the re-trigger.
+- **Solution written** (Gate 2): Zocci — new `input_number.zocci_coffees_at_last_clean` anchors reminder to actual cleaning event. Beamer — 10s debounce on both triggers, tightened `from:` list, state condition on on-branch.
+- **Code review**: `ha-code-reviewer` initially BLOCKED (missing `has_value` guards on reminder template trigger). Fixed and re-reviewed → APPROVED.
+- **Package files written**: `config/packages/zocci.yaml`, `config/packages/beamer_uplight_front.yaml`. YAML validated, committed.
+- **Migration decision**: Edgar chose to migrate all 3 automations from UI-managed → git-tracked packages.
+
+### What's pending (BACKLOG #1)
+Gate 3 deploy deferred to Claude Code (sandbox has no SSH to HA Green). Full deploy steps documented in BACKLOG.md.
+
+### Backup
+`ff623c85` (pre-deploy, taken before validation).
+
+---
+
 ## 2026-04-16 — Context compaction
 
 ### What was done

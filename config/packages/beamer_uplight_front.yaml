@@ -1,0 +1,81 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Beamer — Uplight Front
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Dims light.uplight_front when the VisionMaster Pro beamer turns on and
+# restores it when the beamer turns off, but only if the light was on before.
+#
+# Entities referenced (must exist):
+#   - media_player.living_room_tv_2      (VisionMaster Pro / Android TV)
+#   - light.uplight_front                (Zigbee light)
+#   - input_boolean.uplight_front_beamer_restore  (UI-managed helper)
+#
+# Migrated from UI-managed automation → git-tracked package on 2026-04-16.
+# ──────────────────────────────────────────────────────────────────────────────
+
+automation:
+  - id: "1775852230350"
+    alias: "Beamer — Uplight Front"
+    description: >-
+      Protects the movie-watching experience by dimming light.uplight_front when
+      the VisionMaster Pro beamer (media_player.living_room_tv_2) turns on, and
+      restoring it only if it was on before the beamer started. The VisionMaster
+      reports idle/playing/paused/buffering when active (not on), so the "beamer
+      on" transition is captured as 'from: off' with a 10s debounce to survive
+      brief state flickers (observed 2026-04-15 20:44:34: playing → off →
+      playing within ~20 ms, which previously caused mode:single to drop the
+      re-trigger and leave the light on).
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: media_player.living_room_tv_2
+        from: "off"
+        for: "00:00:10"
+        id: beamer_on
+      - platform: state
+        entity_id: media_player.living_room_tv_2
+        to: "off"
+        from:
+          - idle
+          - paused
+          - playing
+          - buffering
+          - "on"
+        for: "00:00:10"
+        id: beamer_off
+    action:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: beamer_on
+              - condition: state
+                entity_id: media_player.living_room_tv_2
+                state:
+                  - idle
+                  - paused
+                  - playing
+                  - buffering
+                  - "on"
+              - condition: state
+                entity_id: light.uplight_front
+                state: "on"
+            sequence:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.uplight_front_beamer_restore
+              - action: light.turn_off
+                target:
+                  entity_id: light.uplight_front
+          - conditions:
+              - condition: trigger
+                id: beamer_off
+              - condition: state
+                entity_id: input_boolean.uplight_front_beamer_restore
+                state: "on"
+            sequence:
+              - action: light.turn_on
+                target:
+                  entity_id: light.uplight_front
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.uplight_front_beamer_restore

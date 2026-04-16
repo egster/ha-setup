@@ -1,0 +1,95 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Zocci Coffee Machine — Cleaning Reminders
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Tracks when the Zocci (La Marzocco) was last cleaned and fires a deep-clean
+# reminder every 50 coffees since the last recorded cleaning.
+#
+# Entities referenced (must exist):
+#   - sensor.zocci_last_cleaning_time   (La Marzocco integration)
+#   - sensor.zocci_total_coffees_made   (La Marzocco integration)
+#   - input_boolean.zocci_deep_clean_needed  (UI-managed helper)
+#   - notify.mobile_app_edphone         (Mobile App notification)
+#
+# Helper defined here:
+#   - input_number.zocci_coffees_at_last_clean
+#
+# Migrated from UI-managed automations → git-tracked package on 2026-04-16.
+# ──────────────────────────────────────────────────────────────────────────────
+
+input_number:
+  zocci_coffees_at_last_clean:
+    name: "Zocci — Coffees at last clean"
+    min: 0
+    max: 100000
+    step: 1
+    initial: 0
+    mode: box
+    icon: mdi:coffee-outline
+
+automation:
+  - id: "1776073051943"
+    alias: "Zocci – Mark Clean Done"
+    description: >-
+      When sensor.zocci_last_cleaning_time updates (i.e. a clean was recorded on
+      the machine), clear the deep-clean reminder boolean and snapshot the current
+      total coffee count into input_number.zocci_coffees_at_last_clean. This
+      anchors the next 50-coffee reminder to the time of actual cleaning,
+      preventing the stuck-boolean bug where a pre-threshold clean could not
+      prevent a later count%50 reminder firing.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: sensor.zocci_last_cleaning_time
+    condition:
+      - condition: template
+        value_template: >-
+          {{ trigger.to_state.state not in ['unknown', 'unavailable']
+             and has_value('sensor.zocci_total_coffees_made') }}
+    action:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.zocci_deep_clean_needed
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.zocci_coffees_at_last_clean
+        data:
+          value: "{{ states('sensor.zocci_total_coffees_made') | int(0) }}"
+
+  - id: "1776071743294"
+    alias: "Zocci – Deep Clean Reminder"
+    description: >-
+      Fires a deep-clean reminder when 50 or more coffees have been made since
+      the last recorded clean. Uses input_number.zocci_coffees_at_last_clean
+      (set by zocci_mark_clean_done) as the anchor, so reminders only fire after
+      a genuine 50-coffee interval has elapsed since cleaning. Guarded with
+      has_value() to prevent startup/reload misfires when either sensor or helper
+      is still unavailable.
+    mode: single
+    trigger:
+      - platform: template
+        value_template: >-
+          {% if has_value('sensor.zocci_total_coffees_made')
+                and has_value('input_number.zocci_coffees_at_last_clean') %}
+            {% set c = states('sensor.zocci_total_coffees_made') | int(0) %}
+            {% set last = states('input_number.zocci_coffees_at_last_clean') | int(0) %}
+            {{ (c - last) > 0 and (c - last) % 50 == 0 }}
+          {% else %}
+            false
+          {% endif %}
+    condition:
+      - condition: state
+        entity_id: input_boolean.zocci_deep_clean_needed
+        state: "off"
+    action:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.zocci_deep_clean_needed
+      - action: notify.mobile_app_edphone
+        data:
+          title: "☕ Zocci – Deep Clean Required"
+          message: >-
+            {{ states('sensor.zocci_total_coffees_made') }} coffees made
+            ({{ (states('sensor.zocci_total_coffees_made') | int(0))
+               - (states('input_number.zocci_coffees_at_last_clean') | int(0)) }}
+            since last clean). Time to deep clean the Zocci!
