@@ -232,8 +232,8 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 1. ~~Run one real code-review cycle on a new automation from Claude Code~~ ✅ done 2026-04-16
 2. Run one `MODE: setup-review` pass from Claude Code
 3. Schedule quarterly setup-review runs; track findings in CHANGELOG
-4. Add to the reviewer's rule set: YAML-defined input_* helpers do NOT accept `unique_id` (only UI-created ones do).
-**Effort**: ~30 min remaining.
+4. ~~Add to the reviewer's rule set: YAML-defined input_* helpers do NOT accept `unique_id` (only UI-created ones do).~~ ✅ done 2026-04-16 — rule added to anti-pattern table in `ha-code-reviewer.md` § 2 as 🚫.
+**Effort**: ~20 min remaining.
 
 ---
 

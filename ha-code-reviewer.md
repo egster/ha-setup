@@ -164,7 +164,8 @@ Inside automation templates:
 | `event_type: automation_triggered` listener on own output | 🚫 | Self-trigger cascade per DECISIONS 2026-04-12 |
 | `continue_on_error: true` on a permanently failing service | 🚫 | Masks failure per DECISIONS 2026-04-13 |
 | No `description:` on new automation | 🚫 | Required per INSTRUCTIONS.md |
-| Missing `unique_id:` on template sensors / helpers created via YAML | ⚠️ | Breaks UI editability |
+| Missing `unique_id:` on template sensors (YAML `template:` platform) | ⚠️ | Breaks UI editability |
+| `unique_id:` on YAML-defined `input_*` helpers (`input_text` / `input_number` / `input_boolean` / `input_datetime` / `input_select`) | 🚫 | Schema does not accept it — HA rejects the whole block as "Invalid config". Only UI-created helpers (stored in `.storage/`) carry a unique_id. Confirmed 2026-04-16 (CHANGELOG). |
 
 ## 3. Automation YAML schema
 
