@@ -2,7 +2,7 @@
 
 *Priority order within each tier is a starting point — Edgar to confirm.*
 
-_Last reviewed: 2026-04-14_
+_Last reviewed: 2026-04-16_
 
 ---
 
@@ -89,27 +89,27 @@ _Last reviewed: 2026-04-14_
 
 ---
 
-### 8. Test `ha-code-reviewer` agent in real Gate 2 flow + reconcile INSTRUCTIONS files
+### 8. Test `ha-code-reviewer` agent in real Gate 2 flow
 **Added**: 2026-04-14
 **Why**: The improved `ha-code-reviewer.md` agent (code-review + setup-review modes, HA-specific template rules, WebFetch allowlist, three hard rules for setup-review) was drafted and smoke-tested via `general-purpose` proxy. Still needs:
 1. **Real Gate 2 test via Claude Code** — `.claude/agents/*.md` subagent type isn't loaded in Cowork; the agent only invokes natively from Claude Code. Run at least one real code-review cycle on a new automation and one setup-review pass from Claude Code to confirm fidelity.
-2. **Reconcile instruction files** — `INSTRUCTIONS.md` (00 - Agent Context) still has the old Gate 1–4 flow with prose-based critic. `INSTRUCTIONS_Agents.md` (project root) has the new Gate 1–3 flow with `ha-code-reviewer`. Two sources of truth = drift risk. Promote `INSTRUCTIONS_Agents.md` to be the canonical `INSTRUCTIONS.md`; archive the old one or delete.
-3. **Retire legacy critic files** — `gate2-approach-critic.md` and `gate3-plan-critic.md` at project root are superseded. Move to an `archive/` folder or delete.
+2. ✅ **Reconcile instruction files** — INSTRUCTIONS.md now has the new Gate 1–3 flow with `ha-code-reviewer`. Single source of truth.
+3. ✅ **Retire legacy critic files** — `gate2-approach-critic.md` and `gate3-plan-critic.md` moved to `Archive/`.
 4. **Regression-review dormant automations** — once the agent is live, run `MODE: setup-review` quarterly. Track findings in CHANGELOG.
-**Effort**: S (30–45 min total).
+**Effort**: S (30 min remaining — items 1 and 4 only).
 
 ---
 
 ## 🟢 Low Priority / Nice to Have
 
-### 8. Bedroom Automation
+### 9. Bedroom Automation
 - No motion light in the master bedroom currently (lights are on the wall switch → Hue bulbs switched off = unavailable)
 - Bedroom remote mapping exists. Is there anything else wanted here?
 
-### 9. "Tradfi 1" — Identify & Clean Up
+### 10. "Tradfi 1" — Identify & Clean Up
 - Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find it or remove the entity.
 
-### 10. Entity ID Typo Fix
+### 11. Entity ID Typo Fix
 - `light.kitchen_rigth` → rename to correct spelling. Minor but causes confusion.
 
 ---
@@ -129,6 +129,7 @@ Currently only Uplight Front. Consider extending to Uplight Back Left/Right, pos
 
 ## ✅ Completed
 
+- **2026-04-16 — Git+SSH deploy workflow** — git init, SSH key auth to Green board (`ssh ha`), `/config/packages/` dir on HA, pre-commit hook (YAML syntax + description field), `deploy.sh` one-command deploy. All infra live.
 - **2026-04-13 — Vacation Mode Zocci cleanup** — 3 dead switch actions removed, notifications updated to instruct manual handling via La Marzocco app.
 - **2026-04-13 — Zocci deep clean reminder system** — 3 automations + 1 helper.
 - **2026-04-12 — Monitoring system teardown** — self-triggering cascade removed, temperature poller kept.

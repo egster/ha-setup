@@ -4,34 +4,23 @@
 
 ---
 
-## 2026-04-16 — Git + SSH deploy workflow setup
-
-Introduced git-tracked config management for the HA setup. No automations changed.
-
-**What was set up:**
-- `git init` on this project folder — initial commit of all existing context, agents, and archive files
-- SSH key auth to HA Green (`~/.ssh/ha_green`, `ssh ha` alias) — passwordless access confirmed
-- `/config/packages/` directory created on HA Green; `configuration.yaml` updated with `homeassistant: packages: !include_dir_named packages`
-- Pre-commit hook: blocks commits with YAML syntax errors or automations missing `description:` (enforced on `config/packages/` files only)
-- `deploy.sh`: single command to validate → scp → `ha core check` → reload; auto-rollbacks if config check fails
-- Baseline snapshot of `automations.yaml`, `scripts.yaml`, `scenes.yaml` committed to `config/`
-- `INSTRUCTIONS.md` updated: file conventions, Gate 3 pipeline (Step 4 = write+commit, Step 5 = deploy.sh, Steps 6–11 shifted), session end now includes git commit
-
-**Decision recorded**: DECISIONS.md 2026-04-16 — git+SSH deploy over MCP writes; CI/CD pipeline ruled out.
-
-**No HA restart needed** — `configuration.yaml` change (packages dir) takes effect on next restart; packages dir is empty so no impact until first package file is deployed.
-
----
 
 ## 2026-04-16 — Context compaction
 
-- 6 entries summarised → Activity Log (BubbleDash v1, agent workflow, Zocci cleanup, Zocci deep clean, monitoring teardown, context compaction meta-entry dropped)
-- 3 entries compressed (BubbleDash v2, Late Night Shutoff, Vacation mode system)
-- PROFILE.md: automation count 23→24, Late Night Shutoff added to Other table, disk 10.1→11.1 GB
-- BACKLOG.md: removed superseded "HA Control Dashboard" item (covered by BubbleDash v3 brainstorm)
-- CHANGELOG active: 172 → ~65 lines · PROFILE active: unchanged structure, facts updated
+### What was done
+- 2 entries summarised into Activity Log (git+SSH workflow, prior compaction)
+- 4 fixes applied to PROFILE.md (header date, Other count, Clarifications block dropped, Improvement Backlog pointer dropped)
+- 2 redundant blocks dropped from INSTRUCTIONS.md ("What this folder is for", "Who is this for")
+- 4 BACKLOG fixes: duplicate numbering corrected, sub-tasks 2+3 of #8 marked done, git+SSH added to Completed, Last reviewed updated
 
-**Backup**: `.backup/2026-04-16_082411/`
+### Size after compaction
+- CHANGELOG active: 41 lines ✅ (target: <50)
+- PROFILE active: 175 lines ⚠️ (target: <150 — content-dense, no safe cuts remain)
+- INSTRUCTIONS: 185 lines ⚠️ (target: <150 — gate workflow is load-bearing, not touched)
+- BACKLOG: 138 lines (no hard target)
+
+### Backup
+Originals saved to `.backup/2026-04-16_115532/`
 
 ---
 
@@ -73,6 +62,8 @@ Created `automation.late_night_light_shutoff_no_motion_check`.
 
 | Date | Summary | Files | Outcome |
 |------|---------|-------|---------|
+| 2026-04-16 | Git+SSH deploy workflow — git init, SSH key auth to Green (`ssh ha`), `/config/packages/` dir, pre-commit hook (YAML+description check), `deploy.sh`. Baseline snapshot committed. INSTRUCTIONS.md updated (Gate 3 + session end). Decision in DECISIONS.md. | infra | Live |
+| 2026-04-16 | Context compaction — 6 entries summarised, 3 compressed. CHANGELOG 172→65 lines, PROFILE facts updated. Backup `2026-04-16_082411`. | context | Done |
 | 2026-04-14 | BubbleDash v1 — domain-type tabs (Lighting/Heating/Media/System). Basic tiles, no popups. Backup `31d33495`. | dashboard | Superseded by v2 same session |
 | 2026-04-14 | Agent workflow redesign — `ha-code-reviewer.md` added to `.claude/agents/`. Gate 3 standardised pipeline in INSTRUCTIONS.md. Decision in DECISIONS.md. | agents/ | Live |
 | 2026-04-13 | Vacation mode Zocci cleanup — removed 3 dead switch actions (HTTP 500). Notify-only pattern. Backup `MCP_2026-04-13_18:21:29`. Decision in DECISIONS.md. | automations | Clean |

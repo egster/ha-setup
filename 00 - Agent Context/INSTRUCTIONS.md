@@ -15,15 +15,6 @@
 - `config/automations.yaml` / `scripts.yaml` / `scenes.yaml` are legacy HA UI exports — kept as reference snapshots, not edited directly.
 - Use descriptive filenames: `2026-04-10_motion_light_improvements.md`
 
-## What this folder is for
-This is the working folder for managing, planning, and improving the Home Assistant setup. The primary outputs are:
-- Automation configs (written to `config/packages/`, deployed via SSH)
-- Documentation of decisions, structure, and open issues
-- Planning notes for new automations, dashboards, and integrations
-
-## Who is this for and what kind of HA setup do we have?
-Read PROFILE.md.
-
 ---
 
 ## Agent Workflow (Every Request)
