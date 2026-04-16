@@ -1,0 +1,55 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Git-managed config packages — each file in packages/ is a logical group
+# of automations, helpers, and scripts tracked in version control.
+# UI-managed automations remain in automations.yaml (below).
+homeassistant:
+  packages: !include_dir_named packages
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# Storage for Bubble Card Modules
+template:
+  - trigger:
+      - trigger: event
+        event_type: bubble_card_update_modules
+    sensor:
+      - name: "Bubble Card Modules"
+        state: "saved"
+        icon: "mdi:puzzle"
+        attributes:
+          modules: "{{ trigger.event.data.modules }}"
+          last_updated: "{{ trigger.event.data.last_updated }}"
+
+# InfluxDB integration for long-term statistics
+influxdb:
+  host: a0d7b954-influxdb
+  port: 8086
+  database: homeassistant
+  username: !secret influxdb_username
+  password: !secret influxdb_password
+  max_retries: 3
+  default_measurement: state
+  include:
+    domains:
+      - sensor
+      - weather
+      - binary_sensor
+      - climate
+      - light
+      - switch
+      - automation
+      - media_player
+    entity_globs:
+      - climate.*
+  component_config_glob:
+      "climate.*":
+        override_measurement: "temperature"
