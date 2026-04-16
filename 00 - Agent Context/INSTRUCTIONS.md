@@ -34,6 +34,8 @@ Before writing any code:
 
 **For non-trivial requests** (new automations, helpers, structural changes): end Gate 1 with a one-paragraph approach alignment covering the key architectural choice. Do not write code yet. Wait for Edgar's implicit go-ahead before proceeding to Gate 2.
 
+**Before drafting the alignment**, invoke the `research-advisor` subagent when the request touches an unfamiliar pattern, a new integration or HACS component, or a design with no precedent in `DECISIONS.md`. Pass it the original request and the contents of `PROFILE.md`, `DECISIONS.md`, and `INSTRUCTIONS.md`. The agent returns a brief with 2–3 alternatives, known anti-patterns, and a recommendation cross-referenced against Edgar's constraints — fold its findings into the alignment rather than pasting the brief verbatim. Skip for familiar patterns (motion lights, remote mappings, vacation-mode edits) where `DECISIONS.md` already settles the approach.
+
 **For simple/clear requests** (single value edits, well-defined one-liners): skip approach alignment and proceed directly to Gate 2.
 
 ---
