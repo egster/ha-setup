@@ -181,5 +181,6 @@ At the end of every session where files are created, modified, or deleted — or
 2. **Update `DECISIONS.md`** — if a decision was made that changes how future work will be done (tool choice, architectural pattern, workaround rationale), add a row.
 3. **Update `LAST_UPDATED`** — overwrite with today's date (`YYYY-MM-DD`).
 4. **Git commit** — commit all modified `00 - Agent Context/` files with message `docs: session end YYYY-MM-DD — <one-line summary>`.
+5. **Git push** — `git push` to sync the commit to GitHub (`origin/main`).
 
 This is the agent's responsibility, not Edgar's.
