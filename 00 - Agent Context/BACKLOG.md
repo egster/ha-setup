@@ -4,38 +4,102 @@ _Last reviewed: 2026-04-16_
 
 ---
 
-## 🚨 In Progress
-
-### Deploy Zocci + Beamer fixes (Gate 3)
-**Added**: 2026-04-16
-**Status**: Package files written + committed, code-reviewed (APPROVED). Gate 3 deploy pending.
-**What's ready**:
-- `config/packages/zocci.yaml` — two automations + new `input_number.zocci_coffees_at_last_clean` helper
-- `config/packages/beamer_uplight_front.yaml` — one automation with 10s debounce fix
-- Backup: `ff623c85` (pre-deploy, 2026-04-16)
-**What still needs to happen** (in order):
-1. Delete 3 UI-managed automations: `automation.zocci_mark_clean_done`, `automation.zocci_deep_clean_reminder`, `automation.beamer_uplight_front`
-2. Run `./deploy.sh config/packages/zocci.yaml` then `./deploy.sh config/packages/beamer_uplight_front.yaml`
-3. After reload, verify automations live via `ha_config_get_automation`
-4. Bootstrap: `input_number.set_value` on `input_number.zocci_coffees_at_last_clean` → `61` (current coffee count); `input_boolean.turn_off` on `input_boolean.zocci_deep_clean_needed` (clear stuck state)
-5. Verify + traces + health check per Gate 3 Steps 6–11
-**Root causes** (for context):
-- Zocci: `count % 50 == 0` was oblivious to when cleaning happened. Fix anchors to count-at-last-clean.
-- Beamer: 20ms `playing→off→playing` flicker at 2026-04-15 18:44:34 caused `mode:single` to drop the re-trigger. Fix debounces both triggers 10s.
-**Effort**: ~10 min in Claude Code (SSH works there).
-
----
-
 ## 🏠 Automations & Logic
 
-### 🔴 High
-
-#### Vacation Mode — Fix scene persistence (restart survival)
-**Why**: `scene.vacation_mode_heating_restore` is created dynamically via `scene.create` and does not survive an HA restart. If HA reboots while Edgar is away, the Deactivate automation can't restore heating temperatures.
-**Fix**: Replace the scene snapshot in `automation.vacation_mode_activate` with 3 `input_text` helpers (`input_text.vacation_restore_office`, `_living_room`, `_kitchen`). Activate writes the current temperature as a string; Deactivate reads it back with `| float`. These persist across restarts.
-**Effort**: ~20 min. Must be done before vacation mode is used for real.
-
 ### 🟡 Medium
+
+#### Pomodoro Desk Timer
+**Added**: 2026-04-16
+**Status**: Gate 2 APPROVED — ready to deploy. Parked at Edgar's request to add Bubble dashboard trigger first.
+**What it does**: Dashboard toggle starts a 25-min countdown. When time is up, desk lights (`light.desk_lights`) go full red. Lights stay red until toggle is flipped off, which restores the pre-session light state via scene snapshot.
+
+**Still needed before deploy:**
+- Add a Bubble Card button/chip in the Office popup (or a dedicated Pomodoro section) to control `input_boolean.pomodoro_active` — so it can be started/stopped from the dashboard without going to the entity page. Consider showing the remaining timer time on the button (Bubble Card `entity` with a template for countdown display, or a simple toggle chip).
+
+**Approved YAML (Gate 2 sign-off: 2026-04-16):**
+
+*Helpers:*
+```yaml
+# timer.pomodoro_desk_timer
+helper_type: timer
+name: Pomodoro Desk Timer
+icon: mdi:timer
+duration: "00:25:00"
+
+# input_boolean.pomodoro_active
+helper_type: input_boolean
+name: Pomodoro Active
+icon: mdi:timer-outline
+```
+
+*Automations:*
+```yaml
+alias: Pomodoro Desk — Start
+description: >
+  When the Pomodoro toggle is activated, captures a snapshot of the current
+  desk light state (so it can be restored later) and starts the 25-minute
+  countdown. Lights are not changed at this point — only on expiry.
+trigger:
+  - platform: state
+    entity_id: input_boolean.pomodoro_active
+    to: "on"
+condition: []
+action:
+  - service: scene.create
+    data:
+      scene_id: pomodoro_desk_snapshot
+      snapshot_entities:
+        - light.desk_lights
+  - service: timer.start
+    target:
+      entity_id: timer.pomodoro_desk_timer
+mode: single
+---
+alias: Pomodoro Desk — Break Time
+description: >
+  Fires when the 25-minute Pomodoro timer expires. Sets desk lights to full
+  red as a visual break alert. Lights stay red until the user resets the
+  toggle — there is no auto-restore.
+trigger:
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.pomodoro_desk_timer
+condition: []
+action:
+  - service: light.turn_on
+    target:
+      entity_id: light.desk_lights
+    data:
+      rgb_color: [255, 0, 0]
+      brightness: 255
+mode: single
+---
+alias: Pomodoro Desk — Reset
+description: >
+  Fires when the Pomodoro toggle is turned off (either after a break or to
+  cancel a running session). Cancels the timer if still active, then
+  restores the desk lights to the state captured at session start.
+trigger:
+  - platform: state
+    entity_id: input_boolean.pomodoro_active
+    to: "off"
+condition: []
+action:
+  - service: timer.cancel
+    target:
+      entity_id: timer.pomodoro_desk_timer
+  - service: scene.turn_on
+    target:
+      entity_id: scene.pomodoro_desk_snapshot
+mode: single
+```
+
+**Known caveats:**
+- Scene snapshot doesn't survive HA restart. If HA reboots mid-session, lights stay red until manually corrected. Low risk given 25-min window.
+- Snapshot is taken at session start. Mid-session manual light adjustments won't survive reset.
+
+**Effort**: ~20 min (deploy + Bubble card).
 
 #### Kitchen Remote Mapping — Blueprint fix
 **Problem**: `UndefinedError: 'dict object' has no attribute 'args'` in the `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml` blueprint. RWL022 device IEEE: `00:17:88:01:0c:2a:11:6f`.
@@ -149,19 +213,34 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 
 ### 🟡 Medium
 
+#### Update `deploy.sh` to auto-reload input helper domains
+**Added**: 2026-04-16
+**Why**: Today's Zocci+Beamer and Vacation Mode deploys both hit the same snag — `ha core reload-all` (what `deploy.sh` calls) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Had to call `input_number.reload` / `input_text.reload` / `automation.reload` manually via MCP after each deploy.
+**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains `input_number:`, `input_text:`, `input_boolean:`, `input_datetime:`, or `input_select:` top-level keys, issue the corresponding `reload` service call over the HA API. Also unconditionally call `automation.reload`.
+**Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
+**Effort**: ~20 min.
+
+#### Track pre-commit hook in the repo
+**Added**: 2026-04-16
+**Why**: `.git/hooks/pre-commit` is local-only (not in git). Today's YAML-parser fix (replacing the regex that over-matched step-level `alias:` with a proper PyYAML automation-list check) would be lost if the repo is re-cloned. Recommend: move the hook to `scripts/pre-commit`, track it, and add a one-liner to the README: `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`.
+**Effort**: ~10 min.
+
 #### Test `ha-code-reviewer` agent in real Gate 2 flow
 **Added**: 2026-04-14
-**Why**: Agent drafted and smoke-tested via `general-purpose` proxy. Still needs a real Gate 2 run from Claude Code (`.claude/agents/*.md` subagents don't load in Cowork).
+**Progress**: ✅ Real Gate 2 cycle run on 2026-04-16 (Vacation Mode). Reviewer correctly caught 2 blocking findings (input_text min/max semantics, float-default inconsistency) + ⚠️ hardening suggestions. Also incorrectly recommended `unique_id:` on YAML-defined `input_text` — caught at deploy time via HA config errors. Net: high value, with one known fail-class to add to the reviewer's rule set.
 **Remaining work**:
-1. Run one real code-review cycle on a new automation from Claude Code
+1. ~~Run one real code-review cycle on a new automation from Claude Code~~ ✅ done 2026-04-16
 2. Run one `MODE: setup-review` pass from Claude Code
 3. Schedule quarterly setup-review runs; track findings in CHANGELOG
-**Effort**: ~30 min.
+4. Add to the reviewer's rule set: YAML-defined input_* helpers do NOT accept `unique_id` (only UI-created ones do).
+**Effort**: ~30 min remaining.
 
 ---
 
 ## ✅ Completed
 
+- **2026-04-16 — Vacation Mode scene persistence fix** — Migrated 4 automations from UI to `config/packages/vacation_mode.yaml`. Replaced `scene.create` with 3 `input_text` helpers (`vacation_restore_{office,living_room,kitchen}`) that survive HA restarts. Pre-seeded with current setpoints.
+- **2026-04-16 — Zocci + Beamer fixes deployed** — 3 automations migrated from UI to 2 packages. Deep-clean reminder anchored to `input_number.zocci_coffees_at_last_clean` (bootstrap: 61). Beamer uplight 10s debounce on both triggers. Stuck `zocci_deep_clean_needed` cleared.
 - **2026-04-16 — Git+SSH deploy workflow** — git init, SSH key auth to Green board (`ssh ha`), `/config/packages/` dir on HA, pre-commit hook (YAML syntax + description field), `deploy.sh` one-command deploy. All infra live.
 - **2026-04-13 — Vacation Mode Zocci cleanup** — 3 dead switch actions removed, notifications updated to instruct manual handling via La Marzocco app.
 - **2026-04-13 — Zocci deep clean reminder system** — 3 automations + 1 helper.

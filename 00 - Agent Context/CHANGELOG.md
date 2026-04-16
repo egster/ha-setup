@@ -5,6 +5,56 @@
 ---
 
 
+## 2026-04-16 — Zocci+Beamer Gate 3 deploy + Vacation Mode migration (scene persistence fix)
+
+### What was done
+
+**Zocci + Beamer (completing the In Progress backlog item)**
+- Deleted 3 UI-managed automations: `zocci_mark_clean_done`, `zocci_deep_clean_reminder`, `beamer_uplight_front`.
+- Deployed `config/packages/zocci.yaml` + `config/packages/beamer_uplight_front.yaml` via `deploy.sh`.
+- Bootstrapped helpers: `input_number.zocci_coffees_at_last_clean → 61` (current coffee count); `input_boolean.zocci_deep_clean_needed → off` (cleared the stuck flag).
+- Traces clean; all 3 automations `state: on`.
+
+**Vacation Mode scene persistence fix (BACKLOG 🔴 High #1)**
+- Migrated all 4 vacation mode automations (Activate, End, Deactivate, Zocci Warning) from UI-managed to `config/packages/vacation_mode.yaml`. IDs preserved.
+- Replaced `scene.create` (ephemeral, lost on HA restart) with 3 `input_text` helpers: `vacation_restore_office`, `vacation_restore_living_room`, `vacation_restore_kitchen`. These persist across restarts.
+- Activate uses `state_attr(..., 'temperature') | default(X) | round(1) | string` to safely snapshot setpoints.
+- Deactivate uses `states(...) | float(X)` with per-room fallbacks (Office 20, LR 21, Kitchen 20) to restore.
+- Pre-seeded helpers with current setpoints (19.0 / 21.0 / 20.0) so first real activation writes over real values.
+
+### Lessons learned (captured in DECISIONS.md)
+1. **Deploying packages with input helpers requires explicit reload service calls**: `ha core reload-all` (what `deploy.sh` runs) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Call `input_text.reload` / `input_number.reload` / `automation.reload` via MCP after any package deploy that touches input helpers. For a **new** input domain that wasn't previously loaded, a fresh package deploy with `input_text.reload` works — provided the YAML is valid.
+2. **YAML-defined `input_text` does NOT accept `unique_id`**: Only UI-created helpers (stored in `.storage/`) have unique_ids. Setting it in YAML rejects the whole block with "Invalid config". Code reviewer's suggestion was wrong in this case; caught in deploy via HA error logs.
+3. **Pre-commit hook fixed**: Old regex-based check on `\s*- alias:` over-matched step-level aliases inside action blocks. Rewrote to use PyYAML → only top-level `automation:` entries are checked for `description:`. Hook lives at `.git/hooks/pre-commit` (local-only).
+
+### Backups
+- `76d0866b` (pre-Zocci+Beamer deploy, 17:55)
+- `d145330e` (pre-Vacation Mode migration, 21:02)
+
+### Entities affected
+- **Deleted**: 3 UI automations (zocci_mark_clean_done, zocci_deep_clean_reminder, beamer_uplight_front) + 4 vacation mode UI automations.
+- **Added (as package-managed)**: same 7 automations, identical IDs preserved → trace history retained.
+- **New helpers**: `input_number.zocci_coffees_at_last_clean` (value: 61); `input_text.vacation_restore_office` (19.0), `_living_room` (21.0), `_kitchen` (20.0).
+- **Health**: all clean. DB size unchanged at 785 MiB. Disk 12.2 GB / 28 GB.
+
+---
+
+
+## 2026-04-16 — Pomodoro Desk Timer: designed, Gate 2 APPROVED, parked in backlog
+
+### What was done
+- **Gate 1**: Clarified requirements (dashboard toggle, fixed 25 min, stay red until reset, leave lights as-is on start). Confirmed desk light entity: `light.desk_lights`.
+- **Gate 2**: Wrote full solution (2 helpers: `timer.pomodoro_desk_timer`, `input_boolean.pomodoro_active`; 3 automations: Start / Break Time / Reset). Submitted to `ha-code-reviewer` → **APPROVED**, no blocking findings.
+- **Parked**: Edgar requested backlog entry instead of deploy, with requirement to add a Bubble Card trigger button (Office popup) before deployment.
+
+### What's pending
+Full approved YAML embedded in BACKLOG.md (Pomodoro Desk Timer entry). Deploy when Bubble Card button is designed.
+
+### Entities affected
+None yet — no HA changes made this session.
+
+---
+
 ## 2026-04-16 — Zocci + Beamer QC: root cause analysis, fix, code review (Gate 1+2 complete)
 
 ### What was done
