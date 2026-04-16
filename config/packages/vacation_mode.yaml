@@ -1,0 +1,201 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Vacation Mode
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Manages heating during Edgar's absence: sets all AC zones to 16 °C (frost
+# protection) on activation, and restores the pre-vacation setpoints on return.
+#
+# Helpers required (UI-managed, must already exist):
+#   - input_boolean.vacation_mode         (on/off toggle)
+#   - input_datetime.vacation_mode_end    (scheduled end date/time)
+#
+# Helpers defined here (restart-safe setpoint store):
+#   - input_text.vacation_restore_office
+#   - input_text.vacation_restore_living_room
+#   - input_text.vacation_restore_kitchen
+#
+# These store temperature setpoints as short strings (e.g. "20.0", "21.5").
+# min/max are CHARACTER LENGTH bounds (HA input_text semantics), not temperature
+# bounds. Values are written via | round(1) | string → max 4 chars ("25.0").
+# Length 6 gives margin for any unexpected float representation.
+#
+# Entities referenced:
+#   - climate.office_area / climate.living_room_area / climate.kitchen_area
+#   - switch.zocci                        (Zocci coffee machine)
+#   - notify.mobile_app_edphone
+#
+# ⚠️ La Marzocco API returns HTTP 500 on all remote switch calls — Zocci
+# handling is notify-only. Edgar must disable the schedule manually in the
+# La Marzocco app (see DECISIONS.md 2026-04-13).
+#
+# Migrated from UI-managed automations → git-tracked package on 2026-04-16.
+# ──────────────────────────────────────────────────────────────────────────────
+
+input_text:
+  vacation_restore_office:
+    name: "Vacation — Restore temp Office"
+    unique_id: vacation_restore_office
+    min: 1   # character-length bound, not a temperature value
+    max: 6   # "25.0" = 4 chars; 6 gives safety margin
+    icon: mdi:thermometer
+  vacation_restore_living_room:
+    name: "Vacation — Restore temp Living Room"
+    unique_id: vacation_restore_living_room
+    min: 1
+    max: 6
+    icon: mdi:thermometer
+  vacation_restore_kitchen:
+    name: "Vacation — Restore temp Kitchen"
+    unique_id: vacation_restore_kitchen
+    min: 1
+    max: 6
+    icon: mdi:thermometer
+
+automation:
+  - id: "1776090257789"
+    alias: "Vacation Mode – Activate"
+    description: >-
+      When vacation mode is switched on: snapshot the current AC setpoints into
+      input_text helpers (restart-safe, unlike scene.create), set all zones to
+      16 °C (frost protection), and notify Edgar. Zocci must be disabled manually
+      in the La Marzocco app — the API does not support remote control.
+      Snapshot uses | default(20) | round(1) | string to guard against the
+      climate entity being unavailable at activation time.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.vacation_mode
+        to: "on"
+    condition: []
+    action:
+      - alias: "Snapshot Office setpoint"
+        action: input_text.set_value
+        target:
+          entity_id: input_text.vacation_restore_office
+        data:
+          value: "{{ state_attr('climate.office_area', 'temperature') | default(20) | round(1) | string }}"
+      - alias: "Snapshot Living Room setpoint"
+        action: input_text.set_value
+        target:
+          entity_id: input_text.vacation_restore_living_room
+        data:
+          value: "{{ state_attr('climate.living_room_area', 'temperature') | default(21) | round(1) | string }}"
+      - alias: "Snapshot Kitchen setpoint"
+        action: input_text.set_value
+        target:
+          entity_id: input_text.vacation_restore_kitchen
+        data:
+          value: "{{ state_attr('climate.kitchen_area', 'temperature') | default(20) | round(1) | string }}"
+      - alias: "Set Office to 16 °C"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.office_area
+        data:
+          temperature: 16
+      - alias: "Set Living Room to 16 °C"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.living_room_area
+        data:
+          temperature: 16
+      - alias: "Set Kitchen to 16 °C"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.kitchen_area
+        data:
+          temperature: 16
+      - alias: "Notify – Vacation mode activated"
+        action: notify.mobile_app_edphone
+        data:
+          title: "Vacation Mode On"
+          message: >-
+            Heating set to 16 °C in all zones. Mode ends:
+            {{ states('input_datetime.vacation_mode_end') }}.
+            ⚠️ Disable the Zocci auto schedule manually in the La Marzocco app.
+
+  - id: "1776090277293"
+    alias: "Vacation Mode – End"
+    description: >-
+      Fires at the configured vacation end date/time. Simply turns vacation mode
+      off — the Vacation Mode Deactivate automation handles restoration and
+      notification for both this path and manual cancellation.
+    mode: single
+    trigger:
+      - platform: time
+        at: input_datetime.vacation_mode_end
+    condition:
+      - condition: state
+        entity_id: input_boolean.vacation_mode
+        state: "on"
+    action:
+      - alias: "Turn vacation mode off — triggers Deactivate automation"
+        action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.vacation_mode
+
+  - id: "1776091280740"
+    alias: "Vacation Mode – Deactivate"
+    description: >-
+      Fires whenever vacation mode is turned off (manually or by the End
+      automation). Reads the pre-vacation setpoints back from input_text helpers
+      (restart-safe) and restores each climate zone. Fallback defaults reflect
+      each room's typical setpoint: Office 20 °C, Living Room 21 °C (intentional
+      — normal LR setpoint is 1 °C higher), Kitchen 20 °C.
+      Zocci schedule must be re-enabled manually in the La Marzocco app.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.vacation_mode
+        to: "off"
+    condition: []
+    action:
+      - alias: "Restore Office setpoint"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.office_area
+        data:
+          temperature: "{{ states('input_text.vacation_restore_office') | float(20) }}"
+      - alias: "Restore Living Room setpoint (fallback 21 °C — normal LR setpoint is 1 °C above Office/Kitchen)"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.living_room_area
+        data:
+          temperature: "{{ states('input_text.vacation_restore_living_room') | float(21) }}"
+      - alias: "Restore Kitchen setpoint"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.kitchen_area
+        data:
+          temperature: "{{ states('input_text.vacation_restore_kitchen') | float(20) }}"
+      - alias: "Notify – Vacation mode ended"
+        action: notify.mobile_app_edphone
+        data:
+          title: "Vacation Mode Off"
+          message: >-
+            Welcome back! Heating restored to pre-vacation settings.
+            ⚠️ Remember to re-enable the Zocci schedule in the La Marzocco app.
+
+  - id: "1776091296974"
+    alias: "Vacation Mode – Zocci Warning"
+    description: >-
+      While vacation mode is active, if the Zocci coffee machine turns on
+      (scheduled turn-on fired despite vacation mode), notify Edgar to disable
+      the schedule in the La Marzocco app. The API does not support remote
+      control so automated action is not possible.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.zocci
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.vacation_mode
+        state: "on"
+    action:
+      - alias: "Notify – Zocci turned on during vacation"
+        action: notify.mobile_app_edphone
+        data:
+          title: "⚠️ Zocci On During Vacation"
+          message: >-
+            Zocci has turned on while vacation mode is active. Please disable
+            the auto on/off schedule in the La Marzocco app.
