@@ -32,21 +32,19 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 input_text:
+  # YAML-defined input_text does not accept unique_id (only UI-created helpers do).
   vacation_restore_office:
     name: "Vacation — Restore temp Office"
-    unique_id: vacation_restore_office
     min: 1   # character-length bound, not a temperature value
     max: 6   # "25.0" = 4 chars; 6 gives safety margin
     icon: mdi:thermometer
   vacation_restore_living_room:
     name: "Vacation — Restore temp Living Room"
-    unique_id: vacation_restore_living_room
     min: 1
     max: 6
     icon: mdi:thermometer
   vacation_restore_kitchen:
     name: "Vacation — Restore temp Kitchen"
-    unique_id: vacation_restore_kitchen
     min: 1
     max: 6
     icon: mdi:thermometer
