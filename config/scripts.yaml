@@ -1,0 +1,21 @@
+new_script:
+  sequence:
+  - action: light.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.sunricher_hk_zd_rgbcct_a
+  - if:
+    - condition: state
+      entity_id: light.sunricher_hk_zd_rgbcct_a
+      attribute: color_temp_kelvin
+      state: '5000'
+    then:
+    - action: light.turn_on
+      metadata: {}
+      data:
+        color_temp_kelvin: 2706
+      target:
+        entity_id: light.sunricher_hk_zd_rgbcct_a
+  alias: New script
+  description: ''

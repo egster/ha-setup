@@ -1,0 +1,763 @@
+- id: '1753260353077'
+  alias: Garage Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.eve_motion_20eby9901_occupancy
+      light_switch:
+        entity_id: light.signify_netherlands_b_v_lst002
+      time_delay: 2
+      include_light_control:
+      - use_transition
+      - use_brightness
+      include_light_colour_control: disable_colour_control
+- id: '1753279461116'
+  alias: Pantry Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.bijkeuken_motion_sensor
+      light_switch:
+        entity_id:
+        - light.kitchen_bijkeuken
+        - light.kitchen_bijkeuken_kast
+      time_delay: 2
+      include_light_control: []
+      light_transition_off: 3
+      after_time: 06:00:00
+      before_time: '22:00:00'
+      include_time: time_enabled
+- id: '1753438346841'
+  alias: Office Remote Mapping
+  description: ''
+  use_blueprint:
+    path: dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml
+    input:
+      zha_device: 416bed4b3088aaf74557e9f3555f9c17
+      Power_Press:
+      - action: light.toggle
+        metadata: {}
+        data:
+          transition: 1
+        target:
+          entity_id:
+          - light.signify_netherlands_b_v_915005996701
+          - light.desk_lights
+      Up_Press:
+      - device_id: 8d52dcc7888f1c822710b2940bb19978
+        domain: light
+        entity_id: d4ae1ea7034a5569a023c47abf8b4f1f
+        type: brightness_increase
+      - device_id: 3235d4eff7711cc82e159889e2beff0a
+        domain: light
+        entity_id: befc61e130715f96f0829c2b6f2a4934
+        type: brightness_increase
+      - device_id: 9025ced9130ecfa21aaae5e3fbd085d2
+        domain: light
+        entity_id: 879aa62e21d391b8a8d288b888608a9a
+        type: brightness_increase
+      Down_Press:
+      - device_id: 8d52dcc7888f1c822710b2940bb19978
+        domain: light
+        entity_id: d4ae1ea7034a5569a023c47abf8b4f1f
+        type: brightness_decrease
+      - device_id: 3235d4eff7711cc82e159889e2beff0a
+        domain: light
+        entity_id: befc61e130715f96f0829c2b6f2a4934
+        type: brightness_decrease
+      - device_id: 9025ced9130ecfa21aaae5e3fbd085d2
+        domain: light
+        entity_id: 879aa62e21d391b8a8d288b888608a9a
+        type: brightness_decrease
+      Hue_Press:
+      - action: media_player.media_play_pause
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.homepod
+      Hue_Press2x:
+      - action: media_player.media_next_track
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.homepod
+      Hue_Press3x:
+      - action: media_player.media_previous_track
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.homepod
+      Power_Press2x:
+      - action: light.toggle
+        metadata: {}
+        data: {}
+        target:
+          entity_id: light.office_bureau
+      Up_HoldPress:
+      - action: media_player.volume_up
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.homepod
+      Down_HoldPress:
+      - action: media_player.volume_down
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.homepod
+- id: '1753518440602'
+  alias: Jona Remote Mapping
+  description: ''
+  use_blueprint:
+    path: dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml
+    input:
+      zha_device: 41d540a3d5b3ead3aae5ee1ff202379c
+      Power_Press:
+      - action: light.toggle
+        metadata: {}
+        data:
+          transition: 2
+          brightness_pct: 50
+        target:
+          entity_id:
+          - light.jona_lights
+      Up_Press:
+      - device_id: f051add19ba49f7af5bc3aca2881ec24
+        domain: light
+        entity_id: bb90a5409a4d178de77bb63b9f1e828d
+        type: brightness_increase
+      - device_id: 0fe91ef9a48848821dcb19b97ee494df
+        domain: light
+        entity_id: aa2db862aed2f15b661d996bb80df2d2
+        type: brightness_increase
+      Down_Press:
+      - device_id: f051add19ba49f7af5bc3aca2881ec24
+        domain: light
+        entity_id: bb90a5409a4d178de77bb63b9f1e828d
+        type: brightness_decrease
+      - device_id: 0fe91ef9a48848821dcb19b97ee494df
+        domain: light
+        entity_id: aa2db862aed2f15b661d996bb80df2d2
+        type: brightness_decrease
+      Hue_Press:
+      - action: media_player.media_play_pause
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.nestmini6702
+      Hue_Press2x:
+      - action: media_player.media_next_track
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.nestmini6702
+      Hue_Press3x: []
+- id: '1753536715474'
+  alias: Kitchen Remote Mapping
+  description: ''
+  use_blueprint:
+    path: dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml
+    input:
+      zha_device: 5229753ba07142ae656894de4ffabeef
+      Power_Press:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          transition: 1
+          color_temp_kelvin: 5335
+        target:
+          entity_id: light.sunricher_hk_zd_rgbcct_a
+      Power_Press2x:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          transition: 1
+          color_temp_kelvin: 4282
+        target:
+          entity_id: light.sunricher_hk_zd_rgbcct_a
+      Up_Press:
+      - action: media_player.volume_up
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.kitchen_speakers
+      Down_Press:
+      - action: media_player.volume_down
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.kitchen_speakers
+      Hue_Press:
+      - action: media_player.media_play_pause
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.kitchen_speakers
+      Hue_Press2x:
+      - action: media_player.media_next_track
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.kitchen_speakers
+      Hue_Press3x:
+      - action: media_player.media_previous_track
+        metadata: {}
+        data: {}
+        target:
+          entity_id: media_player.kitchen_speakers
+      Down_HoldPress:
+      - device_id: 264738215e55b972143f003420e4fc7c
+        domain: light
+        entity_id: 6205382f6842d4d16143ec61c379e474
+        type: brightness_decrease
+      Up_HoldPress:
+      - device_id: 264738215e55b972143f003420e4fc7c
+        domain: light
+        entity_id: 6205382f6842d4d16143ec61c379e474
+        type: brightness_increase
+      Power_Press3x:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          transition: 1
+          color_temp_kelvin: 3005
+        target:
+          entity_id: light.sunricher_hk_zd_rgbcct_a
+      Up_Press2x: []
+      Down_Press2x: []
+      Down_Press3x: []
+      Hue_Press4x: []
+      Power_Press4x:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          color_temp_kelvin: 2000
+          transition: 1
+        target:
+          entity_id: light.sunricher_hk_zd_rgbcct_a
+      Power_Press5x: []
+- id: '1753687195498'
+  alias: Bedroom Remote Mapping
+  description: ''
+  use_blueprint:
+    path: dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml
+    input:
+      zha_device: a7fd804f5a5f22215621e2be8adb84ef
+      Power_Press:
+      - action: light.toggle
+        metadata: {}
+        data:
+          transition: 2
+          color_temp_kelvin: 2601
+          brightness_pct: 50
+        target:
+          entity_id:
+          - light.bedroom
+      Up_Press:
+      - device_id: fc4b9bf9ba4d0fcbddf2caf11ce45c0d
+        domain: light
+        entity_id: b8c9362a3c6929375db3dbc12d634529
+        type: brightness_increase
+      - device_id: 9ab5a670d04101f53acca3eed540ff61
+        domain: light
+        entity_id: 1ed008c47266cbea25e553cc982472e1
+        type: brightness_increase
+      Down_Press:
+      - device_id: fc4b9bf9ba4d0fcbddf2caf11ce45c0d
+        domain: light
+        entity_id: b8c9362a3c6929375db3dbc12d634529
+        type: brightness_decrease
+      - device_id: 9ab5a670d04101f53acca3eed540ff61
+        domain: light
+        entity_id: 1ed008c47266cbea25e553cc982472e1
+        type: brightness_decrease
+      Hue_Press:
+      - action: climate.toggle
+        metadata: {}
+        data: {}
+        target:
+          entity_id: climate.air_conditioning_bedroom
+      Power_Press2x:
+      - action: light.toggle
+        metadata: {}
+        data:
+          transition: 1
+          brightness_pct: 100
+        target:
+          entity_id:
+          - light.bedroom
+- id: '1753905463644'
+  alias: Living Room Remote Mapping
+  description: ''
+  use_blueprint:
+    path: niro1987/zha_ikea_tradfri_5button_remote_custom.yaml
+    input:
+      remote: b2020cfb070d8d2c9446c1ab6de61c8d
+      power_short:
+      - action: light.toggle
+        metadata: {}
+        data:
+          transition: 2
+        target:
+          entity_id: light.triple_light
+      dimup_short:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          brightness_step_pct: 15
+        target:
+          entity_id: light.triple_light
+      dimdown_short:
+      - action: light.turn_on
+        metadata: {}
+        data:
+          brightness_step_pct: -15
+        target:
+          entity_id: light.triple_light
+      colorup_short:
+      - action: light.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id: light.triple_light
+      colordown_short: []
+- id: '1754340283096'
+  alias: Hall Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.eve_motion_20eby9901_occupancy_3
+      light_switch:
+        entity_id: light.upstairs_hall_lights
+      include_light_control: []
+      dynamic_lighting_max_lux: 220
+      dynamic_lighting_min_lux: 120
+      dynamic_lighting_min_brightness: 10
+      include_dynamic_lighting: enable_time_controled_colour_brightness
+      dynamic_lighting_boolean: input_boolean.hall_motion_light_dynamic
+      dynamic_lighting_time_start_evening: '19:00:00'
+      dynamic_lighting_time_end_evening: '22:00:00'
+      dynamic_lighting_time_start_morning: 06:00:00
+      dynamic_lighting_time_end_morning: 08:00:00
+      time_delay: 2
+      dynamic_lighting_min_colour_temp: 2000
+      dynamic_lighting_max_colour_temp: 4000
+- id: '1754376280361'
+  alias: Office Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.office_motion_sensors
+      light_switch:
+        entity_id:
+        - light.signify_netherlands_b_v_915005996701
+        - light.desk_lights
+      include_light_control:
+      - use_transition
+      - use_brightness
+      include_dynamic_lighting: enable_time_controled_colour_brightness
+      dynamic_lighting_boolean: input_boolean.office_motion_light_dynamic
+      dynamic_lighting_lux_sensor: sensor.motion_sensor_office_illuminance
+      dynamic_lighting_min_brightness: 60
+      dynamic_lighting_time_end_morning: '10:00:00'
+      dynamic_lighting_time_start_evening: '16:00:00'
+      dynamic_lighting_min_colour_temp: 2000
+- id: '1756102463649'
+  alias: Kitchen Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.eve_motion_20eby9901_occupancy_2
+      light_switch:
+        entity_id:
+        - light.sunricher_hk_zd_rgbcct_a
+        - light.kitchen_dimmer_keuken
+      include_dynamic_lighting: enable_sun_elevation_colour_brightness
+      dynamic_lighting_boolean: input_boolean.kitchen_motion_light_dynamic
+      dynamic_lighting_min_brightness: 50
+      dynamic_lighting_max_colour_temp: 5000
+      dynamic_lighting_min_colour_temp: 2000
+      include_time: time_enabled
+      after_time: 06:00:00
+      before_time: '22:00:00'
+      dynamic_lighting_time_end_morning: '10:00:00'
+      dynamic_lighting_sun_elevation_end_rising: 18
+      dynamic_lighting_sun_elevation_start_falling: 18
+      dynamic_lighting_sun_elevation_end_falling: -5
+- id: '1761120924815'
+  alias: Pantry Night Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.bijkeuken_motion_sensor
+      light_switch:
+        entity_id:
+        - light.kitchen_bijkeuken_kast
+      time_delay: 2
+      include_light_control: []
+      light_transition_off: 3
+      after_time: '22:00:00'
+      before_time: 06:00:00
+      include_time: time_enabled
+- id: '1761121238762'
+  alias: Kitchen Night Motion Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.eve_motion_20eby9901_occupancy_2
+      light_switch:
+        entity_id:
+        - light.sunricher_hk_zd_rgbcct_a
+      after_time: '22:00:00'
+      before_time: 06:00:00
+      include_time: time_enabled
+      include_light_colour_control: use_colour_temperature
+      light_colour_temperature: 2000
+      include_light_control:
+      - use_brightness
+      light_brightness: 25
+- id: '1771310849140'
+  alias: Stairs Kitchen Sensor Light
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.motion_sensor_entrance_1
+      light_switch:
+        entity_id: light.stairs_kitchen
+      include_dynamic_lighting: enable_sun_elevation_colour_brightness
+      dynamic_lighting_max_brightness: 70
+      dynamic_lighting_max_colour_temp: 3300
+      dynamic_lighting_min_colour_temp: 2000
+      dynamic_lighting_min_brightness: 30
+      dynamic_lighting_lux_sensor: sensor.motion_sensor_entrance_1_illuminance
+      time_delay: 2
+- id: '1771958317347'
+  alias: Entrance Motion Lights
+  description: ''
+  use_blueprint:
+    path: Blackshome/sensor-light.yaml
+    input:
+      motion_trigger:
+      - binary_sensor.entrance_motion_sensors
+      light_switch:
+        entity_id:
+        - light.entrance_ceiling
+        - light.garage
+      include_dynamic_lighting: enable_sun_elevation_colour_brightness
+      dynamic_lighting_max_brightness: 80
+      dynamic_lighting_max_colour_temp: 3600
+      dynamic_lighting_min_colour_temp: 2300
+      dynamic_lighting_min_brightness: 30
+      time_delay: 2
+- id: '1775852230350'
+  alias: Beamer — Uplight Front
+  description: When the beamer turns on and Uplight Front is on, remember that and
+    turn it off. When the beamer turns off, restore Uplight Front if it was on before.
+    Uses input_boolean.uplight_front_beamer_restore to track prior state.
+  triggers:
+  - platform: state
+    entity_id: media_player.living_room_tv_2
+    from: 'off'
+    id: beamer_on
+  - platform: state
+    entity_id: media_player.living_room_tv_2
+    to: 'off'
+    id: beamer_off
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: beamer_on
+      - condition: state
+        entity_id: light.uplight_front
+        state: 'on'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.uplight_front_beamer_restore
+      - action: light.turn_off
+        target:
+          entity_id: light.uplight_front
+    - conditions:
+      - condition: trigger
+        id: beamer_off
+      - condition: state
+        entity_id: input_boolean.uplight_front_beamer_restore
+        state: 'on'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: light.uplight_front
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.uplight_front_beamer_restore
+  mode: single
+- id: '1775889176884'
+  alias: Monitoring — Temperature Poller
+  description: Updates room temperature helpers every 10 minutes from Wiser thermostat
+    readings and weather.forecast_home. Only writes when the source is available AND
+    the value has actually changed — prevents unnecessary recorder writes on a resource-constrained
+    Green board.
+  triggers:
+  - platform: time_pattern
+    minutes: /10
+  actions:
+  - if:
+    - condition: template
+      value_template: '{{ state_attr(''climate.office_area'', ''current_temperature'')
+        is not none and (state_attr(''climate.office_area'', ''current_temperature'')
+        | float) != (states(''input_number.monitoring_office_temperature'') | float)
+        }}'
+    then:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.monitoring_office_temperature
+      data:
+        value: '{{ state_attr(''climate.office_area'', ''current_temperature'') |
+          float }}'
+  - if:
+    - condition: template
+      value_template: '{{ state_attr(''climate.living_room_area'', ''current_temperature'')
+        is not none and (state_attr(''climate.living_room_area'', ''current_temperature'')
+        | float) != (states(''input_number.monitoring_living_room_temperature'') |
+        float) }}'
+    then:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.monitoring_living_room_temperature
+      data:
+        value: '{{ state_attr(''climate.living_room_area'', ''current_temperature'')
+          | float }}'
+  - if:
+    - condition: template
+      value_template: '{{ state_attr(''climate.kitchen_area'', ''current_temperature'')
+        is not none and (state_attr(''climate.kitchen_area'', ''current_temperature'')
+        | float) != (states(''input_number.monitoring_kitchen_temperature'') | float)
+        }}'
+    then:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.monitoring_kitchen_temperature
+      data:
+        value: '{{ state_attr(''climate.kitchen_area'', ''current_temperature'') |
+          float }}'
+  - if:
+    - condition: template
+      value_template: '{{ state_attr(''weather.forecast_home'', ''temperature'') is
+        not none and (state_attr(''weather.forecast_home'', ''temperature'') | float)
+        != (states(''input_number.monitoring_outdoor_temperature'') | float) }}'
+    then:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.monitoring_outdoor_temperature
+      data:
+        value: '{{ state_attr(''weather.forecast_home'', ''temperature'') | float
+          }}'
+  mode: single
+- id: '1776071743294'
+  alias: Zocci – Deep Clean Reminder
+  description: When coffees hit a multiple of 50, sends an immediate notification
+    and flags that a deep clean is needed.
+  triggers:
+  - platform: template
+    value_template: '{% set count = states(''sensor.zocci_total_coffees_made'') |
+      int(0) %}
+
+      {{ count > 0 and count % 50 == 0 }}'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.zocci_deep_clean_needed
+  - action: notify.mobile_app_edphone
+    data:
+      title: ☕ Zocci – Deep Clean Required
+      message: '{{ states(''sensor.zocci_total_coffees_made'') }} coffees made. Time
+        to deep clean the Zocci!'
+  mode: single
+- id: '1776073051943'
+  alias: Zocci – Mark Clean Done
+  description: When the Zocci records a new last_cleaning_time, clear the deep-clean-needed
+    flag.
+  triggers:
+  - platform: state
+    entity_id: sensor.zocci_last_cleaning_time
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.to_state.state not in [''unknown'', ''unavailable'']
+      }}'
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.zocci_deep_clean_needed
+  mode: single
+- id: '1776073068482'
+  alias: Zocci – Daily Clean Reminder
+  description: Every morning at 08:00, if a deep clean is still outstanding, send
+    a reminder.
+  triggers:
+  - platform: time
+    at: 08:00:00
+  conditions:
+  - condition: state
+    entity_id: input_boolean.zocci_deep_clean_needed
+    state: 'on'
+  actions:
+  - action: notify.mobile_app_edphone
+    data:
+      title: ☕ Zocci – Deep Clean Still Needed
+      message: 'Reminder: the Zocci needs a deep clean ({{ states(''sensor.zocci_total_coffees_made'')
+        }} coffees made).'
+  mode: single
+- id: '1776090257789'
+  alias: Vacation Mode – Activate
+  description: 'When vacation mode is switched on: snapshot current heating targets,
+    set all zones to 16°C (frost protection), and notify Edgar. Zocci must be disabled
+    manually in the La Marzocco app (API does not support remote control).'
+  triggers:
+  - entity_id: input_boolean.vacation_mode
+    to: 'on'
+    platform: state
+  conditions: []
+  actions:
+  - alias: Snapshot current heating states for later restore
+    action: scene.create
+    data:
+      scene_id: vacation_mode_heating_restore
+      snapshot_entities:
+      - climate.office_area
+      - climate.living_room_area
+      - climate.kitchen_area
+  - alias: Set Office to 16°C
+    action: climate.set_temperature
+    target:
+      entity_id: climate.office_area
+    data:
+      temperature: 16
+  - alias: Set Living Room to 16°C
+    action: climate.set_temperature
+    target:
+      entity_id: climate.living_room_area
+    data:
+      temperature: 16
+  - alias: Set Kitchen to 16°C
+    action: climate.set_temperature
+    target:
+      entity_id: climate.kitchen_area
+    data:
+      temperature: 16
+  - alias: Notify – Vacation mode activated
+    action: notify.mobile_app_edphone
+    data:
+      title: Vacation Mode On
+      message: 'Heating set to 16°C in all zones. Mode ends: {{ states(''input_datetime.vacation_mode_end'')
+        }}. ⚠️ Disable the Zocci auto schedule manually in the La Marzocco app.'
+  mode: single
+- id: '1776090277293'
+  alias: Vacation Mode – End
+  description: Fires at the configured vacation end date/time. Simply turns vacation
+    mode off — the Vacation Mode Deactivate automation handles restoration and notification
+    for both this path and manual cancellation.
+  triggers:
+  - trigger: time
+    at: input_datetime.vacation_mode_end
+  conditions:
+  - condition: state
+    entity_id: input_boolean.vacation_mode
+    state: 'on'
+  actions:
+  - alias: Turn vacation mode off — triggers Deactivate automation
+    action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.vacation_mode
+  mode: single
+- id: '1776091280740'
+  alias: Vacation Mode – Deactivate
+  description: Fires whenever vacation mode is turned off (manually or by the End
+    automation). Restores heating to pre-vacation states and notifies Edgar. Zocci
+    schedule must be re-enabled manually in the La Marzocco app (API does not support
+    remote control).
+  triggers:
+  - entity_id: input_boolean.vacation_mode
+    to: 'off'
+    platform: state
+  conditions: []
+  actions:
+  - alias: Restore heating to pre-vacation states
+    action: scene.turn_on
+    target:
+      entity_id: scene.vacation_mode_heating_restore
+    continue_on_error: true
+  - alias: Notify – Vacation mode ended
+    action: notify.mobile_app_edphone
+    data:
+      title: Vacation Mode Off
+      message: Welcome back! Heating restored to pre-vacation settings. ⚠️ Remember
+        to re-enable the Zocci schedule in the La Marzocco app.
+  mode: single
+- id: '1776091296974'
+  alias: Vacation Mode – Zocci Warning
+  description: While vacation mode is active, if Zocci turns on (schedule fired despite
+    vacation mode), send a push notification warning Edgar to disable the schedule
+    in the La Marzocco app.
+  triggers:
+  - trigger: state
+    entity_id: switch.zocci
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.vacation_mode
+    state: 'on'
+  actions:
+  - alias: Notify – Zocci turned on during vacation
+    action: notify.mobile_app_edphone
+    data:
+      title: ⚠️ Zocci On During Vacation
+      message: Zocci has turned on while vacation mode is active. Please disable the
+        auto on/off schedule in the La Marzocco app.
+  mode: single
+- id: '1776189556144'
+  alias: Late Night Light Shutoff — No Motion Check
+  description: Turns off kitchen, living room, and office lights at 23:00 and 00:00
+    if no motion has been detected in any monitored area for the past 30 minutes.
+    Uses Kitchen and Office sensors directly; Entrance and Hall/Upstairs sensors as
+    proxies for the Living Room (which has no dedicated motion sensor).
+  triggers:
+  - platform: time
+    at: '23:00:00'
+  - platform: time
+    at: 00:00:00
+  conditions:
+  - condition: template
+    value_template: "{{\n  (states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state
+      == 'off' and\n   (now() - states['binary_sensor.eve_motion_20eby9901_occupancy_2'].last_changed).total_seconds()
+      > 1800) and\n  (states['binary_sensor.office_motion_sensors'].state == 'off'
+      and\n   (now() - states['binary_sensor.office_motion_sensors'].last_changed).total_seconds()
+      > 1800) and\n  (states['binary_sensor.entrance_motion_sensors'].state == 'off'
+      and\n   (now() - states['binary_sensor.entrance_motion_sensors'].last_changed).total_seconds()
+      > 1800) and\n  (states['binary_sensor.eve_motion_20eby9901_occupancy'].state
+      == 'off' and\n   (now() - states['binary_sensor.eve_motion_20eby9901_occupancy'].last_changed).total_seconds()
+      > 1800)\n}}"
+  actions:
+  - action: light.turn_off
+    target:
+      entity_id:
+      - light.kitchen_lights
+      - light.living_room_lights
+      - light.office_lights
+  mode: single
