@@ -1,0 +1,18 @@
+---
+# Dashboard support sensors
+# Live computed values used for at-a-glance display in BubbleDash.
+# These are intentionally simple — they reflect current state, not history.
+# Do not add historical/trend sensors here; use InfluxDB + Grafana for that.
+
+template:
+  - sensor:
+      - name: "Lights On Count"
+        # Counts how many light entities are currently on. Used as a summary
+        # badge on the BubbleDash Lighting view. Updates on every light state change.
+        unique_id: lights_on_count
+        icon: mdi:lightbulb-group
+        unit_of_measurement: "on"
+        state: >
+          {{ states.light
+             | selectattr('state', 'eq', 'on')
+             | list | count }}
