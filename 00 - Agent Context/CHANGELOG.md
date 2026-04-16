@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-04-16 — Git + SSH deploy workflow setup
+
+Introduced git-tracked config management for the HA setup. No automations changed.
+
+**What was set up:**
+- `git init` on this project folder — initial commit of all existing context, agents, and archive files
+- SSH key auth to HA Green (`~/.ssh/ha_green`, `ssh ha` alias) — passwordless access confirmed
+- `/config/packages/` directory created on HA Green; `configuration.yaml` updated with `homeassistant: packages: !include_dir_named packages`
+- Pre-commit hook: blocks commits with YAML syntax errors or automations missing `description:` (enforced on `config/packages/` files only)
+- `deploy.sh`: single command to validate → scp → `ha core check` → reload; auto-rollbacks if config check fails
+- Baseline snapshot of `automations.yaml`, `scripts.yaml`, `scenes.yaml` committed to `config/`
+- `INSTRUCTIONS.md` updated: file conventions, Gate 3 pipeline (Step 4 = write+commit, Step 5 = deploy.sh, Steps 6–11 shifted), session end now includes git commit
+
+**Decision recorded**: DECISIONS.md 2026-04-16 — git+SSH deploy over MCP writes; CI/CD pipeline ruled out.
+
+**No HA restart needed** — `configuration.yaml` change (packages dir) takes effect on next restart; packages dir is empty so no impact until first package file is deployed.
+
+---
+
 ## 2026-04-16 — Context compaction
 
 - 6 entries summarised → Activity Log (BubbleDash v1, agent workflow, Zocci cleanup, Zocci deep clean, monitoring teardown, context compaction meta-entry dropped)

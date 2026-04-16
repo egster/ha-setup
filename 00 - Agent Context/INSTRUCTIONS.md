@@ -11,12 +11,13 @@
 
 ### File conventions:
 - All planning/research docs: save to this folder as `.md` files
-- Automation configs are managed live via the HA MCP (not stored as YAML files here)
+- **New automations, helpers, and scripts** are written as YAML files in `config/packages/` and deployed via `deploy.sh`. They are git-tracked.
+- `config/automations.yaml` / `scripts.yaml` / `scenes.yaml` are legacy HA UI exports — kept as reference snapshots, not edited directly.
 - Use descriptive filenames: `2026-04-10_motion_light_improvements.md`
 
 ## What this folder is for
 This is the working folder for managing, planning, and improving the Home Assistant setup. The primary outputs are:
-- Automation configs (created/edited directly via HA MCP)
+- Automation configs (written to `config/packages/`, deployed via SSH)
 - Documentation of decisions, structure, and open issues
 - Planning notes for new automations, dashboards, and integrations
 
@@ -99,35 +100,44 @@ Only after Edgar confirms Gate 2. Execute the pipeline below in fixed order. Do 
 - A `false` result is not a failure — it confirms syntax is valid and condition is evaluating correctly
 - Halt on any error — fix the template before continuing
 
-**Step 4 — Apply**
-`ha_config_set_automation` / `ha_config_set_helper` / appropriate MCP tool.
+**Step 4 — Write & commit**
+Write the final YAML to `config/packages/<logical_group>.yaml` (e.g. `vacation_mode.yaml`, `motion_lights.yaml`).
+Commit to git: `git commit -m "feat: <description>"`.
+The pre-commit hook validates YAML syntax and enforces the `description:` field automatically — fix any failures before proceeding.
 
-**Step 5 — Verify**
-Re-read the config with `ha_config_get_automation` (or equivalent).
-Confirm alias, triggers, conditions, and actions exactly match what was written.
+**Step 5 — Deploy**
+Run `./deploy.sh config/packages/<file>.yaml`.
+The script: validates locally → SCPs to `/config/packages/` on the board → runs `ha core check` → triggers reload.
+If `ha core check` fails, the script rolls back (removes the file from the board) automatically.
 
-**Step 6 — Test action**
+**Step 6 — Verify**
+`ha_config_get_automation` (or equivalent MCP read) to confirm the entity is live.
+Alias, triggers, conditions, and actions must match what was written.
+
+**Step 7 — Test action**
 Call the service the automation/script would call, targeting the exact same entities.
 Confirm they respond correctly. Confirm no unintended entities changed state.
 
-**Step 7 — Check traces and logbook**
+**Step 8 — Check traces and logbook**
 `ha_get_automation_traces` — confirm no errors on the new automation.
-`ha_get_logbook` — confirm only intended entities changed state during the Step 6 test.
+`ha_get_logs` — confirm only intended entities changed state during the Step 7 test.
 
-**Step 8 — ⛔ HUMAN APPROVAL GATE**
-HA config was modified. `ha_restart` is required.
+**Step 9 — ⛔ HUMAN APPROVAL GATE**
+If a full HA restart is required (e.g. `configuration.yaml` changed, or a new integration added):
 **Stop. Wait for Edgar's explicit confirmation before restarting. Do not proceed.**
 
-**Step 9 — Restart**
+**Step 10 — Restart (if needed)**
 After Edgar confirms: `ha_check_config` to validate, then `ha_restart(confirm=True)`.
+Most package file changes only require `ha core reload-all` (already handled by `deploy.sh`) — restart is not needed.
 
-**Step 10 — Post-restart verification**
+**Step 11 — Post-deploy verification**
 Search for the changed entity to confirm it is present and enabled.
 `ha_get_system_health` spot-check — no critical errors.
 
 **Rollback at any point:**
-If any step fails after Step 4 (apply): `ha_config_remove_automation` (or equivalent) to undo.
-If uncertain about system state after Step 9: restore from Step 1 backup via `ha_backup_restore`.
+- If Step 5 deploy fails: the script auto-rolls back. No further action needed.
+- If Step 6–8 reveals a problem: `ssh ha "rm /config/packages/<file>.yaml"` + `ha core reload-all`, then `git revert`.
+- If uncertain about system state after Step 10: restore from Step 1 backup via `ha_backup_restore`.
 
 ---
 
@@ -179,5 +189,6 @@ At the end of every session where files are created, modified, or deleted — or
 1. **Update `CHANGELOG.md`** — log: date, what was done, which entities/automations were affected, and any open questions.
 2. **Update `DECISIONS.md`** — if a decision was made that changes how future work will be done (tool choice, architectural pattern, workaround rationale), add a row.
 3. **Update `LAST_UPDATED`** — overwrite with today's date (`YYYY-MM-DD`).
+4. **Git commit** — commit all modified `00 - Agent Context/` files with message `docs: session end YYYY-MM-DD — <one-line summary>`.
 
 This is the agent's responsibility, not Edgar's.
