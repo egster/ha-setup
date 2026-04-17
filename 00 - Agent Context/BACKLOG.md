@@ -6,6 +6,30 @@ _Last reviewed: 2026-04-17_
 
 ## 🏠 Automations & Logic
 
+### 🔴 High
+
+#### Goodnight Kill Switch
+**Added**: 2026-04-17
+**Status**: Backlog — not started
+**What it does**: A single script/button that kills all lights, turns off TV/media, and sets ACs to night setpoints. Excludes hall upstairs lights (so you can still see walking to bed). Triggerable from dashboard, voice (Alexa/Google), or a remote button.
+**Scope**: Script + optional automation for voice trigger. No new helpers expected.
+**Effort**: ~30 min.
+
+#### Weather-Aware Room Heating
+**Added**: 2026-04-17
+**Status**: Backlog — not started
+**What it does**: Uses motion sensors (present in almost every room) to detect unoccupied rooms and lower AC setpoints after ~30 min of no motion. Motion resumes → restore previous setpoint. Weather-aware: on nice/warm forecast days, target temps are set lower; on cold/overcast/rainy days, temps are set a bit higher. Uses `weather.forecast_home` (met.no) or Panasonic outdoor temp sensor for forecast data.
+**Scope**: Likely needs `input_number` helpers per room for target temps, plus a weather-condition template. Touches all 4 Panasonic AC units. Recorder impact needs discussion (4 rooms × helpers).
+**Complexity**: Medium-high — weather logic, per-room state tracking, setpoint restore. Worth a research-advisor pass at Gate 1.
+**Effort**: ~2–3 hrs.
+
+#### Low Battery Alerts
+**Added**: 2026-04-17
+**Status**: Backlog — not started
+**What it does**: Single automation that monitors all `sensor.*_battery` entities. Fires a notification when any device drops below 15%. Set-and-forget — covers all Zigbee motion sensors, remotes, and any future battery devices automatically.
+**Scope**: One automation, no helpers. Uses a numeric_state trigger with a template or a group.
+**Effort**: ~20 min.
+
 ### 🟡 Medium
 
 #### Pomodoro Desk Timer
@@ -117,6 +141,12 @@ Given the presence of Panasonic AC in every room + full lighting control, a bedt
 #### Beamer Automation — Extend to More Lights
 Currently only Uplight Front. Consider extending to Uplight Back Left/Right, possibly dim Triple Light. Could also add: sunset condition (skip daytime), brightness/colour temp target.
 
+#### Movie Mode Enhancement
+**Added**: 2026-04-17
+**Status**: Backlog — parked. Check after BubbleDash scene buttons are fully wired.
+**What it does**: Extend existing `script.movie_mode` to also: dim all non-LR lights, set LR AC to comfort temp, pause kitchen motion lights (so getting a snack doesn't blast you with light on return).
+**Effort**: ~30 min (incremental on existing script).
+
 #### Bedroom Automation
 No motion light in the master bedroom currently (lights are on the wall switch → Hue bulbs switched off = unavailable). Bedroom remote mapping exists. Is there anything else wanted here?
 
@@ -124,7 +154,7 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 ## 🖥️ Dashboard (BubbleDash)
 
-*Current state: v3 room-first rebuild deployed 2026-04-17. 5 views (Home / Lights / Heating / Media / Settings). Rounded-Bubble theme active. Kiosk mode wired.*
+*Current state: v4 visual overhaul deployed 2026-04-17. 5 views (Home / Lights / Heating / Media / Settings). Rounded-Bubble dark theme, Poppins font, navbar-card sidebar, card-mod. Home view: 2-column layout with greeting+map+weather left, room cards right.*
 
 ### 🟡 Medium
 
@@ -142,10 +172,10 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 ### 🟢 Low / Nice to Have
 
-#### BD-7 — `navbar-card` for mobile
-**What**: Install `navbar-card` from HACS. Replaces top tab bar with a bottom navigation bar — thumbs reach it naturally on phone.
-**Why**: Material/iOS-style nav UX. Worth it if BubbleDash is used primarily on phone.
-**Effort**: ~1 hr (HACS install + nav config). Decide based on primary device.
+#### BD-10 — Navbar styling refinements
+**What**: Add labels, notification badges (lights count, security), and accent colors to the navbar-card routes. Match the jlnbln example's sidebar look more closely.
+**Why**: Current navbar has icons only, no labels or badges. The example has colored icons with notification counts.
+**Effort**: ~30 min.
 
 ---
 
@@ -213,7 +243,7 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 
 ## ✅ Completed
 
-- **2026-04-17 — BubbleDash v3 room-first rebuild** — Complete dashboard rebuild: 5 views (Home/Lights/Heating/Media/Settings), room-first Home landing with full-room popups (lights+climate+media+sensors), scene buttons (Bright/Relax/Movie/Off) in LR popup, 2 new scripts (`script.movie_mode`, `script.lr_relax`). Supersedes BD-1 (theme), BD-2 (kiosk), BD-3 (lights chip), BD-4 (scene buttons), BD-6 (favourites landing), BD-8 (room-first rethink).
+- **2026-04-17 — BubbleDash v4 visual overhaul** — Rounded-Bubble dark theme + Poppins font + card-mod + navbar-card sidebar. Home view restructured: 2-column layout with greeting/weather/map/person left, room cards right. Supersedes BD-1 (theme), BD-2 (kiosk), BD-3 (lights chip), BD-4 (scene buttons), BD-6 (favourites landing), BD-7 (navbar), BD-8 (room-first rethink). Scripts: `script.movie_mode`, `script.lr_relax`.
 - **2026-04-16 — Vacation Mode scene persistence fix** — Migrated 4 automations from UI to `config/packages/vacation_mode.yaml`. Replaced `scene.create` with 3 `input_text` helpers (`vacation_restore_{office,living_room,kitchen}`) that survive HA restarts. Pre-seeded with current setpoints.
 - **2026-04-16 — Zocci + Beamer fixes deployed** — 3 automations migrated from UI to 2 packages. Deep-clean reminder anchored to `input_number.zocci_coffees_at_last_clean` (bootstrap: 61). Beamer uplight 10s debounce on both triggers. Stuck `zocci_deep_clean_needed` cleared.
 - **2026-04-16 — Git+SSH deploy workflow** — git init, SSH key auth to Green board (`ssh ha`), `/config/packages/` dir on HA, pre-commit hook (YAML syntax + description field), `deploy.sh` one-command deploy. All infra live.

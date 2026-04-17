@@ -5,35 +5,31 @@
 ---
 
 
-## 2026-04-17 — BubbleDash v3: complete room-first rebuild
+## 2026-04-17 — BubbleDash v3→v4: room-first rebuild + visual overhaul
 
 ### What was done
 
-**Dashboard scripts deployed** (`config/packages/dashboard_scripts.yaml`)
-- 2 new scripts: `script.movie_mode` (ceiling off, uplights dim warm, table lamp low) and `script.lr_relax` (ceiling off, all lamps medium warm). Used by scene buttons in LR popup.
-- Deployed via `deploy.sh` + explicit `script.reload` (deploy.sh's `ha core reload-all` doesn't cover the script domain).
+**Session 1 — v3 room-first rebuild**
+- 2 new scripts deployed: `script.movie_mode`, `script.lr_relax` (`config/packages/dashboard_scripts.yaml`).
+- Dashboard rebuilt from scratch: 5 views (Home / Lights / Heating / Media / Settings), room-first Home landing with full-room popups, scene buttons in LR popup.
 
-**BubbleDash dashboard rebuilt from scratch** (HA storage, `dashboard-bubbledash`)
-- Replaced v2 (4 entity-type tabs) with v3 (5-view room-first hybrid).
-- **View 1 — Home** (new landing): 5 room slider cards (Kitchen, Living Room, Office, Bedroom, Upstairs) with climate sub-buttons. Tap opens full-room popups containing lights + climate + media + sensors. Quick actions row (All Off + Movie Mode).
-- **View 2 — Lights**: 10 room sliders + 9 lights-only popups. Scene buttons (Bright/Relax/Movie/Off) added to Living Room popup.
-- **View 3 — Heating**: Streamlined — 4 climate cards + vacation toggle + thermostat popups with 48h history. Removed redundant state button row.
-- **View 4 — Media**: Unchanged (Sonos, HomePod, VisionMaster Pro, Jona, Upstairs).
-- **View 5 — Settings** (renamed from Home): Presence, Zocci, System, Weather, Kiosk toggle.
-- Built via 3 `python_transform` calls for reliability (Stage 1: insert Home view, Stage 2: modify existing views, Stage 3: clean emoji from titles).
-- Final config: 43,486 bytes, config_hash `236a6462315fc6fd`.
+**Session 2 — v4 visual overhaul (inspired by jlnbln/My-HA-Dashboard)**
+- **Rounded-Bubble dark theme**: Updated `/config/themes/rounded-bubble.yaml` with Poppins font, card-mod-root CSS (navbar sidebar padding + font import), full contrast scale. Applied to all 5 views.
+- **HACS installed**: `card-mod` (v4.2.1), `navbar-card` (v1.5.0). Resources auto-registered.
+- **navbar-card**: Added to all 5 views for sidebar navigation (desktop) / bottom bar (mobile).
+- **Home view restructured** into 2-column layout (`max_columns: 4`):
+  - Left panel (column_span 2): navbar, greeting card (time-based Jinja2 + weather summary), weather/lights chips, map card (person.edgar, dark mode), quick actions (All Off + Movie), person card (Edgar + battery) + vacation toggle.
+  - Right panel (column_span 2): "Rooms" separator, 5 room slider cards, all 5 room popups.
+- Badges removed from Home view (info now in left panel content).
 
 ### Not implemented (deferred)
-- Color temp sliders (BD-5) — planned but not included in final transforms. Remains as enhancement.
-- Pomodoro dashboard controls — helpers not yet deployed.
-- navbar-card — tab bar sufficient for 5 views.
-
-### Backup
-Automated backups in place. Manual `ha_backup_create` timed out twice (non-blocking — dashboard is HA storage, fully reversible).
+- Color temp sliders (BD-5) — ready to add incrementally.
+- Pomodoro dashboard controls — blocked by helper deploy.
 
 ### Entities affected
 - **New**: `script.movie_mode`, `script.lr_relax`
-- **Modified**: `dashboard-bubbledash` (full replacement)
+- **Modified**: `dashboard-bubbledash` (full replacement → v4), `/config/themes/rounded-bubble.yaml`
+- **HACS**: `card-mod`, `navbar-card` installed
 - **No new helpers** — zero recorder impact.
 
 ---
