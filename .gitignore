@@ -26,3 +26,4 @@ secrets.yaml
 00 - Agent Context/.backup/
 00 - Agent Context/healthcheck*.json
 00 - Agent Context/healthcheck*.md
+Archive/
