@@ -1,6 +1,6 @@
 # Improvement Backlog
 
-_Last reviewed: 2026-04-16_
+_Last reviewed: 2026-04-17_
 
 ---
 
@@ -124,42 +124,21 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 ## 🖥️ Dashboard (BubbleDash)
 
-*Inspiration: [jlnbln/My-HA-Dashboard](https://github.com/jlnbln/My-HA-Dashboard) — Rounded-Bubble theme, navbar-card, room-first layout, chip summary row.*
-
-### 🔴 High
-
-#### BD-1 — Apply Rounded-Bubble theme
-**What**: Install [rounded-bubble.yaml](https://github.com/jlnbln/My-HA-Dashboard/blob/main/rounded-bubble.yaml) as a HA theme. Sets Poppins font, full contrast scale, correct Bubble Card CSS variables (`bubble-border-radius`, `bubble-main-background-color`, etc.).
-**Why**: Highest visual ROI — transforms the look with zero structural changes to the dashboard.
-**Effort**: ~30 min (HACS theme install + set theme on dashboard).
-
-#### BD-2 — Kiosk mode
-**What**: Install `kiosk-mode` from HACS + `input_boolean.kiosk_mode` helper. Hides HA header/sidebar chrome. Toggle off in edit mode.
-**Why**: Makes BubbleDash feel like a native app rather than a browser page.
-**Effort**: ~15 min.
+*Current state: v3 room-first rebuild deployed 2026-04-17. 5 views (Home / Lights / Heating / Media / Settings). Rounded-Bubble theme active. Kiosk mode wired.*
 
 ### 🟡 Medium
-
-#### BD-3 — Lights-on summary chip
-**What**: Template sensor counting `states.light | selectattr('state', 'eq', 'on') | count`. Display as a Bubble Card `chip` at the top of the Lighting view.
-**Why**: At-a-glance status without opening a tab.
-**Effort**: ~20 min (template sensor + chip card).
-**Note**: Template sensor adds to recorder — check if InfluxDB already has it first.
-
-#### BD-4 — Scene buttons in Living Room popup
-**What**: Add 4 preset buttons inside `#lights-livingroom` popup: **Bright / Relax / Movie / Off**. Movie dims mains, turns on uplights. Calls `light.turn_on` with preset brightness/color_temp values — no scene entity needed.
-**Why**: Single-tap mood switching without leaving the dashboard.
-**Effort**: ~30 min.
 
 #### BD-5 — Color temperature sliders in popups
 **What**: Add a `color_temp` slider row to Kitchen, Office, and Living Room popups. Bubble Card supports this natively via `button_type: slider` with `attribute: color_temp`.
 **Why**: Currently on/off + brightness only — color temp is a daily control that requires going to the full entity page.
-**Effort**: ~45 min.
+**Effort**: ~30 min.
+**Note**: Was in the v3 rebuild plan but not included in the final transforms. Ready to add as an incremental update.
 
-#### BD-6 — Favourites landing tab
-**What**: New tab as the default view with 6–8 hand-picked controls: Kitchen main, Living Room table lamp, Office desk, all-off button, current heating overview, movie scene button. Replaces Lighting as the landing tab.
-**Why**: 80% of daily use in one screen, zero extra taps.
-**Effort**: ~45 min.
+#### BD-9 — Pomodoro controls in Office popup
+**What**: Add toggle + timer display for `input_boolean.pomodoro_active` in `#room-office` popup.
+**Why**: Pomodoro automation is approved but parked — needs a dashboard trigger before deploy.
+**Blocked by**: Pomodoro helpers not yet deployed (see Automations section).
+**Effort**: ~15 min (after helpers exist).
 
 ### 🟢 Low / Nice to Have
 
@@ -167,11 +146,6 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 **What**: Install `navbar-card` from HACS. Replaces top tab bar with a bottom navigation bar — thumbs reach it naturally on phone.
 **Why**: Material/iOS-style nav UX. Worth it if BubbleDash is used primarily on phone.
 **Effort**: ~1 hr (HACS install + nav config). Decide based on primary device.
-
-#### BD-8 — Room-first structural rethink
-**What**: Replace 4 entity-type tabs (Lighting / Heating / Media / Home) with room-based cards on a single view. Each room = one Bubble Card opening a popup with lights + AC + media together.
-**Why**: The inspiration's key structural difference — fewer mental context switches.
-**Effort**: ~2 hrs. Major restructure; do BD-1 through BD-6 first and live with them before committing.
 
 ---
 
@@ -216,7 +190,7 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 #### Update `deploy.sh` to auto-reload input helper domains
 **Added**: 2026-04-16
 **Why**: Today's Zocci+Beamer and Vacation Mode deploys both hit the same snag — `ha core reload-all` (what `deploy.sh` calls) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Had to call `input_number.reload` / `input_text.reload` / `automation.reload` manually via MCP after each deploy.
-**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains `input_number:`, `input_text:`, `input_boolean:`, `input_datetime:`, or `input_select:` top-level keys, issue the corresponding `reload` service call over the HA API. Also unconditionally call `automation.reload`.
+**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains `input_number:`, `input_text:`, `input_boolean:`, `input_datetime:`, `input_select:`, or `script:` top-level keys, issue the corresponding `reload` service call over the HA API. Also unconditionally call `automation.reload`.
 **Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
 **Effort**: ~20 min.
 
@@ -239,6 +213,7 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 
 ## ✅ Completed
 
+- **2026-04-17 — BubbleDash v3 room-first rebuild** — Complete dashboard rebuild: 5 views (Home/Lights/Heating/Media/Settings), room-first Home landing with full-room popups (lights+climate+media+sensors), scene buttons (Bright/Relax/Movie/Off) in LR popup, 2 new scripts (`script.movie_mode`, `script.lr_relax`). Supersedes BD-1 (theme), BD-2 (kiosk), BD-3 (lights chip), BD-4 (scene buttons), BD-6 (favourites landing), BD-8 (room-first rethink).
 - **2026-04-16 — Vacation Mode scene persistence fix** — Migrated 4 automations from UI to `config/packages/vacation_mode.yaml`. Replaced `scene.create` with 3 `input_text` helpers (`vacation_restore_{office,living_room,kitchen}`) that survive HA restarts. Pre-seeded with current setpoints.
 - **2026-04-16 — Zocci + Beamer fixes deployed** — 3 automations migrated from UI to 2 packages. Deep-clean reminder anchored to `input_number.zocci_coffees_at_last_clean` (bootstrap: 61). Beamer uplight 10s debounce on both triggers. Stuck `zocci_deep_clean_needed` cleared.
 - **2026-04-16 — Git+SSH deploy workflow** — git init, SSH key auth to Green board (`ssh ha`), `/config/packages/` dir on HA, pre-commit hook (YAML syntax + description field), `deploy.sh` one-command deploy. All infra live.

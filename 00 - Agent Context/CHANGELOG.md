@@ -5,6 +5,40 @@
 ---
 
 
+## 2026-04-17 — BubbleDash v3: complete room-first rebuild
+
+### What was done
+
+**Dashboard scripts deployed** (`config/packages/dashboard_scripts.yaml`)
+- 2 new scripts: `script.movie_mode` (ceiling off, uplights dim warm, table lamp low) and `script.lr_relax` (ceiling off, all lamps medium warm). Used by scene buttons in LR popup.
+- Deployed via `deploy.sh` + explicit `script.reload` (deploy.sh's `ha core reload-all` doesn't cover the script domain).
+
+**BubbleDash dashboard rebuilt from scratch** (HA storage, `dashboard-bubbledash`)
+- Replaced v2 (4 entity-type tabs) with v3 (5-view room-first hybrid).
+- **View 1 — Home** (new landing): 5 room slider cards (Kitchen, Living Room, Office, Bedroom, Upstairs) with climate sub-buttons. Tap opens full-room popups containing lights + climate + media + sensors. Quick actions row (All Off + Movie Mode).
+- **View 2 — Lights**: 10 room sliders + 9 lights-only popups. Scene buttons (Bright/Relax/Movie/Off) added to Living Room popup.
+- **View 3 — Heating**: Streamlined — 4 climate cards + vacation toggle + thermostat popups with 48h history. Removed redundant state button row.
+- **View 4 — Media**: Unchanged (Sonos, HomePod, VisionMaster Pro, Jona, Upstairs).
+- **View 5 — Settings** (renamed from Home): Presence, Zocci, System, Weather, Kiosk toggle.
+- Built via 3 `python_transform` calls for reliability (Stage 1: insert Home view, Stage 2: modify existing views, Stage 3: clean emoji from titles).
+- Final config: 43,486 bytes, config_hash `236a6462315fc6fd`.
+
+### Not implemented (deferred)
+- Color temp sliders (BD-5) — planned but not included in final transforms. Remains as enhancement.
+- Pomodoro dashboard controls — helpers not yet deployed.
+- navbar-card — tab bar sufficient for 5 views.
+
+### Backup
+Automated backups in place. Manual `ha_backup_create` timed out twice (non-blocking — dashboard is HA storage, fully reversible).
+
+### Entities affected
+- **New**: `script.movie_mode`, `script.lr_relax`
+- **Modified**: `dashboard-bubbledash` (full replacement)
+- **No new helpers** — zero recorder impact.
+
+---
+
+
 ## 2026-04-16 — Zocci+Beamer Gate 3 deploy + Vacation Mode migration (scene persistence fix)
 
 ### What was done
