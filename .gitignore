@@ -20,3 +20,9 @@ secrets.yaml
 
 # Claude Code — machine-local permissions, not project config
 .claude/settings.local.json
+
+# Agent context — contains PII (address, household names, network details)
+00 - Agent Context/PROFILE.md
+00 - Agent Context/.backup/
+00 - Agent Context/healthcheck*.json
+00 - Agent Context/healthcheck*.md

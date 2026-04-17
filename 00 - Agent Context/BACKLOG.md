@@ -183,9 +183,9 @@ No motion light in the master bedroom currently (lights are on the wall switch â
 **Goal**: Organise areas into floors for better navigation and future floor-based automations.
 **Proposed structure**:
 - Ground Floor: Kitchen, Living Room, Office, Entrance, Garage, Pantry (sub of Kitchen)
-- First Floor: Bedroom, Upstairs, Hall (corridor), Jona's Room (Jonathan), Stairs
+- First Floor: Bedroom, Upstairs, Hall (corridor), Jona's Room, Stairs
 - Outdoor: Outdoor, Garden
-**Blocker**: Hall is not yet a formal area. Lennard's room doesn't exist yet.
+**Blocker**: Hall is not yet a formal area. Second child's room doesn't exist yet.
 
 #### "Hall" â€” Create as Formal Area
 **Current state**: Hall Motion Light automation works, but "Hall" isn't a defined HA area. The lights (`light.upstairs_hall_lights`) sit in the Upstairs area.

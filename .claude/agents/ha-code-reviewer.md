@@ -441,7 +441,7 @@ names, file sections. Tie back to PROFILE/DECISIONS facts, not abstractions.
 - MQTT broker exposure (if present).
 
 ### Presence / household
-- Which household members are tracked (currently only Edgar; Jonathan, Lennard not tracked — PROFILE).
+- Which household members are tracked (see PROFILE for current state).
 - Person entities tied to device trackers.
 - Presence automations that assume 1 person.
 

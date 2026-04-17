@@ -182,6 +182,34 @@ At the end of every session where files are created, modified, or deleted — or
 1. **Update `CHANGELOG.md`** — log: date, what was done, which entities/automations were affected, and any open questions.
 2. **Update `DECISIONS.md`** — if a decision was made that changes how future work will be done (tool choice, architectural pattern, workaround rationale), add a row.
 3. **Update `LAST_UPDATED`** — overwrite with today's date (`YYYY-MM-DD`).
+
+---
+
+## Privacy & Public Repo Safety
+
+This repo is **public on GitHub**. Every tracked file is world-readable.
+
+### What must NEVER be committed (enforced by .gitignore)
+- `PROFILE.md` — contains address, household names, network details, device inventory
+- `.backup/` — contains historical copies of PROFILE.md and other context files
+- `healthcheck*.json` / `healthcheck*.md` — contains entity inventory and system internals
+- `secrets.yaml` / `.env` / `*.token` — credentials and API keys
+
+### PII rules for tracked files
+- **No home address, GPS coordinates, or postal codes** in any tracked file
+- **No children's full names** — use nicknames (e.g. "Jona") or roles ("second child") only
+- **No WiFi SSIDs, internal IPs, MAC addresses, or router models**
+- **No credentials** — use `!secret` references in YAML; store values in `secrets.yaml`
+- First names of the primary user (Edgar) are acceptable since the GitHub account is public
+
+### Session-start privacy check
+On every session start, after reading context files, do a quick scan:
+1. Run `git diff --cached --name-only` and `git status` to see what's staged or modified
+2. If any staged/modified file contains patterns matching: street addresses, full children's names (Jonathan, Lennard), SSIDs, internal IPs, passwords, or API keys — **warn Edgar before committing**
+3. If a new file is being added to tracking, verify it doesn't belong in `.gitignore`
+
+### Pre-commit responsibility
+Before every `git commit`, scan the diff for the PII patterns above. If found, **block the commit and alert Edgar** with the specific file and line.
 4. **Git commit** — commit all modified `00 - Agent Context/` files with message `docs: session end YYYY-MM-DD — <one-line summary>`.
 5. **Git push** — `git push` to sync the commit to GitHub (`origin/main`).
 
