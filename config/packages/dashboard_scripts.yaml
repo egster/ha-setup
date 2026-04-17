@@ -1,0 +1,59 @@
+---
+# Dashboard scripts
+# Service-call sequences used by BubbleDash scene buttons.
+# These exist because Bubble Card tap_action supports only a single
+# service call — multi-step presets need a script wrapper.
+
+script:
+  movie_mode:
+    alias: "Movie Mode"
+    description: >-
+      Living Room movie preset. Turns off ceiling, dims uplights to warm
+      glow and table lamp very low. For use with the VisionMaster Pro.
+    sequence:
+      - alias: "Turn off ceiling light"
+        service: light.turn_off
+        target:
+          entity_id: light.living_room_light_woonkamer
+      - alias: "Dim uplights warm"
+        service: light.turn_on
+        target:
+          entity_id:
+            - light.uplight_front
+            - light.uplight_back_left
+            - light.uplight_back_right
+        data:
+          brightness: 40
+          color_temp_kelvin: 2200
+      - alias: "Dim table lamp"
+        service: light.turn_on
+        target:
+          entity_id: light.living_room_dimmer_woonkamer
+        data:
+          brightness: 30
+    mode: single
+    icon: mdi:movie-open
+
+  lr_relax:
+    alias: "Living Room Relax"
+    description: >-
+      Living Room relax preset. Turns off ceiling, dims table lamp and
+      uplights to medium warm.
+    sequence:
+      - alias: "Turn off ceiling light"
+        service: light.turn_off
+        target:
+          entity_id: light.living_room_light_woonkamer
+      - alias: "Dim table and uplights"
+        service: light.turn_on
+        target:
+          entity_id:
+            - light.living_room_dimmer_woonkamer
+            - light.uplight_front
+            - light.uplight_back_left
+            - light.uplight_back_right
+        data:
+          brightness: 128
+          color_temp_kelvin: 2700
+    mode: single
+    icon: mdi:sofa
