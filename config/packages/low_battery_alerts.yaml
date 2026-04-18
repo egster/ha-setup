@@ -67,6 +67,7 @@ automation:
         data:
           title: "🔋 Low Battery"
           message: "{{ low_summary }}"
+          tag: low_battery_alerts
       - action: persistent_notification.create
         data:
           title: "🔋 Low Battery Alert"
