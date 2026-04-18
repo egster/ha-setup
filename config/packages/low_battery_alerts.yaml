@@ -1,0 +1,76 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Low Battery Alerts
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Daily digest scan of every sensor with device_class: battery. Fires one
+# notification at 10:00 listing any device below 15%. Covers all current
+# Zigbee/Matter battery devices (motion sensors, remotes, Eve sensors) and
+# any future battery device automatically — no maintenance as devices are
+# added.
+#
+# Companion-app phone/tablet batteries are excluded by entity_id pattern
+# (no reliable attribute distinguishes them from Zigbee batteries): entity_id
+# containing `iphone`, `ipad`, `pixel`, or `phone` is skipped.
+#
+# Architecture choices (see DECISIONS.md + INSTRUCTIONS.md):
+#   - No helpers → zero recorder impact.
+#   - Time trigger (10:00 daily) → no self-trigger risk, no state-change storm.
+#   - Single automation sends both mobile + persistent HA notification in one
+#     action sequence. Persistent notification uses a fixed notification_id so
+#     each day's digest overwrites yesterday's rather than stacking up.
+#   - mode: single — at most one concurrent run; redundant given a daily time
+#     trigger but explicit for clarity.
+#
+# Entities referenced:
+#   - All sensors with attributes.device_class == 'battery' (discovered at runtime)
+#   - notify.mobile_app_edphone
+#   - persistent_notification (built-in service)
+#
+# Created: 2026-04-18 (BACKLOG 🔴 High — Low Battery Alerts).
+# ──────────────────────────────────────────────────────────────────────────────
+
+automation:
+  - id: "low_battery_alerts_daily"
+    alias: "Low Battery — Daily Digest"
+    description: >-
+      Every day at 10:00, scans all sensors with device_class: battery
+      (excluding companion-app phone/tablet batteries by entity_id pattern)
+      and fires a single digest notification — mobile push plus a persistent
+      HA notification — listing any device below 15%. No helpers, no state-
+      change triggers, no recorder impact. Silent when all batteries are
+      healthy. Set-and-forget: future battery devices are picked up
+      automatically via device_class.
+    mode: single
+    trigger:
+      - platform: time
+        at: "10:00:00"
+    action:
+      - variables:
+          low_summary: >-
+            {% set ns = namespace(items=[]) %}
+            {% for s in states.sensor %}
+              {% if s.attributes.device_class | default('') == 'battery'
+                    and 'iphone' not in s.entity_id
+                    and 'ipad' not in s.entity_id
+                    and 'pixel' not in s.entity_id
+                    and 'phone' not in s.entity_id
+                    and s.state not in ['unknown', 'unavailable', 'none', ''] %}
+                {% if s.state | float(101) < 15 %}
+                  {% set ns.items = ns.items + [s.name ~ ' — ' ~ s.state ~ '%'] %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.items | join('\n') }}
+      - condition: template
+        value_template: "{{ low_summary | length > 0 }}"
+      - action: notify.mobile_app_edphone
+        data:
+          title: "🔋 Low Battery"
+          message: "{{ low_summary }}"
+      - action: persistent_notification.create
+        data:
+          title: "🔋 Low Battery Alert"
+          notification_id: low_battery_alerts
+          message: |-
+            The following devices are below 15%:
+            {{ low_summary }}
