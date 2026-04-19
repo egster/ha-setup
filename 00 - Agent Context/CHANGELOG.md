@@ -5,6 +5,29 @@
 ---
 
 
+## 2026-04-19 — Pomodoro Desk Timer: package committed (branch `claude/review-backlog-K9wUf`)
+
+### What was done
+- Translated the Gate 2-approved Pomodoro YAML (CHANGELOG 2026-04-16) from its parked UI-style snippet in `BACKLOG.md` into `config/packages/pomodoro.yaml`.
+- Package declares 2 helpers (`timer.pomodoro_desk_timer` 25 min, `input_boolean.pomodoro_active`) and 3 automations (Start / Break Time / Reset) with stable numeric IDs `17766000000{01,02,03}` and the `action:` service-call keyword (matching repo style in `vacation_mode.yaml` / `beamer_uplight_front.yaml`).
+- Local sanity checks: `yamllint` (relaxed + 120-col) passes; PyYAML confirms all 3 automations have a `description:` field (the pre-commit rule from CHANGELOG 2026-04-16 lesson #3).
+
+### Not executed in this session (headless GitHub agent — no HA MCP, no SSH to Green)
+- `ha_backup_create`, entity/template validation, `deploy.sh`, `input_boolean.reload`, trace verification, and the BD-9 Bubble Card — all remain for Edgar to run live. Steps documented in the updated BACKLOG entry.
+
+### Entities affected (pending deploy)
+- **New helpers**: `timer.pomodoro_desk_timer`, `input_boolean.pomodoro_active` (2 helpers — well under the 5-per-session recorder-awareness cap).
+- **Reads on deploy**: `light.desk_lights` (already live, used by existing desk scenes).
+
+### Recorder impact
+- `timer` state transitions (active/idle) and a single `input_boolean` are low cardinality — no additional recorder config needed.
+
+### Backups
+- None taken by this agent; pre-deploy backup is Edgar's responsibility at Gate 3 Step 1.
+
+---
+
+
 ## 2026-04-17 — BubbleDash v3→v4: room-first rebuild + visual overhaul
 
 ### What was done
