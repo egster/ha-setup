@@ -101,3 +101,8 @@ automation:
         action: scene.turn_on
         target:
           entity_id: scene.pomodoro_desk_snapshot
+        # Tolerates the edge case where Reset runs before Start has ever
+        # created the snapshot scene (e.g. first-ever toggle-off, or HA
+        # restart mid-session). Legitimate transient-absence use, not the
+        # DECISIONS 2026-04-13 silent-failure anti-pattern.
+        continue_on_error: true
