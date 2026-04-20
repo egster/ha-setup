@@ -32,23 +32,12 @@ _Last reviewed: 2026-04-19_
 
 ### 🟡 Medium
 
-#### Pomodoro Desk Timer
-**Added**: 2026-04-16
-**Status**: Package committed (`config/packages/pomodoro.yaml`, branch `claude/review-backlog-K9wUf`). Live Gate 3 deploy + BD-9 dashboard trigger still to run on Edgar's side.
-**What it does**: Dashboard toggle starts a 25-min countdown. When time is up, desk lights (`light.desk_lights`) go full red. Lights stay red until toggle is flipped off, which restores the pre-session light state via scene snapshot.
-
-**Remaining steps (run live on Edgar's laptop with HA MCP + SSH):**
-1. Merge the branch and run `./deploy.sh config/packages/pomodoro.yaml`.
-2. Post-deploy, call `input_boolean.reload` via MCP (first-time load of the `input_boolean` domain for this entity — `reload-all` doesn't cover it; see CHANGELOG 2026-04-16 lesson #1).
-3. Verify via `ha_get_state` that `timer.pomodoro_desk_timer` and `input_boolean.pomodoro_active` exist and are idle/off.
-4. Manual test: toggle `input_boolean.pomodoro_active` on → confirm `scene.pomodoro_desk_snapshot` is created and timer starts; toggle off → confirm lights restore.
-5. Add BD-9 — Bubble Card control in Office popup (see Dashboard section).
+#### Pomodoro Desk Timer — live on 2026-04-20
+**Status**: Deployed and verified (see CHANGELOG 2026-04-20). Helpers, automations, and BubbleDash Focus-row controls all live. Scene-snapshot caveats still apply (see below) and live manual smoke test (toggle on → timer starts → break-time red → toggle off → lights restore) is still Edgar's responsibility on his own time — no blocker.
 
 **Known caveats:**
 - Scene snapshot doesn't survive HA restart. If HA reboots mid-session, lights stay red until manually corrected. Low risk given 25-min window.
 - Snapshot is taken at session start. Mid-session manual light adjustments won't survive reset.
-
-**Effort remaining**: ~10 min (deploy + reload + smoke test) + ~15 min BD-9 card.
 
 #### Kitchen Remote Mapping — Blueprint fix
 **Problem**: `UndefinedError: 'dict object' has no attribute 'args'` in the `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml` blueprint. RWL022 device IEEE: `00:17:88:01:0c:2a:11:6f`.
@@ -88,12 +77,6 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 **Why**: Currently on/off + brightness only — color temp is a daily control that requires going to the full entity page.
 **Effort**: ~30 min.
 **Note**: Was in the v3 rebuild plan but not included in the final transforms. Ready to add as an incremental update.
-
-#### BD-9 — Pomodoro controls in Office popup
-**What**: Add toggle + timer display for `input_boolean.pomodoro_active` in `#room-office` popup.
-**Why**: Pomodoro automation package is committed — needs a dashboard trigger so sessions can be started/stopped without opening the entity page. Consider a Bubble Card chip bound to the `input_boolean`, plus a template entity row showing `timer.pomodoro_desk_timer` remaining time while active.
-**Blocked by**: Pomodoro helpers must be live in HA first (package deployed via `deploy.sh`, `input_boolean.reload` called).
-**Effort**: ~15 min (after helpers exist).
 
 ### 🟢 Low / Nice to Have
 
