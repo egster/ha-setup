@@ -8,6 +8,17 @@
 3. Read `DECISIONS.md` for load-bearing decisions that shape current choices
 4. Use the Home Assistant MCP to get current state — don't rely on cached data from PROFILE.md for live entity states
 5. Check `BACKLOG.md` for prioritised outstanding tasks
+6. Identify your **environment mode** (see next section) — it determines which Gate 3 steps you can run.
+
+### Environment modes
+
+This repo is operated from two distinct agent environments. Know which you're in before you start, because Gate 3 scope differs.
+
+- **Live session** — Claude Code running on Edgar's laptop with the HA MCP server connected and `ssh ha` reachable. This is the default mode and the only one that can execute the full Gate 3 pipeline (backup, entity validation, template evaluation, `deploy.sh`, trace inspection).
+
+- **GitHub agent** — Claude invoked from a GitHub workflow (branches like `claude/*`). No HA MCP, no SSH to Green. Scope is limited to: writing/editing files, running the tracked pre-commit hook, committing, and pushing. Gate 3 Steps 1–8 **cannot be executed here** — they remain for Edgar to run live after merging the branch. In this mode, CHANGELOG/BACKLOG entries must say "package committed" or "PR open", never "deployed", until the live session catches up.
+
+If you are unsure which mode you're in, check for HA MCP tools (`ha_get_state`, `ha_backup_create`, etc.) in your tool list. If they are absent, you are in GitHub-agent mode.
 
 ### File conventions:
 - All planning/research docs: save to this folder as `.md` files
@@ -29,6 +40,7 @@ Before writing any code:
 - Identify what is being asked and what assumptions are embedded in the request
 - Fetch live HA state via MCP where relevant — never rely on cached PROFILE.md data
 - Use `AskUserQuestion` to surface ambiguities. Do not proceed on assumptions.
+- **Ambiguous verbs** — "finish", "wire up", "sort out", "clean up" — always trigger one round of `AskUserQuestion` before any work starts. Do not infer scope from environment constraints or prior context; ask. (Rule W2, 2026-04-19 meta session.)
 - Challenge weak reasoning or architecturally questionable approaches upfront
 - If a simpler approach exists, say so. Push back when warranted.
 
@@ -53,14 +65,18 @@ Write the complete, ready-to-deploy solution. Then submit it for code review bef
 
 **Code review:**
 
-Invoke the `ha-code-reviewer` subagent. Pass it:
+Invoke the `ha-code-reviewer` subagent. Use `scripts/gate2-review.sh <package-file> "<original request>"` to assemble the prompt — this bundles the original request, full file contents, and pointers to INSTRUCTIONS/DECISIONS/PROFILE automatically. Don't skip the reviewer because prompt assembly feels tedious.
+
+Pass the reviewer:
 1. The original request verbatim
 2. The complete proposed solution (full YAML/config)
 3. The full contents of INSTRUCTIONS.md and PROFILE.md
 
+**A prior APPROVED verdict does NOT transfer across material rewrites.** If you have translated, reformatted, restructured, added IDs, converted keywords (e.g. `service:` → `action:`), or reshaped helper blocks since the previous review, run the reviewer again. Cosmetic/whitespace changes do not require re-review; anything that changes the code the deploy.sh pipeline will validate does. (Rule W1, 2026-04-19 meta session.)
+
 If the reviewer returns **BLOCKED**: do not show the solution to Edgar. Fix every 🚫 finding in the code, then resubmit to the reviewer. Repeat until APPROVED.
 
-If the reviewer returns **APPROVED**: present the solution to Edgar along with the reviewer's findings summary (including any ⚠️ concerns). Wait for Edgar's confirmation before Gate 3.
+If the reviewer returns **APPROVED**: present the solution to Edgar along with the reviewer's findings summary (including any ⚠️ concerns). Wait for Edgar's confirmation before Gate 3. Add a `# Gate 2 reviewed: YYYY-MM-DD` line to the package file's header comment block — the tracked pre-commit hook blocks commits on `config/packages/*.yaml` that lack this line.
 
 ---
 
@@ -96,7 +112,7 @@ Only after Edgar confirms Gate 2. Execute the pipeline below in fixed order. Do 
 **Step 4 — Write & commit**
 Write the final YAML to `config/packages/<logical_group>.yaml` (e.g. `vacation_mode.yaml`, `motion_lights.yaml`).
 Commit to git: `git commit -m "feat: <description>"`.
-The pre-commit hook validates YAML syntax and enforces the `description:` field automatically — fix any failures before proceeding.
+The pre-commit hook (tracked at `scripts/pre-commit`; install once with `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`) validates YAML syntax, enforces the `description:` field on every automation, and blocks any `config/packages/*.yaml` commit that lacks a `# Gate 2 reviewed: YYYY-MM-DD` header line — fix any failures before proceeding.
 
 **Step 5 — Deploy**
 Run `./deploy.sh config/packages/<file>.yaml`.
@@ -182,6 +198,8 @@ At the end of every session where files are created, modified, or deleted — or
 1. **Update `CHANGELOG.md`** — log: date, what was done, which entities/automations were affected, and any open questions.
 2. **Update `DECISIONS.md`** — if a decision was made that changes how future work will be done (tool choice, architectural pattern, workaround rationale), add a row.
 3. **Update `LAST_UPDATED`** — overwrite with today's date (`YYYY-MM-DD`).
+
+**Context files reflect completed state only.** CHANGELOG entries say "package committed, deploy pending" if Gate 3 hasn't run; they say "deployed" only after Gate 3 Steps 6–8 pass. BACKLOG statuses follow the same discipline. Do not write a session-end entry that implies work is further along than it actually is. (Rule W3, 2026-04-19 meta session.)
 
 ---
 

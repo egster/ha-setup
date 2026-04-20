@@ -17,8 +17,7 @@
 # via scene.create and restored on reset. It does NOT survive an HA restart
 # mid-session — in that rare case lights stay red until manually corrected.
 #
-# Gate 2 APPROVED 2026-04-16 (ha-code-reviewer, no blocking findings).
-# Previously parked in backlog pending BubbleDash Office-popup trigger (BD-9).
+# Gate 2 reviewed: 2026-04-19
 # ──────────────────────────────────────────────────────────────────────────────
 
 timer:

@@ -11,6 +11,8 @@
 #   - input_boolean.uplight_front_beamer_restore  (UI-managed helper)
 #
 # Migrated from UI-managed automation → git-tracked package on 2026-04-16.
+#
+# Gate 2 reviewed: 2026-04-16
 # ──────────────────────────────────────────────────────────────────────────────
 
 automation:

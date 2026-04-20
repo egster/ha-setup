@@ -140,6 +140,20 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 
 ## 🔧 Infrastructure & Tooling
 
+### 🔴 High
+
+#### Reviewer rule: `continue_on_error` — transient-absence vs silent-failure (A2)
+**Added**: 2026-04-19 (meta session retro)
+**Status**: High prio, **needs refinement before writing the rule**.
+**Why**: In the 2026-04-19 Pomodoro re-review, the `ha-code-reviewer` correctly distinguished between a legitimate use of `continue_on_error: true` (transient absence — e.g. `scene.pomodoro_desk_snapshot` hasn't been created yet on first run) and the DECISIONS 2026-04-13 anti-pattern (using it to mask a permanently-failing API like La Marzocco). That distinction is encoded in the reviewer's reasoning but NOT in its written anti-pattern table. Next time a different reviewer run might not apply it consistently.
+**What the rule needs to cover (refinement required before adding)**:
+- A positive definition: when is `continue_on_error: true` OK? (Runtime-created entities, best-effort cleanup, optional-dependency services.)
+- A negative definition: when is it an anti-pattern? (Masking a service that fails every time, swallowing errors from a required step, replacing proper `condition:` checks.)
+- A decision heuristic the reviewer can apply in one pass without deep context.
+- Cross-references to DECISIONS 2026-04-13 and the pomodoro.yaml Reset step as exemplars.
+**Open question**: is this one rule or two (one under "Legitimate patterns", one under "Anti-patterns" in the reviewer's table)? Probably two mirrored entries that point at each other.
+**Effort**: ~30 min drafting + one validation pass on an existing package that uses `continue_on_error:` to see whether the rule correctly approves/blocks.
+
 ### 🟡 Medium
 
 #### Update `deploy.sh` to auto-reload input helper domains
@@ -149,10 +163,9 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 **Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
 **Effort**: ~20 min.
 
-#### Track pre-commit hook in the repo
-**Added**: 2026-04-16
-**Why**: `.git/hooks/pre-commit` is local-only (not in git). Today's YAML-parser fix (replacing the regex that over-matched step-level `alias:` with a proper PyYAML automation-list check) would be lost if the repo is re-cloned. Recommend: move the hook to `scripts/pre-commit`, track it, and add a one-liner to the README: `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`.
-**Effort**: ~10 min.
+#### ~~Track pre-commit hook in the repo~~ ✅ done 2026-04-19
+**Added**: 2026-04-16 — **Completed**: 2026-04-19
+**Outcome**: Hook moved to `scripts/pre-commit` (PyYAML-based; checks `description:` on every automation AND a new `# Gate 2 reviewed: YYYY-MM-DD` header line per Rule H2). Install locally with `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`. Documented in INSTRUCTIONS.md Gate 3 Step 4.
 
 #### Test `ha-code-reviewer` agent in real Gate 2 flow
 **Added**: 2026-04-14

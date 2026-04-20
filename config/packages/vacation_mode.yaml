@@ -29,6 +29,8 @@
 # La Marzocco app (see DECISIONS.md 2026-04-13).
 #
 # Migrated from UI-managed automations → git-tracked package on 2026-04-16.
+#
+# Gate 2 reviewed: 2026-04-16
 # ──────────────────────────────────────────────────────────────────────────────
 
 input_text:
