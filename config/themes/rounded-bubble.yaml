@@ -1,4 +1,28 @@
 Rounded-Bubble:
+  # card-mod integration
+  card-mod-theme: Rounded-Bubble
+  card-mod-root-yaml: |
+    .: |
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+      /* Navbar sidebar padding on desktop */
+      @media (min-width: 768px) {
+        :not(.edit-mode) > #view {
+          padding-left: 100px !important;
+        }
+      }
+      /* Navbar bottom bar spacing on mobile */
+      @media (max-width: 767px) {
+        :not(.edit-mode) > hui-view:after {
+          content: "";
+          display: block;
+          height: 180px;
+          width: 100%;
+          background-color: transparent;
+        }
+      }
+  # Typography
+  primary-font-family: "Poppins"
+  secondary-font-family: "Poppins"
   ##BUBBLE CARD
   bubble-border-radius: var(--ha-card-border-radius)
   bubble-main-background-color: var(--contrast2)
