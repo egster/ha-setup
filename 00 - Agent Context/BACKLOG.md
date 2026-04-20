@@ -1,6 +1,6 @@
 # Improvement Backlog
 
-_Last reviewed: 2026-04-17_
+_Last reviewed: 2026-04-19_
 
 ---
 
@@ -34,96 +34,21 @@ _Last reviewed: 2026-04-17_
 
 #### Pomodoro Desk Timer
 **Added**: 2026-04-16
-**Status**: Gate 2 APPROVED — ready to deploy. Parked at Edgar's request to add Bubble dashboard trigger first.
+**Status**: Package committed (`config/packages/pomodoro.yaml`, branch `claude/review-backlog-K9wUf`). Live Gate 3 deploy + BD-9 dashboard trigger still to run on Edgar's side.
 **What it does**: Dashboard toggle starts a 25-min countdown. When time is up, desk lights (`light.desk_lights`) go full red. Lights stay red until toggle is flipped off, which restores the pre-session light state via scene snapshot.
 
-**Still needed before deploy:**
-- Add a Bubble Card button/chip in the Office popup (or a dedicated Pomodoro section) to control `input_boolean.pomodoro_active` — so it can be started/stopped from the dashboard without going to the entity page. Consider showing the remaining timer time on the button (Bubble Card `entity` with a template for countdown display, or a simple toggle chip).
-
-**Approved YAML (Gate 2 sign-off: 2026-04-16):**
-
-*Helpers:*
-```yaml
-# timer.pomodoro_desk_timer
-helper_type: timer
-name: Pomodoro Desk Timer
-icon: mdi:timer
-duration: "00:25:00"
-
-# input_boolean.pomodoro_active
-helper_type: input_boolean
-name: Pomodoro Active
-icon: mdi:timer-outline
-```
-
-*Automations:*
-```yaml
-alias: Pomodoro Desk — Start
-description: >
-  When the Pomodoro toggle is activated, captures a snapshot of the current
-  desk light state (so it can be restored later) and starts the 25-minute
-  countdown. Lights are not changed at this point — only on expiry.
-trigger:
-  - platform: state
-    entity_id: input_boolean.pomodoro_active
-    to: "on"
-condition: []
-action:
-  - service: scene.create
-    data:
-      scene_id: pomodoro_desk_snapshot
-      snapshot_entities:
-        - light.desk_lights
-  - service: timer.start
-    target:
-      entity_id: timer.pomodoro_desk_timer
-mode: single
----
-alias: Pomodoro Desk — Break Time
-description: >
-  Fires when the 25-minute Pomodoro timer expires. Sets desk lights to full
-  red as a visual break alert. Lights stay red until the user resets the
-  toggle — there is no auto-restore.
-trigger:
-  - platform: event
-    event_type: timer.finished
-    event_data:
-      entity_id: timer.pomodoro_desk_timer
-condition: []
-action:
-  - service: light.turn_on
-    target:
-      entity_id: light.desk_lights
-    data:
-      rgb_color: [255, 0, 0]
-      brightness: 255
-mode: single
----
-alias: Pomodoro Desk — Reset
-description: >
-  Fires when the Pomodoro toggle is turned off (either after a break or to
-  cancel a running session). Cancels the timer if still active, then
-  restores the desk lights to the state captured at session start.
-trigger:
-  - platform: state
-    entity_id: input_boolean.pomodoro_active
-    to: "off"
-condition: []
-action:
-  - service: timer.cancel
-    target:
-      entity_id: timer.pomodoro_desk_timer
-  - service: scene.turn_on
-    target:
-      entity_id: scene.pomodoro_desk_snapshot
-mode: single
-```
+**Remaining steps (run live on Edgar's laptop with HA MCP + SSH):**
+1. Merge the branch and run `./deploy.sh config/packages/pomodoro.yaml`.
+2. Post-deploy, call `input_boolean.reload` via MCP (first-time load of the `input_boolean` domain for this entity — `reload-all` doesn't cover it; see CHANGELOG 2026-04-16 lesson #1).
+3. Verify via `ha_get_state` that `timer.pomodoro_desk_timer` and `input_boolean.pomodoro_active` exist and are idle/off.
+4. Manual test: toggle `input_boolean.pomodoro_active` on → confirm `scene.pomodoro_desk_snapshot` is created and timer starts; toggle off → confirm lights restore.
+5. Add BD-9 — Bubble Card control in Office popup (see Dashboard section).
 
 **Known caveats:**
 - Scene snapshot doesn't survive HA restart. If HA reboots mid-session, lights stay red until manually corrected. Low risk given 25-min window.
 - Snapshot is taken at session start. Mid-session manual light adjustments won't survive reset.
 
-**Effort**: ~20 min (deploy + Bubble card).
+**Effort remaining**: ~10 min (deploy + reload + smoke test) + ~15 min BD-9 card.
 
 #### Kitchen Remote Mapping — Blueprint fix
 **Problem**: `UndefinedError: 'dict object' has no attribute 'args'` in the `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml` blueprint. RWL022 device IEEE: `00:17:88:01:0c:2a:11:6f`.
@@ -166,8 +91,8 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 #### BD-9 — Pomodoro controls in Office popup
 **What**: Add toggle + timer display for `input_boolean.pomodoro_active` in `#room-office` popup.
-**Why**: Pomodoro automation is approved but parked — needs a dashboard trigger before deploy.
-**Blocked by**: Pomodoro helpers not yet deployed (see Automations section).
+**Why**: Pomodoro automation package is committed — needs a dashboard trigger so sessions can be started/stopped without opening the entity page. Consider a Bubble Card chip bound to the `input_boolean`, plus a template entity row showing `timer.pomodoro_desk_timer` remaining time while active.
+**Blocked by**: Pomodoro helpers must be live in HA first (package deployed via `deploy.sh`, `input_boolean.reload` called).
 **Effort**: ~15 min (after helpers exist).
 
 ### 🟢 Low / Nice to Have
@@ -215,6 +140,20 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 
 ## 🔧 Infrastructure & Tooling
 
+### 🔴 High
+
+#### Reviewer rule: `continue_on_error` — transient-absence vs silent-failure (A2)
+**Added**: 2026-04-19 (meta session retro)
+**Status**: High prio, **needs refinement before writing the rule**.
+**Why**: In the 2026-04-19 Pomodoro re-review, the `ha-code-reviewer` correctly distinguished between a legitimate use of `continue_on_error: true` (transient absence — e.g. `scene.pomodoro_desk_snapshot` hasn't been created yet on first run) and the DECISIONS 2026-04-13 anti-pattern (using it to mask a permanently-failing API like La Marzocco). That distinction is encoded in the reviewer's reasoning but NOT in its written anti-pattern table. Next time a different reviewer run might not apply it consistently.
+**What the rule needs to cover (refinement required before adding)**:
+- A positive definition: when is `continue_on_error: true` OK? (Runtime-created entities, best-effort cleanup, optional-dependency services.)
+- A negative definition: when is it an anti-pattern? (Masking a service that fails every time, swallowing errors from a required step, replacing proper `condition:` checks.)
+- A decision heuristic the reviewer can apply in one pass without deep context.
+- Cross-references to DECISIONS 2026-04-13 and the pomodoro.yaml Reset step as exemplars.
+**Open question**: is this one rule or two (one under "Legitimate patterns", one under "Anti-patterns" in the reviewer's table)? Probably two mirrored entries that point at each other.
+**Effort**: ~30 min drafting + one validation pass on an existing package that uses `continue_on_error:` to see whether the rule correctly approves/blocks.
+
 ### 🟡 Medium
 
 #### Update `deploy.sh` to auto-reload input helper domains
@@ -224,10 +163,9 @@ With several unavailable entities, worth checking for Zigbee range issues — es
 **Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
 **Effort**: ~20 min.
 
-#### Track pre-commit hook in the repo
-**Added**: 2026-04-16
-**Why**: `.git/hooks/pre-commit` is local-only (not in git). Today's YAML-parser fix (replacing the regex that over-matched step-level `alias:` with a proper PyYAML automation-list check) would be lost if the repo is re-cloned. Recommend: move the hook to `scripts/pre-commit`, track it, and add a one-liner to the README: `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`.
-**Effort**: ~10 min.
+#### ~~Track pre-commit hook in the repo~~ ✅ done 2026-04-19
+**Added**: 2026-04-16 — **Completed**: 2026-04-19
+**Outcome**: Hook moved to `scripts/pre-commit` (PyYAML-based; checks `description:` on every automation AND a new `# Gate 2 reviewed: YYYY-MM-DD` header line per Rule H2). Install locally with `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`. Documented in INSTRUCTIONS.md Gate 3 Step 4.
 
 #### Test `ha-code-reviewer` agent in real Gate 2 flow
 **Added**: 2026-04-14

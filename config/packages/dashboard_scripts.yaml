@@ -3,6 +3,8 @@
 # Service-call sequences used by BubbleDash scene buttons.
 # These exist because Bubble Card tap_action supports only a single
 # service call — multi-step presets need a script wrapper.
+#
+# Gate 2 reviewed: 2026-04-17
 
 script:
   movie_mode:

@@ -5,6 +5,71 @@
 ---
 
 
+## 2026-04-19 — Meta: harness + workflow retro after skipped Gate 2 review
+
+### Context
+During the Pomodoro session (same day, entry below), I translated the 2026-04-16 Gate 2-approved YAML into full package format — `service:` → `action:`, added numeric IDs, restructured helpers — and committed/pushed without re-running the `ha-code-reviewer`. Edgar caught it. A re-review was APPROVED with one ⚠️ (`continue_on_error` on the scene restore), which we then applied. Retro focused on turning this class of miss into mechanical enforcement.
+
+### What was done
+
+**H1 — Pre-commit hook tracked in repo** (`scripts/pre-commit`)
+PyYAML-based. Checks every top-level `automation:` entry has a `description:` field (existing rule) AND every added/modified `config/packages/*.yaml` has a `# Gate 2 reviewed: YYYY-MM-DD` header line in the first 40 lines (new H2 rule). Install: `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit`. Closes BACKLOG "Track pre-commit hook in the repo".
+
+**H2 — Gate 2 enforcement via file header**
+Added `# Gate 2 reviewed: YYYY-MM-DD` lines to all existing packages (backfilled from CHANGELOG dates): pomodoro 2026-04-19, vacation_mode/beamer_uplight_front/zocci 2026-04-16, dashboard_scripts/dashboard_sensors 2026-04-17. Hook smoke-tested: passes on current repo state, blocks on a package without the line.
+
+**H3 — Environment modes section in INSTRUCTIONS.md**
+Added explicit "live session" vs "GitHub agent" mode split near the top. GitHub-agent mode cannot run Gate 3 Steps 1–8; it can only commit + push. CHANGELOG/BACKLOG entries in that mode must say "package committed" / "PR open" never "deployed" until the live session catches up.
+
+**W1 — Material-rewrite rule in Gate 2**
+Added to INSTRUCTIONS.md Gate 2: a prior APPROVED verdict does NOT transfer across material rewrites (keyword conversions, format restructure, ID additions, helper reshaping). Cosmetic changes only are exempt. This is the rule I walked through today.
+
+**W2 — Ambiguous-verb rule in Gate 1**
+"Finish", "wire up", "sort out", "clean up" always trigger one round of `AskUserQuestion` before any work. Do not infer scope from env constraints or prior context — ask.
+
+**W3 — Context files reflect completed state only**
+Added to the Session-end section. No more writing "deployed" when the work stops at "committed".
+
+**A1 — `scripts/gate2-review.sh` prompt assembler**
+One-liner to generate a ready-to-paste `ha-code-reviewer` prompt from a package path + the original request. Removes the friction excuse for skipping Gate 2.
+
+**A2 — moved to BACKLOG**
+Reviewer rule for `continue_on_error` legitimate-vs-anti-pattern distinction. Added under 🔧 Infrastructure & Tooling 🔴 High, marked "needs refinement before writing the rule" — we want the positive and negative definitions and a one-pass heuristic drafted before it goes into `ha-code-reviewer.md`.
+
+### Files added / modified
+- **New**: `scripts/pre-commit` (Python, executable), `scripts/gate2-review.sh` (Bash, executable).
+- **Modified**: `00 - Agent Context/INSTRUCTIONS.md` (Environment modes, W1, W2, W3, pre-commit install line, gate2-review.sh reference), `00 - Agent Context/BACKLOG.md` (pre-commit done, A2 added as High), all 6 `config/packages/*.yaml` (header line backfill).
+
+### Not done in this session
+- Live install of the hook on Edgar's laptop — requires `ln -sf ../../scripts/pre-commit .git/hooks/pre-commit` from the repo root after merge.
+- A2 refinement and integration into `ha-code-reviewer.md` — deliberately parked for a dedicated pass.
+
+---
+
+
+## 2026-04-19 — Pomodoro Desk Timer: package committed (branch `claude/review-backlog-K9wUf`)
+
+### What was done
+- Translated the Gate 2-approved Pomodoro YAML (CHANGELOG 2026-04-16) from its parked UI-style snippet in `BACKLOG.md` into `config/packages/pomodoro.yaml`.
+- Package declares 2 helpers (`timer.pomodoro_desk_timer` 25 min, `input_boolean.pomodoro_active`) and 3 automations (Start / Break Time / Reset) with stable numeric IDs `17766000000{01,02,03}` and the `action:` service-call keyword (matching repo style in `vacation_mode.yaml` / `beamer_uplight_front.yaml`).
+- Local sanity checks: `yamllint` (relaxed + 120-col) passes; PyYAML confirms all 3 automations have a `description:` field (the pre-commit rule from CHANGELOG 2026-04-16 lesson #3).
+
+### Not executed in this session (headless GitHub agent — no HA MCP, no SSH to Green)
+- `ha_backup_create`, entity/template validation, `deploy.sh`, `input_boolean.reload`, trace verification, and the BD-9 Bubble Card — all remain for Edgar to run live. Steps documented in the updated BACKLOG entry.
+
+### Entities affected (pending deploy)
+- **New helpers**: `timer.pomodoro_desk_timer`, `input_boolean.pomodoro_active` (2 helpers — well under the 5-per-session recorder-awareness cap).
+- **Reads on deploy**: `light.desk_lights` (already live, used by existing desk scenes).
+
+### Recorder impact
+- `timer` state transitions (active/idle) and a single `input_boolean` are low cardinality — no additional recorder config needed.
+
+### Backups
+- None taken by this agent; pre-deploy backup is Edgar's responsibility at Gate 3 Step 1.
+
+---
+
+
 ## 2026-04-17 — BubbleDash v3→v4: room-first rebuild + visual overhaul
 
 ### What was done

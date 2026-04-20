@@ -3,6 +3,8 @@
 # Live computed values used for at-a-glance display in BubbleDash.
 # These are intentionally simple — they reflect current state, not history.
 # Do not add historical/trend sensors here; use InfluxDB + Grafana for that.
+#
+# Gate 2 reviewed: 2026-04-17
 
 template:
   - sensor:

@@ -1,0 +1,107 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Pomodoro Desk Timer
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Dashboard toggle starts a 25 min countdown. On expiry, desk lights go full
+# red as a visual break alert. Lights stay red until the toggle is flipped
+# off, which restores the pre-session light state via a scene snapshot.
+#
+# Helpers defined here:
+#   - timer.pomodoro_desk_timer        (25 min countdown)
+#   - input_boolean.pomodoro_active    (dashboard toggle / session flag)
+#
+# Entities referenced (must exist):
+#   - light.desk_lights                (target for break-time red alert)
+#
+# Scene snapshot (scene.pomodoro_desk_snapshot) is created at session start
+# via scene.create and restored on reset. It does NOT survive an HA restart
+# mid-session — in that rare case lights stay red until manually corrected.
+#
+# Gate 2 reviewed: 2026-04-19
+# ──────────────────────────────────────────────────────────────────────────────
+
+timer:
+  pomodoro_desk_timer:
+    name: Pomodoro Desk Timer
+    icon: mdi:timer
+    duration: "00:25:00"
+
+input_boolean:
+  pomodoro_active:
+    name: Pomodoro Active
+    icon: mdi:timer-outline
+
+automation:
+  - id: "1776600000001"
+    alias: "Pomodoro Desk — Start"
+    description: >-
+      When the Pomodoro toggle is activated, captures a snapshot of the current
+      desk light state (so it can be restored later) and starts the 25-minute
+      countdown. Lights are not changed at this point — only on expiry.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.pomodoro_active
+        to: "on"
+    condition: []
+    action:
+      - alias: "Snapshot desk lights for later restore"
+        action: scene.create
+        data:
+          scene_id: pomodoro_desk_snapshot
+          snapshot_entities:
+            - light.desk_lights
+      - alias: "Start the 25-minute countdown"
+        action: timer.start
+        target:
+          entity_id: timer.pomodoro_desk_timer
+
+  - id: "1776600000002"
+    alias: "Pomodoro Desk — Break Time"
+    description: >-
+      Fires when the 25-minute Pomodoro timer expires. Sets desk lights to full
+      red as a visual break alert. Lights stay red until the user resets the
+      toggle — there is no auto-restore.
+    mode: single
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.pomodoro_desk_timer
+    condition: []
+    action:
+      - alias: "Desk lights → full red break alert"
+        action: light.turn_on
+        target:
+          entity_id: light.desk_lights
+        data:
+          rgb_color: [255, 0, 0]
+          brightness: 255
+
+  - id: "1776600000003"
+    alias: "Pomodoro Desk — Reset"
+    description: >-
+      Fires when the Pomodoro toggle is turned off (either after a break or to
+      cancel a running session). Cancels the timer if still active, then
+      restores the desk lights to the state captured at session start via the
+      scene.create snapshot.
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.pomodoro_active
+        to: "off"
+    condition: []
+    action:
+      - alias: "Cancel the countdown (no-op if already expired)"
+        action: timer.cancel
+        target:
+          entity_id: timer.pomodoro_desk_timer
+      - alias: "Restore pre-session desk light state"
+        action: scene.turn_on
+        target:
+          entity_id: scene.pomodoro_desk_snapshot
+        # Tolerates the edge case where Reset runs before Start has ever
+        # created the snapshot scene (e.g. first-ever toggle-off, or HA
+        # restart mid-session). Legitimate transient-absence use, not the
+        # DECISIONS 2026-04-13 silent-failure anti-pattern.
+        continue_on_error: true

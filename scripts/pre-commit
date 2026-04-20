@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+# ──────────────────────────────────────────────────────────────────────────────
+# pre-commit — Tracked in repo (install: ln -sf ../../scripts/pre-commit .git/hooks/pre-commit)
+#
+# Enforces two rules on every commit that touches config/packages/*.yaml:
+#
+#   1. Every top-level `automation:` entry must have a `description:` field.
+#      (Rule established CHANGELOG 2026-04-16 lesson #3 — descriptions capture
+#      intent/"why", not just "what".)
+#
+#   2. Every added/modified package file must have a `# Gate 2 reviewed:
+#      YYYY-MM-DD` line somewhere in its first 40 lines (header comment block).
+#      (Rule H2 established 2026-04-19 meta session — a prior APPROVED verdict
+#      does NOT transfer across material rewrites, so each commit that changes
+#      a package must carry a fresh review date. See INSTRUCTIONS.md Gate 2.)
+#
+# Outputs: prints findings to stderr and exits non-zero on any failure.
+# Bypass: only with explicit `--no-verify` and a written justification in the
+# commit message. Don't bypass casually — that's what H2 is here to prevent.
+# ──────────────────────────────────────────────────────────────────────────────
+
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("pre-commit: PyYAML not installed — run `pip3 install pyyaml`.", file=sys.stderr)
+    sys.exit(1)
+
+PACKAGE_GLOB = re.compile(r"^config/packages/.+\.ya?ml$")
+GATE2_HEADER_RE = re.compile(r"^\s*#\s*Gate\s*2\s*reviewed:\s*(\d{4}-\d{2}-\d{2})\s*$", re.IGNORECASE)
+HEADER_SCAN_LINES = 40
+
+
+def staged_files() -> list[str]:
+    out = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
+        capture_output=True, text=True, check=True,
+    )
+    return [line for line in out.stdout.splitlines() if line]
+
+
+def check_description(path: Path) -> list[str]:
+    """Every top-level automation entry must have a description field."""
+    try:
+        doc = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        return [f"{path}: YAML parse error — {e}"]
+
+    if not isinstance(doc, dict):
+        return []
+
+    automations = doc.get("automation") or []
+    if not isinstance(automations, list):
+        return [f"{path}: top-level `automation:` must be a list"]
+
+    missing = [
+        (i, entry.get("alias", "<no alias>"))
+        for i, entry in enumerate(automations)
+        if isinstance(entry, dict) and "description" not in entry
+    ]
+    return [
+        f"{path}: automation[{i}] '{alias}' is missing `description:` (rule CHANGELOG 2026-04-16 #3)"
+        for i, alias in missing
+    ]
+
+
+def check_gate2_header(path: Path) -> list[str]:
+    """Every package YAML must declare a `# Gate 2 reviewed: YYYY-MM-DD` line."""
+    lines = path.read_text().splitlines()[:HEADER_SCAN_LINES]
+    for line in lines:
+        if GATE2_HEADER_RE.match(line):
+            return []
+    return [
+        f"{path}: missing `# Gate 2 reviewed: YYYY-MM-DD` header line "
+        f"(rule INSTRUCTIONS.md Gate 2 / H2 2026-04-19). "
+        f"Run the ha-code-reviewer agent on this file, then add the line with today's date."
+    ]
+
+
+def main() -> int:
+    findings: list[str] = []
+    for rel in staged_files():
+        if not PACKAGE_GLOB.match(rel):
+            continue
+        path = Path(rel)
+        if not path.exists():
+            continue
+        findings.extend(check_description(path))
+        findings.extend(check_gate2_header(path))
+
+    if findings:
+        print("pre-commit: blocked with the following findings:\n", file=sys.stderr)
+        for f in findings:
+            print(f"  - {f}", file=sys.stderr)
+        print("\nFix these, re-stage, and commit again.", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
