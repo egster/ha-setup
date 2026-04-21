@@ -5,6 +5,91 @@
 ---
 
 
+## 2026-04-21 — Floors setup + Upstairs / Stairs area restructure
+
+### What was done
+
+**Backup**
+- `ha_backup_create` → backup id `aaefea4e` ("pre_floors_setup_2026-04-21"), 267 MB, 52 s.
+
+**Floors (4 created)**
+- `downstairs` (level 0, `mdi:home-floor-0`, aliases: ground floor / entry level)
+- `main` (level 1, `mdi:home-floor-1`, aliases: first floor / main level / living level)
+- `upper` (level 2, `mdi:home-floor-2`, aliases: upstairs / second floor / bedroom level)
+- `outside` (level −1, `mdi:tree`, aliases: outdoor / garden / outside)
+
+**Area restructure**
+- Renamed `stairs` → "Stairs Level 1" (id unchanged; kitchen-stair lights + motion + automation), floor: main.
+- Renamed `upstairs` → "Stairs Level 2" (id unchanged; hall lights + Eve motion remained), floor: upper.
+- Created `stairs_level_0` ("Stairs Level 0"), floor: downstairs, icon `mdi:stairs-down`.
+- Created `jona_s_room` ("Jona's Room"), floor: upper, icon `mdi:bed-empty`.
+- Total: 9 → 11 areas; legacy ids `stairs`/`upstairs` preserved (HA doesn't rename ids on rename).
+
+**Floor assignments on existing areas**
+- Downstairs: entrance, garage
+- Main: kitchen, living_room, office
+- Upper: bedroom
+- Outside: outdoor
+
+**Device moves (6)**
+- `Stairs Garage` (Hue) → stairs_level_0
+- `Upstairs Speaker` (Google Home) → bedroom (Edgar confirmed it's physically in the bedroom, not the hall)
+- `Jona Bedroom Left` (Hue) → jona_s_room
+- `Jona Bedroom Right` (Hue) → jona_s_room
+- `Jona Speaker` (Nest Mini) → jona_s_room
+- `Jona Remote` (Hue RWL022) → jona_s_room
+
+### Verification
+- `ha_config_list_floors` → 4 floors as expected.
+- `ha_config_list_areas` → 11 areas, every one has a `floor_id` (no nulls).
+- Devices per new/renamed area: Stairs Level 0 = 1, Stairs Level 1 = 3, Stairs Level 2 = 3, Jona's Room = 4. All counts match the plan.
+- `automation.stairs_kitchen_sensor_light` references entity IDs, not areas — unaffected by the rename; no trace/log check needed.
+
+### Files changed
+- `00 - Agent Context/PROFILE.md` (Structure section — floors table added, areas table rebuilt with floor column, household note amended)
+- `00 - Agent Context/INSTRUCTIONS.md` (removed "no floors defined yet" stub)
+- `00 - Agent Context/LAST_UPDATED` (→ 2026-04-21)
+
+### Notes / follow-ups
+- **Lennard** still has no area/devices. Not in scope today.
+
+---
+
+## 2026-04-21 (cont.) — Quirk fixes: area_id cleanup + kitchen_rigth typo
+
+### What was done
+
+**Entity rename — 8 entities on "Stairs Kitchen Right" device**
+- `light.kitchen_rigth` → `light.kitchen_right` (plus 7 sibling entities: `update.*_firmware`, `button.*_identify`, `select.*_start_up_behaviour`, 2× `number.*`, 2× `sensor.*_lqi/rssi`). All renamed via `ha_set_entity(new_entity_id=...)`.
+- **Group update**: `light.stairs_kitchen` (config-flow group, entry `01KHN5FEBH7F76AT7FBBR4KPYK`) reconfigured via `ha_set_config_entry_helper` to reference the new entity ID. Verified via state attribute `entity_id: [light.kitchen_left, light.kitchen_right]`.
+- **Dashboard update**: BubbleDash `views[1].sections[0].cards[13].cards[3].cards[1].entity` — one bubble-card entity ref — patched via `python_transform`. `ha_deep_search` for `kitchen_rigth` → 0 matches post-fix.
+- Pre-scan confirmed: no automations, scripts, helpers (other than the group) referenced the old ID.
+
+**Area_id rename — `stairs` → `stairs_level_1`**
+1. Renamed old area display name to `_Old Stairs (migrating)` (id immutable).
+2. Created new area "Stairs Level 1" → id `stairs_level_1`, floor: main, icon `mdi:stairs`.
+3. Reassigned 3 devices (Stairs Kitchen Left, Right, Motion Sensor) + 2 entities (`light.stairs_kitchen` group, `automation.stairs_kitchen_sensor_light`) to new area.
+4. Confirmed old area empty (0 devices, 0 entities), then `ha_config_remove_area(stairs)`.
+
+**Area_id rename — `upstairs` → `stairs_level_2`**
+1. Same pattern: rename → create new → migrate → delete.
+2. New area "Stairs Level 2" → id `stairs_level_2`, floor: upper, icon `mdi:stairs-up`.
+3. Reassigned 3 devices (Hall Bathroom/Bedrooms Lights, Eve Motion) + 1 entity (`light.upstairs_hall_lights` group) to new area.
+4. Deleted old `upstairs` area.
+
+### Verification
+- `ha_config_list_areas` → 11 areas, all with clean `stairs_level_*` IDs matching display names.
+- `ha_get_state(light.kitchen_right)` → on/off reachable, friendly name "Stairs Kitchen Right" preserved.
+- `ha_get_state(light.stairs_kitchen)` → group contains `[light.kitchen_left, light.kitchen_right]`.
+
+### Files changed
+- `00 - Agent Context/PROFILE.md` — areas table now shows clean IDs (`stairs_level_1`, `stairs_level_2`); removed ⚠ typo line and ⚠ Legacy area_ids callout; added `light.upstairs_hall_lights` group to Stairs Level 2 row.
+- `00 - Agent Context/BACKLOG.md` — removed "Entity ID Typo Fix" item.
+- `00 - Agent Context/CHANGELOG.md` — this entry.
+
+---
+
+
 ## 2026-04-20 — Merge `claude/review-backlog-K9wUf` + Pomodoro deploy + BubbleDash Focus section
 
 ### What was done

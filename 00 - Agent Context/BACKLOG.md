@@ -113,8 +113,11 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 #### "Tradfi 1" — Identify & Clean Up
 Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find it physically or remove the entity.
 
-#### Entity ID Typo Fix
-`light.kitchen_rigth` → rename to correct spelling. Minor but causes confusion in dashboard YAML.
+#### Clean Up jlnbln Reference Files
+**Added**: 2026-04-20
+**Status**: Backlog — low priority
+**What**: Remove leftover jlnbln dashboard reference files from `reference/`: `jlnbln-dashboard.yaml`, `jlnbln-dashboard-mapped.yaml`, `jlnbln-README.md`, and 9 `map_entities*.py` / `home_view_transform.py` scripts. Dashboard experiment abandoned — files serve no further purpose.
+**Effort**: 5 min.
 
 #### Zigbee Mesh Health
 With several unavailable entities, worth checking for Zigbee range issues — especially for the IKEA Tradfi 1 and bedroom bulbs. HA's ZHA integration has a network map worth reviewing.

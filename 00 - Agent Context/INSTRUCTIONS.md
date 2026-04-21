@@ -181,7 +181,7 @@ These exist because past mistakes taught us the hard way. Don't bypass them.
 - **Motion lights** use the `Blackshome/sensor-light.yaml` blueprint — always use this for new motion light automations. Lights that can be switched off at the wall require the blueprint's `dynamic_lighting_boolean` toggle helper (see DECISIONS 2026-04-11).
 - **IKEA remote mappings** (Living Room, Bedroom, Jona) use the `niro1987/zha_ikea_tradfri_5button_remote_custom.yaml` blueprint. **Kitchen Remote** is a Philips Hue RWL022 and uses `dustins/zha-philips-hue-v2-smart-dimmer-switch-and-remote-rwl022.yaml`
 - **Area naming** is clean and consistent — follow the same convention when adding new areas
-- No floors are defined yet — this is an open improvement item
+- **Floors** (4) are live as of 2026-04-21: Downstairs (0), Main (1), Upper (2), Outside (−1). All 11 areas are assigned. See PROFILE.md Structure section for the mapping.
 
 ---
 
