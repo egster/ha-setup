@@ -5,6 +5,93 @@
 ---
 
 
+## 2026-04-22 — Weather-Aware Heating deployed
+
+### What was done
+Shipped `config/packages/weather_aware_heating.yaml` — a single automation that adjusts the 3 Wiser by Feller thermostat setpoints (Kitchen, Living Room, Office) daily at 22:00 based on tomorrow's met.no forecast mean vs a 3-day trailing average of daily means.
+
+### Approach
+- **Tier-based offset**: `|delta| < 3 °C` → 0 (noise floor), 3–5 °C → ±0.5, ≥5 °C → ±1.5 capped. Mirrored sign (warmer → setback).
+- **Metric**: daily mean = `(forecast.temperature + forecast.templow) / 2`
+- **Trailing window**: 3 helpers (`outdoor_mean_day1/2/3`) shifted at each 22:00 run; cold-start seeded at 12.0 °C; converges in 3 days.
+- **Guards**: `input_boolean.vacation_mode == off` AND `input_boolean.heating_season == on` (new helper, default on).
+- **Setpoint model**: absolute — `climate.set_temperature` = base + offset, fully owned by the automation at 22:00 (daytime manual overrides survive until next run).
+- **Visibility**: daily notification to `notify.mobile_app_edphone` with forecast/delta/offset/setpoints summary. Dashboard cards follow-up is in BACKLOG.
+
+### New helpers (9)
+- `input_number`: `outdoor_mean_day1/2/3`, `outdoor_3day_avg`, `heating_offset`, `kitchen_base_temp` (20), `living_room_base_temp` (21), `office_base_temp` (19)
+- `input_boolean`: `heating_season` (default on)
+- Write volume: ~5 writes/day total (trailing window + avg + offset on each 22:00 run). Base setpoints + season toggle write only on manual UI change.
+
+### Gate process
+- **Gate 1**: 2 research-advisor rounds. Round 1 built on old backlog (motion + Panasonic) — Edgar refined scope to forecast-only + Wiser-only. Round 2 researched HVAC weather-compensation norms (Tado/Nest ±3 °C trigger, Swiss thermal mass 1:5 ratio) and proposed the final tier curve.
+- **Gate 2**: `gate2-approach-critic` APPROVED with ⚠️ (visibility-helper philosophy, silent forecast failure, vacation/season stale window, Wiser µGateway back-to-back writes). `ha-code-reviewer` APPROVED, re-approved after notification was added per Rule W1.
+- **Backtest**: ERA5 actuals for Mar 23 – Apr 21 2026 simulated. 9/29 non-zero triggers (31%), every real weather event caught, no false-fires during stable warm spell. No threshold tweaks recommended. Report saved at `00 - Agent Context/weather_heating_backtest_2026-04-22.md`.
+- **Gate 3**: Backup created (2 attempts — both succeeded despite MCP timeout). Entity IDs + templates validated. Committed. Deployed via `deploy.sh`. Helpers + automation reloaded via MCP (deploy.sh still doesn't reload input domains — see BACKLOG). Test-triggered successfully; trace shows all 11 actions completed cleanly. Forecast: today 12.6/10.4 °C → tomorrow 12.6 mean → delta 0.8 (< 3 noise floor) → offset 0 → setpoints unchanged (K 20, LR 21, O 19). Notification sent. Health spot-check clean (DB at 785.61 MiB, no growth).
+
+### Key decisions logged
+- DECISIONS 2026-04-22: 5-helper guideline is about writes/day, not count.
+- DECISIONS 2026-04-22: Weather-aware heating owns setpoints absolutely at 22:00 (base+offset), not delta-based.
+
+### BACKLOG additions
+- 🟡 Home Monitoring — Weather-Aware Heating dashboard view (~30 min, follow-up from v1 notification)
+- 🟡 Retire the daily notification (~2 weeks out, after trust is built)
+- 🟢 Notify on met.no forecast failure (low prio — current behaviour is clean abort, no partial writes)
+
+### Memory saved
+- `~/.claude/projects/.../memory/feedback_helper_limit.md` — "helper limit is performance-based, not count-based"
+
+### Files changed
+- `config/packages/weather_aware_heating.yaml` (new, committed `badff28`)
+- `00 - Agent Context/weather_heating_backtest_2026-04-22.md` (new, committed `badff28`)
+- `00 - Agent Context/PROFILE.md` — Climate section corrected (Kitchen/LR/Office are Wiser, not Panasonic; only Bedroom is Panasonic)
+- `00 - Agent Context/BACKLOG.md` — 3 new entries under Dashboard section
+- `00 - Agent Context/DECISIONS.md` — 2 new rows
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- HA server: `/config/packages/weather_aware_heating.yaml`, 9 helpers live, 1 automation live
+
+---
+
+
+## 2026-04-22 — Automated health check
+- Health check: 🟡 4 warnings — see healthcheck.md (9 unavailable lights, living room remote no traces, vacation_mode_activate old error, InfluxDB repair item)
+
+## 2026-04-22 — jlnbln dashboard clone experiment (abandoned)
+
+### What was tried
+Cloned the [jlnbln/My-HA-Dashboard](https://github.com/jlnbln/My-HA-Dashboard) template 1:1, then attempted to map its entities to Edgar's HA setup. Deployed as a new YAML-mode dashboard `dashboard-jlnbln` alongside BubbleDash.
+
+### What happened
+- **9 mapping passes** total. Passes 1–7 handled entity replacements, pass 8 stripped 14,775 lines of leftover sections-view cruft (`column_span`, `max_columns`, `dense_section_placement`, `visibility`) that was blanking every view, pass 9 replaced 239 remaining missing entity references with safe fallbacks to eliminate all `ButtonCardJSTemplateError` cards.
+- Home view eventually rendered **error-free** — greeting, chip bar, security, media, person cards, device cards all visible.
+- But foreign content (Dobby vacuum, Prusa Mini+ printer, Playstation 5, Dishwasher, Washing Machine, Anna/Valentin/Simone/Guest person cards, 3 camera placeholders) was woven too deep in ~4,000 lines of `button_card_templates` JavaScript to clean up cleanly.
+
+### Decision
+**Abandoned the clone approach — adapt BubbleDash instead.** Logged as a permanent decision in DECISIONS.md. External dashboards are UX inspiration only, not clone-and-adapt starting points. See DECISIONS.md 2026-04-22.
+
+### Cleanup
+- Deleted `/config/lovelace/jlnbln-dashboard.yaml` from HA server.
+- Removed `lovelace:` YAML-mode dashboard block from `configuration.yaml` (deployed + restart).
+- Sidebar `jlnbln` entry removed.
+- Local `reference/` files (original YAML, mapped YAML, 9 mapping scripts, README) left in place — logged as a low-prio BACKLOG item for later cleanup.
+
+### Key technical learnings
+1. **YAML-mode dashboards can't use `type: sections`** on HA 2026.4 — `hui-sections-view` isn't registered as a custom element. Masonry (default) or `panel` only.
+2. **View-level `visibility:` silently hides the whole view.** A media-query condition with `max-width: 767px` made desktop views render blank with no error.
+3. **`button_card_templates` JS is fragile** — any `states['missing.entity']` → `undefined.state` → `ButtonCardJSTemplateError`. No graceful fallback.
+4. **HA's shadow DOM blocks JS inspection.** Chrome MCP's `javascript_tool` can't traverse the nesting; computer-use screenshots are the only reliable verification path.
+5. **String replacement order matters** — `switch.junglemoney` replaced before `switch.junglemoneyguest` produced the corrupted `switch.eve_energy_20ebo8301guest`. Always replace longer strings first.
+
+### Files changed
+- Local: `config/configuration.yaml` (removed `lovelace:` block).
+- Local: `00 - Agent Context/DECISIONS.md` (+1 row).
+- Local: `00 - Agent Context/BACKLOG.md` (added low-prio cleanup item).
+- Local: `00 - Agent Context/CHANGELOG.md` (this entry).
+- HA server: `/config/configuration.yaml` redeployed, `/config/lovelace/jlnbln-dashboard.yaml` deleted, HA restarted.
+
+---
+
+
 ## 2026-04-21 — Floors setup + Upstairs / Stairs area restructure
 
 ### What was done
