@@ -1,0 +1,279 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Weather-Aware Heating
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Gate 2 reviewed: 2026-04-22
+#
+# Adjusts heating setpoints on the 3 Wiser by Feller thermostats (Kitchen,
+# Living Room, Office) once daily at 22:00 based on tomorrow's forecast vs
+# a 3-day trailing average of daily mean outdoor temperature (from met.no
+# via weather.forecast_home).
+#
+# ── Logic ────────────────────────────────────────────────────────────────────
+#
+# Daily mean = (forecast.temperature + forecast.templow) / 2
+#   - forecast[0] = today's mean (rolled into the trailing average)
+#   - forecast[1] = tomorrow's mean (the comparison value)
+#
+# delta = tomorrow_mean − trailing_3day_avg
+#
+# Tier offsets (applied to each room's base setpoint):
+#   |delta| < 3 °C              → 0 °C   (noise floor, thermal mass absorbs)
+#   3 °C ≤ |delta| < 5 °C       → ±0.5 °C
+#   |delta| ≥ 5 °C              → ±1.5 °C (capped)
+#
+# Sign convention: tomorrow warmer → negative offset (setback). Tomorrow
+# colder → positive offset (boost). Final setpoint = base + offset.
+#
+# ── Helpers ──────────────────────────────────────────────────────────────────
+#
+# Trailing average state (4 helpers, written 1×/day at 22:00):
+#   - input_number.outdoor_mean_day1   (most recent day stored)
+#   - input_number.outdoor_mean_day2
+#   - input_number.outdoor_mean_day3
+#   - input_number.outdoor_3day_avg    (convenience — visible on dashboard)
+#
+# Applied offset (visibility, written 1×/day at 22:00):
+#   - input_number.heating_offset
+#
+# Per-room base setpoints (UI-tunable, written only on manual change):
+#   - input_number.kitchen_base_temp       (default 20.0)
+#   - input_number.living_room_base_temp   (default 21.0)
+#   - input_number.office_base_temp        (default 19.0 — Edgar's current setting)
+#
+# Seasonal guard (user-toggled):
+#   - input_boolean.heating_season         (default on)
+#
+# Total: 8 new input_number + 1 new input_boolean = 9 helpers.
+# Write volume: ~5 writes/day (day1/2/3/avg/offset) + occasional manual toggles.
+# Edgar approved exceeding the 5-helpers/session limit on 2026-04-22 since
+# write volume is low and recorder impact is negligible.
+#
+# ── Guards ───────────────────────────────────────────────────────────────────
+#
+# The automation exits early if:
+#   - input_boolean.vacation_mode is ON  (vacation owns the setpoint at 16 °C)
+#   - input_boolean.heating_season is OFF (summer — heating is manually managed)
+#
+# ── Cold start ───────────────────────────────────────────────────────────────
+#
+# outdoor_mean_day1/2/3 are seeded at 12.0 °C (reasonable April Zurich mean).
+# After 3 days of operation the trailing average converges on real data.
+#
+# ── Entities referenced ──────────────────────────────────────────────────────
+#
+#   - climate.kitchen_area / climate.living_room_area / climate.office_area
+#   - weather.forecast_home   (met.no integration)
+#   - input_boolean.vacation_mode (already exists, from vacation_mode.yaml)
+#
+# ── Research provenance ──────────────────────────────────────────────────────
+#
+# Threshold (3 °C noise floor) and offset curve (0 / 0.5 / 1.5 °C) derived
+# from: Tado/Nest weather-compensation guidance (±3 °C trigger), Swiss
+# residential thermal-mass norms (1:5 to 1:8 outdoor/indoor ratio), and
+# Wiser's 0.5 °C native step size. See research-advisor brief 2026-04-22.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+
+input_boolean:
+  heating_season:
+    name: "Heating Season"
+    icon: mdi:radiator
+    initial: true
+
+input_number:
+  outdoor_mean_day1:
+    name: "Outdoor mean — Day -1"
+    min: -30
+    max: 50
+    step: 0.1
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    initial: 12.0
+
+  outdoor_mean_day2:
+    name: "Outdoor mean — Day -2"
+    min: -30
+    max: 50
+    step: 0.1
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    initial: 12.0
+
+  outdoor_mean_day3:
+    name: "Outdoor mean — Day -3"
+    min: -30
+    max: 50
+    step: 0.1
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer
+    initial: 12.0
+
+  outdoor_3day_avg:
+    name: "Outdoor 3-day trailing average"
+    min: -30
+    max: 50
+    step: 0.1
+    unit_of_measurement: "°C"
+    icon: mdi:chart-line
+    initial: 12.0
+
+  heating_offset:
+    name: "Heating offset (applied)"
+    min: -2.0
+    max: 2.0
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:plus-minus-variant
+    initial: 0.0
+
+  kitchen_base_temp:
+    name: "Kitchen base setpoint"
+    min: 15
+    max: 25
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:stove
+    initial: 20.0
+
+  living_room_base_temp:
+    name: "Living Room base setpoint"
+    min: 15
+    max: 25
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:sofa
+    initial: 21.0
+
+  office_base_temp:
+    name: "Office base setpoint"
+    min: 15
+    max: 25
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:desk
+    initial: 19.0
+
+automation:
+  - id: "1777180000001"
+    alias: "Weather-Aware Heating — Daily Update"
+    description: >-
+      Runs once daily at 22:00. Fetches the met.no daily forecast, rolls
+      today's mean into the 3-day trailing average, compares tomorrow's mean
+      against that average, and writes tier-based offsets to the 3 Wiser
+      thermostats' setpoints. Skips if vacation mode is on or heating season
+      is off. Time of 22:00 is chosen for underfloor/radiator thermal lag —
+      the setpoint has ~8 h to manifest before the morning occupancy peak.
+    mode: single
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.vacation_mode
+        state: "off"
+      - condition: state
+        entity_id: input_boolean.heating_season
+        state: "on"
+    action:
+      - alias: "Fetch daily forecast from met.no"
+        action: weather.get_forecasts
+        target:
+          entity_id: weather.forecast_home
+        data:
+          type: daily
+        response_variable: forecast_response
+
+      - alias: "Compute today/tomorrow means and trailing average"
+        variables:
+          forecast_list: "{{ forecast_response['weather.forecast_home']['forecast'] }}"
+          today_mean: >-
+            {{ ((forecast_list[0].temperature | float + forecast_list[0].templow | float) / 2) | round(1) }}
+          tomorrow_mean: >-
+            {{ ((forecast_list[1].temperature | float + forecast_list[1].templow | float) / 2) | round(1) }}
+          prev_day1: "{{ states('input_number.outdoor_mean_day1') | float(12.0) }}"
+          prev_day2: "{{ states('input_number.outdoor_mean_day2') | float(12.0) }}"
+          new_avg: "{{ ((today_mean + prev_day1 + prev_day2) / 3) | round(1) }}"
+          delta: "{{ (tomorrow_mean - new_avg) | round(1) }}"
+          abs_delta: "{{ delta | abs }}"
+          offset: >-
+            {% if abs_delta < 3 %}
+              {{ 0.0 }}
+            {% elif abs_delta < 5 %}
+              {{ -0.5 if delta > 0 else 0.5 }}
+            {% else %}
+              {{ -1.5 if delta > 0 else 1.5 }}
+            {% endif %}
+
+      - alias: "Shift trailing-average window: day3 ← day2"
+        action: input_number.set_value
+        target:
+          entity_id: input_number.outdoor_mean_day3
+        data:
+          value: "{{ prev_day2 }}"
+
+      - alias: "Shift trailing-average window: day2 ← day1"
+        action: input_number.set_value
+        target:
+          entity_id: input_number.outdoor_mean_day2
+        data:
+          value: "{{ prev_day1 }}"
+
+      - alias: "Shift trailing-average window: day1 ← today"
+        action: input_number.set_value
+        target:
+          entity_id: input_number.outdoor_mean_day1
+        data:
+          value: "{{ today_mean }}"
+
+      - alias: "Store computed trailing average (visibility)"
+        action: input_number.set_value
+        target:
+          entity_id: input_number.outdoor_3day_avg
+        data:
+          value: "{{ new_avg }}"
+
+      - alias: "Store applied offset (visibility)"
+        action: input_number.set_value
+        target:
+          entity_id: input_number.heating_offset
+        data:
+          value: "{{ offset | float }}"
+
+      - alias: "Set Kitchen setpoint = base + offset"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.kitchen_area
+        data:
+          temperature: >-
+            {{ (states('input_number.kitchen_base_temp') | float(20.0) + offset | float) | round(1) }}
+
+      - alias: "Set Living Room setpoint = base + offset"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.living_room_area
+        data:
+          temperature: >-
+            {{ (states('input_number.living_room_base_temp') | float(21.0) + offset | float) | round(1) }}
+
+      - alias: "Set Office setpoint = base + offset"
+        action: climate.set_temperature
+        target:
+          entity_id: climate.office_area
+        data:
+          temperature: >-
+            {{ (states('input_number.office_base_temp') | float(19.0) + offset | float) | round(1) }}
+
+      - alias: "Notify Edgar — daily result (validation; remove once trusted)"
+        action: notify.mobile_app_edphone
+        data:
+          title: "Weather-Aware Heating"
+          message: >-
+            Tomorrow mean {{ tomorrow_mean }} °C vs 3-day avg
+            {{ new_avg }} °C (Δ {{ delta }} °C). Offset
+            {{ offset | float }} °C. Setpoints: K
+            {{ (states('input_number.kitchen_base_temp') | float(20.0) + offset | float) | round(1) }},
+            LR
+            {{ (states('input_number.living_room_base_temp') | float(21.0) + offset | float) | round(1) }},
+            O
+            {{ (states('input_number.office_base_temp') | float(19.0) + offset | float) | round(1) }}.
