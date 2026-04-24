@@ -1,0 +1,543 @@
+# FUSION Dashboard — Phase 1 shell (status bar + sidebar + panel switcher)
+# Gate 2 reviewed: 2026-04-24
+# -----------------------------------------------------------------------------
+# SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
+# This file is the only authoritative source for FUSION's dashboard config.
+# NEVER edit FUSION via the HA UI "Edit Dashboard" button. All edits go:
+#   edit this file  →  git commit  →  ha_config_set_dashboard(config=...) via MCP
+# See DECISIONS.md (2026-04-24) for rationale.
+# -----------------------------------------------------------------------------
+# Scope: Phase 1 only — outer layout + status bar + sidebar + panel stubs.
+# Panel content (hero strip, floor grid, room popups, etc.) comes in Phase 2+.
+# See: 00 - Agent Context/FUSION-DESIGN-SPEC.md and BACKLOG.md.
+# -----------------------------------------------------------------------------
+
+title: Fusion
+
+# Shared button-card template for all 7 sidebar nav icons.
+# Active-state highlight is set per-icon via the `state:` block.
+# NOTE: button-card uses JS template syntax [[[ ... ]]] — this is NOT Jinja2.
+# Don't "fix" it to {{ ... }} (see DECISIONS 2026-04-14 — that rule is about
+# automations, not button-card).
+button_card_templates:
+  fusion_nav_icon:
+    show_name: false
+    show_state: false
+    tap_action:
+      action: call-service
+      service: input_select.select_option
+      target:
+        entity_id: input_select.fusion_panel
+    styles:
+      card:
+        - background: transparent
+        - border: 1px solid transparent
+        - border-radius: 10px
+        - width: 42px
+        - height: 42px
+        - margin: 4px 8px
+        - padding: 0
+        - box-shadow: none
+        - cursor: pointer
+        - transition: background 120ms ease, border-color 120ms ease
+      icon:
+        - width: 20px
+        - height: 20px
+        - color: "#888"
+
+views:
+  - title: FUSION
+    path: fusion
+    type: panel
+    cards:
+
+      # =======================================================================
+      # OUTER GRID — 2 rows × 2 cols
+      #   Row 1: status bar spans both cols (36 px)
+      #   Row 2: sidebar (58 px) + content (1fr)
+      # =======================================================================
+      - type: custom:layout-card
+        layout_type: custom:grid-layout
+        layout:
+          grid-template-columns: 58px 1fr
+          grid-template-rows: 36px 1fr
+          grid-template-areas: |
+            "statusbar statusbar"
+            "sidebar content"
+          grid-gap: 0
+          margin: 0
+          padding: 0
+          min-height: 100vh
+          background: "#090909"
+          color: "#e8e8e8"
+        cards:
+
+          # ===================================================================
+          # STATUS BAR (row 1, both cols) — 8-column inner grid
+          #   left:  person · edphone · ipad
+          #   right: temp · wan · dl · ul
+          #   middle spacer (column 4) absorbs free space via 1fr
+          # ===================================================================
+          - type: custom:layout-card
+            view_layout:
+              grid-area: statusbar
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: auto auto auto 1fr auto auto auto auto
+              grid-template-areas: |
+                "person edphone ipad . temp wan dl ul"
+              grid-gap: 12px
+              align-items: center
+              padding: 0 14px
+              height: 36px
+              background: "#000"
+              border-bottom: "1px solid #222"
+              box-sizing: border-box
+            cards:
+
+              # Presence — pulsing dot + "Edgar · Home"
+              - type: custom:button-card
+                view_layout:
+                  grid-area: person
+                entity: person.edgar
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const s = states['person.edgar'].state;
+                    const dot = s === 'home' ? '●' : '○';
+                    return `${dot} Edgar · ${s === 'home' ? 'Home' : 'Away'}`;
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#e8e8e8"
+                    - white-space: nowrap
+                state:
+                  - operator: template
+                    value: "[[[ return states['person.edgar'].state === 'home'; ]]]"
+                    styles:
+                      label:
+                        - color: "#4caf6e"
+
+              # Edphone tracker
+              - type: custom:button-card
+                view_layout:
+                  grid-area: edphone
+                entity: device_tracker.edphone
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const s = states['device_tracker.edphone'].state;
+                    return s === 'home' ? 'Edphone 🏠' : 'Edphone ·';
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#888"
+                    - white-space: nowrap
+
+              # iPad tracker
+              - type: custom:button-card
+                view_layout:
+                  grid-area: ipad
+                entity: device_tracker.ipad
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const s = states['device_tracker.ipad'].state;
+                    return s === 'home' ? 'iPad 🏠' : 'iPad ·';
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#888"
+                    - white-space: nowrap
+
+              # Outdoor temperature (poller fallback — see DESIGN-SPEC §3)
+              - type: custom:button-card
+                view_layout:
+                  grid-area: temp
+                entity: input_number.monitoring_outdoor_temperature
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);
+                    return isNaN(v) ? '—°C' : `${v.toFixed(1)}°C`;
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#e8e8e8"
+                    - white-space: nowrap
+
+              # WAN online dot
+              - type: custom:button-card
+                view_layout:
+                  grid-area: wan
+                entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 13px
+                    - line-height: 1
+                state:
+                  - operator: template
+                    value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
+                    styles:
+                      label:
+                        - color: "#4caf6e"
+                  - operator: template
+                    value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
+                    styles:
+                      label:
+                        - color: "#e05555"
+
+              # Download speed
+              - type: custom:button-card
+                view_layout:
+                  grid-area: dl
+                entity: sensor.zenwifi_bq16_ca38_download_speed
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);
+                    return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)} KiB/s`;
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#888"
+                    - white-space: nowrap
+
+              # Upload speed
+              - type: custom:button-card
+                view_layout:
+                  grid-area: ul
+                entity: sensor.zenwifi_bq16_ca38_upload_speed
+                show_icon: false
+                show_state: false
+                show_name: false
+                label: |
+                  [[[
+                    const v = parseFloat(states['sensor.zenwifi_bq16_ca38_upload_speed'].state);
+                    return isNaN(v) ? '↑ —' : `↑ ${v.toFixed(1)} KiB/s`;
+                  ]]]
+                styles:
+                  card:
+                    - background: transparent
+                    - border: none
+                    - padding: 0
+                    - box-shadow: none
+                    - height: 36px
+                  label:
+                    - font-size: 11px
+                    - color: "#888"
+                    - white-space: nowrap
+
+          # ===================================================================
+          # SIDEBAR (col 1, row 2) — 7 icons + 1 horizontal separator
+          # ===================================================================
+          - type: vertical-stack
+            view_layout:
+              grid-area: sidebar
+            cards:
+
+              # 1. Home
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:home-variant
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: home
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'home'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # 2. Kitchen
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:silverware-fork-knife
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: kitchen
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'kitchen'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # Separator (28×1 px rule)
+              - type: custom:button-card
+                show_name: false
+                show_icon: false
+                styles:
+                  card:
+                    - background: "#2a2a2a"
+                    - border: none
+                    - border-radius: 0
+                    - width: 28px
+                    - height: 1px
+                    - margin: 10px 15px
+                    - padding: 0
+                    - box-shadow: none
+                    - pointer-events: none
+
+              # 3. Climate
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:thermometer
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: climate
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'climate'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # 4. Media
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:music
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: media
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'media'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # 5. Network
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:wifi
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: network
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'network'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # 6. Energy
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:lightning-bolt
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: energy
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'energy'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+              # 7. Automations
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:cog-outline
+                tap_action:
+                  action: call-service
+                  service: input_select.select_option
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: automations
+                state:
+                  - operator: template
+                    value: "[[[ return states['input_select.fusion_panel'].state === 'automations'; ]]]"
+                    styles:
+                      card:
+                        - background: "#161616"
+                        - border: "1px solid #2a2a2a"
+                      icon:
+                        - color: "#e8e8e8"
+
+          # ===================================================================
+          # CONTENT (col 2, row 2) — panel switcher via 7 conditional cards.
+          #
+          # Initially tried config-template-card with ${PANEL} substitution, but
+          # its internal JS template-literal eval choked on the backticks inside
+          # the markdown body. The plan's R3 fallback is to use parallel
+          # conditional cards — simpler, built-in HA, no JS eval, and for stubs
+          # the extra DOM nodes are negligible. Revisit config-template-card in
+          # Phase 2+ if/when real panel content makes 7 conditionals wasteful.
+          # ===================================================================
+          - type: vertical-stack
+            view_layout:
+              grid-area: content
+            cards:
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: home
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: home
+
+                    _Phase 1 stub — real content arrives in Phase 2 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: kitchen
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: kitchen
+
+                    _Phase 1 stub — real content arrives in Phase 5 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: climate
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: climate
+
+                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: media
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: media
+
+                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: network
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: network
+
+                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: energy
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: energy
+
+                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+              - type: conditional
+                conditions:
+                  - entity: input_select.fusion_panel
+                    state: automations
+                card:
+                  type: markdown
+                  content: |
+                    # Panel: automations
+
+                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._

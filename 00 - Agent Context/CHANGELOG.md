@@ -5,6 +5,69 @@
 ---
 
 
+## 2026-04-24 — FUSION Dashboard Phase 0 + Phase 1 deployed
+
+### What was done
+Shipped Phase 0 (prerequisites) + Phase 1 (shell) of the new **FUSION** dashboard — a Carbon-aesthetic dark dashboard (`#090909` base) with a 36px top status bar, 58px left icon sidebar, and a content area driven by a 7-option panel switcher. BubbleDash v4 left untouched and remains the default dashboard.
+
+### Gate process
+- **Plan**: `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` — reviewed by `gate3-plan-critic` (APPROVED-WITH-FINDINGS); 7 findings resolved inline before execution.
+- **Gate 2 code review**: `ha-code-reviewer` APPROVED `config/dashboards/fusion.yaml` with non-blocking notes (PROFILE gap for BQ16 entities; pulsing-dot CSS deferred to Phase 6; outdoor temp uses tier-3 fallback only).
+- **Gate 3**: Backup created (`pre_fusion_dashboard_2026-04-24_*.tar`, 264.5 MB). Sequential HACS installs → helper create → Edgar hard-refresh checkpoint → YAML draft + code review → Edgar YAML confirmation → MCP write → agent-verified S1–S6 + S9 + 20a → Edgar visual confirmation of S7/S8.
+
+### Phase 0 — Prerequisites
+- **HACS installs**: `layout-card` v2.4.7, `apexcharts-card` v2.2.3, `config-template-card` 1.3.6 — all auto-registered as Lovelace resources (12 → 15 resources).
+- **Helper created**: `input_select.fusion_panel` (7 options: home / kitchen / climate / media / network / energy / automations; default `home`).
+- Backup verified via SSH (`/backup/pre_fusion_dashboard_2026-04-24_*.tar`) despite MCP timeout — same pattern as 2026-04-22.
+
+### Phase 1 — Shell
+- New storage-mode dashboard at `url_path: dashboard-fusion` (HA required a hyphen; plan's original `fusion` rejected with VALIDATION error).
+- Outer `custom:layout-card` CSS grid (2×2 template areas: `statusbar statusbar / sidebar content`), 58px × 36px fixed dimensions.
+- **Status bar** (8-column inner grid): presence dot (Edgar/Home), Edphone + iPad device trackers, outdoor temp, WAN status dot, ↓/↑ speeds. All driven by `person.edgar`, `device_tracker.{edphone,ipad}`, `input_number.monitoring_outdoor_temperature`, and `binary_sensor.zenwifi_bq16_ca38_wan_status` + `sensor.zenwifi_bq16_ca38_{download,upload}_speed`.
+- **Sidebar** (vertical-stack): 7 `custom:button-card` icons with a shared `fusion_nav_icon` button-card template + 1 separator. Active-icon highlight via button-card's native `state: [{operator: template}]` block (deviates from DESIGN-SPEC §4 card-mod approach — logged in DECISIONS 2026-04-24).
+- **Content**: 7 parallel `type: conditional` markdown stubs (pivot from `config-template-card` after the `${VAR}` substitution errored on backticks in the content — R3 fallback per plan, logged in DECISIONS 2026-04-24).
+
+### Key decisions logged (DECISIONS.md 2026-04-24)
+1. **FUSION is git source-of-truth** — HA UI "Edit Dashboard" prohibited for the 6-phase build to prevent .storage/git divergence.
+2. **Sidebar active highlight uses button-card native `state:`**, not card-mod — simpler, fewer moving parts.
+3. **Panel switcher uses 7 `conditional` cards**, not `config-template-card` — backticks in content break config-template-card's template-literal eval.
+
+### Verification (Phase 1C)
+| Criterion | Method | Result |
+|---|---|---|
+| S1 Backup | SSH `ls /backup/` | 264.5 MB tar present |
+| S2 HACS installed | `ha_hacs_search(installed_only=true)` | all 3 at target versions |
+| S3 Resources | `ha_config_list_dashboard_resources` | 12 → 15 |
+| S4 Helper | `ha_eval_template` | `home` · 7 options |
+| S5 Dashboard | `ha_config_get_dashboard` round-trip | config hash `2f6edd8cd2e00099` intact |
+| S6 Panel cycle | 7 × `input_select.select_option` calls | all 7 options cycle cleanly, return to `home` |
+| S7 Active highlight | Edgar visual | confirmed working |
+| S8 Console errors | Edgar DevTools | no red errors after conditional-card pivot |
+| S9 Health | `ha_get_system_health` baseline diff | DB 785.61 MiB unchanged; `healthy: true`; dashboards 3→4, views 6→7 |
+| 20a Unintended changes | `ha_get_logs` | only `input_select.fusion_panel` mutated during 24s click-test; no listeners on helper |
+
+### Files changed
+- `config/dashboards/fusion.yaml` (new — shell YAML source)
+- `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` (new — plan doc, gate3-plan-critic reviewed)
+- `00 - Agent Context/DECISIONS.md` (+3 rows)
+- `00 - Agent Context/PROFILE.md` (+BQ16 network entity IDs)
+- `00 - Agent Context/BACKLOG.md` (FUSION entry marked Phase 0+1 done, Phase 2 next)
+- `00 - Agent Context/CHANGELOG.md` (this entry)
+- `00 - Agent Context/LAST_UPDATED` (→ 2026-04-24)
+- HA server: `.storage/lovelace_dashboards` (+1 entry `dashboard_fusion`), `.storage/lovelace.dashboard_fusion` (new), `.storage/input_select` (+1 entry `fusion_panel`), `/config/www/community/*/` (3 new HACS card dirs)
+
+### Known deferrals (tracked as BACKLOG or DESIGN-SPEC notes)
+- Pulsing presence dot is static in Phase 1 (Phase 6 polish will add CSS keyframe).
+- Outdoor temp only uses tier-3 fallback (`input_number.monitoring_outdoor_temperature`) — DESIGN-SPEC §3's tier-1/tier-2 fallback chain not wired because both are unreliable.
+- `config-template-card` is installed and available for Phase 2+ use, but has a known-bad case with backticks in string values — screen for this before reaching for it.
+- `apexcharts-card` installed but unused until Phase 3.
+
+### Next session
+Phase 2 — Home panel: hero strip (6 tiles), floor-grouped room grid, scenes row. Blocked on Phase 2 entity-resolution pass (per-room motion sensors, energy sensors, scene entity IDs).
+
+---
+
+
 ## 2026-04-22 — Weather-Aware Heating deployed
 
 ### What was done
