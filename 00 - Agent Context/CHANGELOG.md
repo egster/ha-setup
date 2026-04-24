@@ -5,6 +5,40 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6c — perform-action migration + Kiosk toggle; popups attempted/reverted
+
+### What was done
+
+Three targeted follow-ups to the FUSION dashboard:
+1. **`call-service` → `perform-action` migration** — 11 sites updated (sidebar nav template + 7 per-icon tap_action overrides + 3 scene buttons). Removes deprecation risk before future HA major upgrades.
+2. **Kiosk Mode toggle button** — `input_boolean.fusion_kiosk` helper created; `kiosk_mode:` top-level config reads it; toggle icon added at the bottom of the sidebar. Tap toggles the boolean; when `on`, kiosk-mode plugin hides HA's header + sidebar for fullscreen iPad use. Icon changes from `mdi:fullscreen` → `mdi:fullscreen-exit` via button-card's native `state:` block (JS template in `icon:` doesn't work — only in `name:`/`label:`).
+3. **Bubble Card popups — attempted, reverted** — 8 popups (one per room) drafted with mushroom-light-card + mushroom-climate-card + mini-media-player sections. Initial placement in outer layout-card's cards array caused the content grid cell to fail rendering. Moving popups into content vertical-stack also failed (bubble-cards either didn't materialize in DOM or HA's render pipeline choked mixing pop-up cards with conditionals). Reverted tap_action on 8 room cards back to `more-info` (Phase 4 pattern). Popups tracked as BACKLOG item with notes on what worked/didn't.
+
+### Key technical learnings
+- **Kiosk button location**: putting it in the 9th column of the status bar overflowed the grid on narrow viewports (~1400px) because the 1fr spacer can't shrink below content widths. Moving it to the sidebar bottom keeps it always-visible regardless of viewport.
+- **button-card `icon:` field doesn't accept JS templates** (only `name:`/`label:` do). For state-dependent icons, use button-card's native `state:` block with `value:` matcher + `icon:` override.
+- **Bubble Card popups + HA panel mode don't cohabit** cleanly. Panel mode forces single top-level card; popups expect to sit at view-level. Inserting them inside nested containers broke content rendering. Next attempt: convert FUSION to non-panel view mode, OR use browser_mod.popup service (requires installing browser_mod).
+
+### Deploy strategy
+Used sequential `python_transform` calls (5 total) — full config replace wasn't feasible because Read tool truncates ≥25K tokens and inlining 52KB JSON hits tool-parameter limits. Each transform was 100-5000 bytes and kept error isolation clean.
+
+### Files changed
+- `config/dashboards/fusion.yaml` — full regeneration from `.storage` (1718 lines, down from 1968 after popup removal; up from 2170 pre-migration because of some YAML flow reformatting during round-trip)
+- `00 - Agent Context/BACKLOG.md` — popups still tracked; Kiosk + perform-action marked ✅
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- HA server: `.storage/lovelace.dashboard_fusion` (5 transforms); `.storage/input_boolean` (+1 entry `fusion_kiosk`)
+
+### Known follow-ups
+- **Popups retry** — try non-panel view mode or install browser_mod
+- **Kiosk button styling** — currently at sidebar bottom with default button-card framing; could use `fusion_nav_icon` template for visual consistency with nav icons above
+- **Popup popup z-index** — if/when popups work, check they sit above the 36px status bar (z-index:9999 per spec)
+
+### Next session
+Next BACKLOG priorities: Goodnight Kill Switch script, Low Battery Alerts, Home Monitoring Weather-Aware Heating view.
+
+---
+
+
 ## 2026-04-24 — FUSION Dashboard Phases 3, 4, 5, 6 deployed (same day — final session)
 
 ### What was done

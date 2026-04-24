@@ -69,12 +69,12 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 **Status**: ✅ **All 6 phases deployed 2026-04-24** — shell + all 7 panels (Home, Kitchen, Climate, Media, Network, Energy, Automations) + room tap/hold actions + global polish live at `/dashboard-fusion`. See CHANGELOG 2026-04-24 for what shipped.
 
 **Open enhancements** (tracked separately below, not blocking dashboard use):
-1. Bubble Card popups for room taps (Phase 4 was simplified to more-info + navigate)
+1. **Bubble Card popups for room taps** — Attempted in Phase 6c, reverted. Placing popups in outer layout-card's cards array caused the entire content grid cell to fail rendering; moving them into content vertical-stack also broke rendering (bubble-cards either didn't materialize in DOM or something about HA's render pipeline chokes when pop-up cards sit amongst conditional cards). Needs research — maybe popups must live at the view-top level which `type: panel` doesn't allow. Workaround: convert view to non-panel mode with explicit sections, OR wrap popups in a conditional that's always visible, OR use a different popup library (browser_mod). Tap-action currently reverted to `more-info` on primary entity (Phase 4 behavior).
 2. Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode)
 3. Kitchen recipe integration / links
-4. Kiosk Mode activation on iPad
+4. ✅ **Kiosk Mode** — Added 2026-04-24 Phase 6c. Toggle icon at bottom of sidebar (moved there from status bar because 9-column status bar overflowed 1fr-constrained layouts on narrow viewports). Reads `input_boolean.fusion_kiosk`; `kiosk_mode:` top-level config activates when helper is `on`.
 5. BubbleDash v4 archival (after 1-2 weeks of trusting FUSION)
-6. `tap_action: call-service` → `perform-action` audit
+6. ✅ **`call-service` → `perform-action`** migration — Done 2026-04-24 Phase 6c (11 sites: sidebar nav template + 7 icon overrides + 3 scene buttons).
 7. iPad VoiceOver accessibility pass
 8. Pulsing presence dot CSS keyframe animation
 **Design spec**: `00 - Agent Context/FUSION-DESIGN-SPEC.md` ← read this at the start of every implementation session

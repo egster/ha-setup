@@ -1,8 +1,12 @@
-# FUSION Dashboard — Phases 1-6 complete
+# FUSION Dashboard — Phases 1-6 complete + 6c (perform-action migration + Kiosk toggle)
 # Gate 2 reviewed: 2026-04-24 (Phase 1 shell)
 # Gate 2 reviewed: 2026-04-24 (Phase 2 Home panel)
 # Gate 2 reviewed: 2026-04-24 (Phase 3 Climate/Media/Network/Energy/Automations)
-# Phases 4 (room tap/hold), 5 (Kitchen), 6 (polish) follow Phase 3 patterns
+# Phases 4 (room tap/hold), 5 (Kitchen), 6 (polish) follow Phase 3 patterns.
+# Phase 6c: perform-action migration (11 sites), Kiosk toggle moved to sidebar bottom
+# (status bar ran out of horizontal space on narrow viewports).
+# Bubble Card popups attempted in Phase 6c but reverted — broke content rendering.
+# Popups tracked as BACKLOG item; tap_action reverted to more-info.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # This file is the only authoritative source for FUSION's dashboard config.
@@ -10,2109 +14,1705 @@
 #   edit this file  →  git commit  →  ha_config_set_dashboard(config=...) via MCP
 # See DECISIONS.md (2026-04-24) for rationale.
 # -----------------------------------------------------------------------------
-# Scope: Phase 1 only — outer layout + status bar + sidebar + panel stubs.
-# Panel content (hero strip, floor grid, room popups, etc.) comes in Phase 2+.
-# See: 00 - Agent Context/FUSION-DESIGN-SPEC.md and BACKLOG.md.
-# -----------------------------------------------------------------------------
-
 title: Fusion
-
-# Shared button-card template for all 7 sidebar nav icons.
-# Active-state highlight is set per-icon via the `state:` block.
-# NOTE: button-card uses JS template syntax [[[ ... ]]] — this is NOT Jinja2.
-# Don't "fix" it to {{ ... }} (see DECISIONS 2026-04-14 — that rule is about
-# automations, not button-card).
 button_card_templates:
   fusion_nav_icon:
     show_name: false
     show_state: false
     tap_action:
-      action: call-service
-      service: input_select.select_option
+      action: perform-action
       target:
         entity_id: input_select.fusion_panel
+      perform_action: input_select.select_option
     styles:
       card:
-        - background: transparent
-        - border: 1px solid transparent
-        - border-radius: 10px
-        - width: 42px
-        - height: 42px
-        - margin: 4px 8px
-        - padding: 0
-        - box-shadow: none
-        - cursor: pointer
-        - transition: background 120ms ease, border-color 120ms ease
+      - background: transparent
+      - border: 1px solid transparent
+      - border-radius: 10px
+      - width: 42px
+      - height: 42px
+      - margin: 4px 8px
+      - padding: 0
+      - box-shadow: none
+      - cursor: pointer
+      - transition: background 120ms ease, border-color 120ms ease
       icon:
-        - width: 20px
-        - height: 20px
-        - color: "#888"
-
-  # Shared template for Phase 2 floor section headers.
-  # Replaces the naive `type: markdown` + `style:` pattern, which silently
-  # drops styling (markdown card has no `style:` key). Per Gate 2 review.
+      - width: 20px
+      - height: 20px
+      - color: '#888'
   fusion_floor_header:
     show_name: true
     show_icon: false
     show_state: false
     styles:
       card:
-        - background: transparent
-        - border: none
-        - border-bottom: "1px solid #2a2a2a"
-        - border-radius: 0
-        - box-shadow: none
-        - padding: 14px 14px 6px 14px
-        - margin: 0 14px
-        - height: auto
+      - background: transparent
+      - border: none
+      - border-bottom: '1px solid #2a2a2a'
+      - border-radius: 0
+      - box-shadow: none
+      - padding: 14px 14px 6px 14px
+      - margin: 0 14px
+      - height: auto
       name:
-        - color: "#888"
-        - font-size: 11px
-        - font-weight: 600
-        - text-transform: uppercase
-        - letter-spacing: 1px
-        - text-align: left
-        - justify-self: start
-
+      - color: '#888'
+      - font-size: 11px
+      - font-weight: 600
+      - text-transform: uppercase
+      - letter-spacing: 1px
+      - text-align: left
+      - justify-self: start
 views:
-  - title: FUSION
-    path: fusion
-    type: panel
+- title: FUSION
+  path: fusion
+  type: panel
+  cards:
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: 58px 1fr
+      grid-template-rows: 36px 1fr
+      grid-template-areas: '"statusbar statusbar"
+
+        "sidebar content"
+
+        '
+      grid-gap: 0
+      margin: 0
+      padding: 0
+      min-height: 100vh
+      background: '#090909'
+      color: '#e8e8e8'
     cards:
+    - type: custom:layout-card
+      view_layout:
+        grid-area: statusbar
+      layout_type: custom:grid-layout
+      layout:
+        grid-template-columns: max-content max-content max-content 1fr max-content max-content max-content max-content
+        grid-template-areas: '"person edphone ipad . temp wan dl ul"
 
-      # =======================================================================
-      # OUTER GRID — 2 rows × 2 cols
-      #   Row 1: status bar spans both cols (36 px)
-      #   Row 2: sidebar (58 px) + content (1fr)
-      # =======================================================================
-      - type: custom:layout-card
-        layout_type: custom:grid-layout
-        layout:
-          grid-template-columns: 58px 1fr
-          grid-template-rows: 36px 1fr
-          grid-template-areas: |
-            "statusbar statusbar"
-            "sidebar content"
-          grid-gap: 0
-          margin: 0
-          padding: 0
-          min-height: 100vh
-          background: "#090909"
-          color: "#e8e8e8"
-        # Phase 6 polish: global font, scrollbar, accent colour CSS vars.
-        # Applied at the outer layout so every descendant inherits the dark
-        # theme without per-card overrides.
-        card_mod:
-          style: |
-            :host {
-              --primary-color: #4f8ef7;
-              --paper-item-icon-color: #888;
-              font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-            }
-            :host ::-webkit-scrollbar {
-              width: 8px;
-              height: 8px;
-            }
-            :host ::-webkit-scrollbar-track {
-              background: #111;
-            }
-            :host ::-webkit-scrollbar-thumb {
-              background: #2a2a2a;
-              border-radius: 4px;
-            }
-            :host ::-webkit-scrollbar-thumb:hover {
-              background: #3a3a3a;
-            }
-        cards:
-
-          # ===================================================================
-          # STATUS BAR (row 1, both cols) — 8-column inner grid
-          #   left:  person · edphone · ipad
-          #   right: temp · wan · dl · ul
-          #   middle spacer (column 4) absorbs free space via 1fr
-          # ===================================================================
+          '
+        grid-gap: 12px
+        align-items: center
+        padding: 0 14px
+        height: 36px
+        background: '#000'
+        border-bottom: '1px solid #222'
+        box-sizing: border-box
+      cards:
+      - type: custom:button-card
+        view_layout:
+          grid-area: person
+        entity: person.edgar
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const s = states['person.edgar'].state;\n  const dot = s === 'home' ? '●' : '○';\n  return `${dot} Edgar · ${s === 'home' ? 'Home' : 'Away'}`;\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#e8e8e8'
+          - white-space: nowrap
+        state:
+        - operator: template
+          value: '[[[ return states[''person.edgar''].state === ''home''; ]]]'
+          styles:
+            label:
+            - color: '#4caf6e'
+      - type: custom:button-card
+        view_layout:
+          grid-area: edphone
+        entity: device_tracker.edphone
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const s = states['device_tracker.edphone'].state;\n  return s === 'home' ? 'Edphone \U0001F3E0' : 'Edphone ·';\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#888'
+          - white-space: nowrap
+      - type: custom:button-card
+        view_layout:
+          grid-area: ipad
+        entity: device_tracker.ipad
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const s = states['device_tracker.ipad'].state;\n  return s === 'home' ? 'iPad \U0001F3E0' : 'iPad ·';\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#888'
+          - white-space: nowrap
+      - type: custom:button-card
+        view_layout:
+          grid-area: temp
+        entity: input_number.monitoring_outdoor_temperature
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);\n  return isNaN(v) ? '—°C' : `${v.toFixed(1)}°C`;\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#e8e8e8'
+          - white-space: nowrap
+      - type: custom:button-card
+        view_layout:
+          grid-area: wan
+        entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 13px
+          - line-height: 1
+        state:
+        - operator: template
+          value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+          styles:
+            label:
+            - color: '#4caf6e'
+        - operator: template
+          value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+          styles:
+            label:
+            - color: '#e05555'
+      - type: custom:button-card
+        view_layout:
+          grid-area: dl
+        entity: sensor.zenwifi_bq16_ca38_download_speed
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);\n  return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)} KiB/s`;\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#888'
+          - white-space: nowrap
+      - type: custom:button-card
+        view_layout:
+          grid-area: ul
+        entity: sensor.zenwifi_bq16_ca38_upload_speed
+        show_icon: false
+        show_state: false
+        show_name: false
+        show_label: true
+        label: "[[[\n  const v = parseFloat(states['sensor.zenwifi_bq16_ca38_upload_speed'].state);\n  return isNaN(v) ? '↑ —' : `↑ ${v.toFixed(1)} KiB/s`;\n]]]\n"
+        styles:
+          card:
+          - background: transparent
+          - border: none
+          - padding: 0
+          - box-shadow: none
+          - height: 36px
+          - width: max-content
+          label:
+          - font-size: 11px
+          - color: '#888'
+          - white-space: nowrap
+    - type: vertical-stack
+      view_layout:
+        grid-area: sidebar
+      cards:
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:home-variant
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: home
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:silverware-fork-knife
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: kitchen
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        styles:
+          card:
+          - background: '#2a2a2a'
+          - border: none
+          - border-radius: 0
+          - width: 28px
+          - height: 1px
+          - margin: 10px 15px
+          - padding: 0
+          - box-shadow: none
+          - pointer-events: none
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:thermometer
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: climate
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:music
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: media
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:wifi
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: network
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:lightning-bolt
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: energy
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        template: fusion_nav_icon
+        icon: mdi:cog-outline
+        tap_action:
+          action: perform-action
+          target:
+            entity_id: input_select.fusion_panel
+          data:
+            option: automations
+          perform_action: input_select.select_option
+        state:
+        - operator: template
+          value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
+          styles:
+            card:
+            - background: '#161616'
+            - border: '1px solid #2a2a2a'
+            icon:
+            - color: '#e8e8e8'
+      - type: custom:button-card
+        entity: input_boolean.fusion_kiosk
+        show_icon: true
+        show_state: false
+        show_name: false
+        show_label: false
+        icon: mdi:fullscreen
+        tap_action:
+          action: perform-action
+          perform_action: input_boolean.toggle
+          target:
+            entity_id: input_boolean.fusion_kiosk
+        styles:
+          card:
+          - background: transparent
+          - border: 1px solid transparent
+          - border-radius: 10px
+          - width: 42px
+          - height: 42px
+          - margin: 16px 8px 0 8px
+          - padding: 0
+          - box-shadow: none
+          - cursor: pointer
+          icon:
+          - width: 20px
+          - height: 20px
+          - color: '#888'
+        state:
+        - value: 'on'
+          icon: mdi:fullscreen-exit
+          styles:
+            icon:
+            - color: '#4f8ef7'
+    - type: vertical-stack
+      view_layout:
+        grid-area: content
+      cards:
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: home
+        card:
+          type: vertical-stack
+          cards:
           - type: custom:layout-card
-            view_layout:
-              grid-area: statusbar
             layout_type: custom:grid-layout
             layout:
-              # NOTE: auto columns collapse to 0 for button-cards inside a grid
-              # (they don't report intrinsic width). max-content forces each
-              # column to its max intrinsic width — the label text fits.
-              grid-template-columns: max-content max-content max-content 1fr max-content max-content max-content max-content
-              grid-template-areas: |
-                "person edphone ipad . temp wan dl ul"
-              grid-gap: 12px
-              align-items: center
+              grid-template-columns: repeat(5, 1fr)
+              grid-gap: 10px
+              padding: 14px 14px 4px 14px
+            cards:
+            - type: custom:button-card
+              icon: mdi:home-group
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const sensors = [\n    'binary_sensor.eve_motion_20eby9901_occupancy_2',\n    'binary_sensor.office_motion_sensors',\n    'binary_sensor.entrance_motion_sensors'\n  ];\n  const\
+                \ on = sensors.filter(id => states[id] && states[id].state === 'on').length;\n  return `${on}/${sensors.length}`;\n]]]\n"
+              label: Rooms Occupied
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 10px 12px
+                - height: 64px
+                - box-shadow: none
+                icon:
+                - width: 18px
+                - height: 18px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - color: '#4caf6e'
+                - text-align: left
+                - padding-top: 2px
+                label:
+                - font-size: 9px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                - padding-top: 2px
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+            - type: custom:button-card
+              icon: mdi:lightbulb-group
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const groups = [\n    'light.living_room_lights',\n    'light.kitchen_lights',\n    'light.office_lights',\n    'light.entrance_ceiling',\n    'light.outdoor_lights',\n    'light.jona_lights',\n\
+                \    'light.upstairs_hall_lights'\n  ];\n  const singles = [\n    'light.garage',\n    'light.uplight_front',\n    'light.uplight_back_left',\n    'light.uplight_back_right'\n  ];\n  let\
+                \ total = 0;\n  for (const g of groups) {\n    const s = states[g];\n    if (s && s.state === 'on') {\n      const members = s.attributes.entity_id || [];\n      total += members.filter(id\
+                \ => states[id] && states[id].state === 'on').length;\n    }\n  }\n  for (const id of singles) {\n    if (states[id] && states[id].state === 'on') total++;\n  }\n  return total;\n]]]\n"
+              label: Lights On
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 10px 12px
+                - height: 64px
+                - box-shadow: none
+                icon:
+                - width: 18px
+                - height: 18px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 2px
+                label:
+                - font-size: 9px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                - padding-top: 2px
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+            - type: custom:button-card
+              icon: mdi:thermometer
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const ids = ['climate.living_room_area', 'climate.kitchen_area', 'climate.office_area'];\n  const temps = ids\n    .map(id => states[id] && parseFloat(states[id].attributes.current_temperature))\n\
+                \    .filter(v => !isNaN(v));\n  if (temps.length === 0) return '—°';\n  const avg = temps.reduce((a,b) => a+b, 0) / temps.length;\n  return `${avg.toFixed(1)}°`;\n]]]\n"
+              label: Avg Temp
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 10px 12px
+                - height: 64px
+                - box-shadow: none
+                icon:
+                - width: 18px
+                - height: 18px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 2px
+                label:
+                - font-size: 9px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                - padding-top: 2px
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+            - type: custom:button-card
+              icon: mdi:wifi
+              show_name: true
+              show_label: true
+              show_state: false
+              entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+              name: "[[[\n  return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? 'Online' : 'Offline';\n]]]\n"
+              label: Network
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 10px 12px
+                - height: 64px
+                - box-shadow: none
+                icon:
+                - width: 18px
+                - height: 18px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - text-align: left
+                - padding-top: 2px
+                label:
+                - font-size: 9px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                - padding-top: 2px
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+              state:
+              - operator: template
+                value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+                styles:
+                  name:
+                  - color: '#4caf6e'
+              - operator: template
+                value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+                styles:
+                  name:
+                  - color: '#e05555'
+            - type: custom:button-card
+              icon: mdi:play-circle
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const players = [\n    'media_player.living_room',\n    'media_player.homepod',\n    'media_player.jona_speaker',\n    'media_player.kitchen_speakers',\n    'media_player.upstairs_speaker',\n\
+                \    'media_player.living_room_tv_2'\n  ];\n  return players.filter(id => states[id] && states[id].state === 'playing').length;\n]]]\n"
+              label: Playing
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 10px 12px
+                - height: 64px
+                - box-shadow: none
+                icon:
+                - width: 18px
+                - height: 18px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 2px
+                label:
+                - font-size: 9px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                - padding-top: 2px
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🏠 MAIN FLOOR
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(3, 1fr)
+              grid-gap: 10px
               padding: 0 14px
-              height: 36px
-              background: "#000"
-              border-bottom: "1px solid #222"
-              box-sizing: border-box
             cards:
-
-              # Presence — pulsing dot + "Edgar · Home"
-              - type: custom:button-card
-                view_layout:
-                  grid-area: person
-                entity: person.edgar
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const s = states['person.edgar'].state;
-                    const dot = s === 'home' ? '●' : '○';
-                    return `${dot} Edgar · ${s === 'home' ? 'Home' : 'Away'}`;
-                  ]]]
+            - type: custom:button-card
+              icon: mdi:sofa
+              name: Living Room
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              label: "[[[\n  const chips = [];\n  const lg = states['light.living_room_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count =\
+                \ members.filter(id => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Floor ♨</span>');\n  const mp = states['media_player.living_room'];\n  const hp = states['media_player.homepod'];\n  if ((mp && mp.state === 'playing') || (hp && hp.state ===\
+                \ 'playing')) {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">▶ Playing</span>');\n  }\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              tap_action:
+                action: more-info
+                entity: light.living_room_lights
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/living_room
+            - type: custom:button-card
+              icon: mdi:silverware-fork-knife
+              name: Kitchen
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              entity: binary_sensor.eve_motion_20eby9901_occupancy_2
+              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on') {\n    chips.push('<span\
+                \ style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n\
+                \  const lg = states['light.kitchen_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] &&\
+                \ states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Auto</span>');\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Floor ♨</span>');\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              state:
+              - operator: template
+                value: '[[[ return !!states[''binary_sensor.eve_motion_20eby9901_occupancy_2''] && states[''binary_sensor.eve_motion_20eby9901_occupancy_2''].state === ''on''; ]]]'
                 styles:
                   card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#e8e8e8"
-                    - white-space: nowrap
-                state:
-                  - operator: template
-                    value: "[[[ return states['person.edgar'].state === 'home'; ]]]"
-                    styles:
-                      label:
-                        - color: "#4caf6e"
-
-              # Edphone tracker
-              - type: custom:button-card
-                view_layout:
-                  grid-area: edphone
-                entity: device_tracker.edphone
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const s = states['device_tracker.edphone'].state;
-                    return s === 'home' ? 'Edphone 🏠' : 'Edphone ·';
-                  ]]]
+                  - border-left: '3px solid #4caf6e'
+              tap_action:
+                action: more-info
+                entity: climate.kitchen_area
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/kitchen
+            - type: custom:button-card
+              icon: mdi:desk
+              name: Office
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              entity: binary_sensor.office_motion_sensors
+              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on') {\n    chips.push('<span style=\"display:inline-block;padding:2px\
+                \ 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n  const lg = states['light.office_lights']\
+                \ || states['light.desk_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] && states[id].state\
+                \ === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Auto</span>');\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Floor ♨</span>');\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              state:
+              - operator: template
+                value: '[[[ return !!states[''binary_sensor.office_motion_sensors''] && states[''binary_sensor.office_motion_sensors''].state === ''on''; ]]]'
                 styles:
                   card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#888"
-                    - white-space: nowrap
-
-              # iPad tracker
-              - type: custom:button-card
-                view_layout:
-                  grid-area: ipad
-                entity: device_tracker.ipad
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const s = states['device_tracker.ipad'].state;
-                    return s === 'home' ? 'iPad 🏠' : 'iPad ·';
-                  ]]]
-                styles:
-                  card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#888"
-                    - white-space: nowrap
-
-              # Outdoor temperature (poller fallback — see DESIGN-SPEC §3)
-              - type: custom:button-card
-                view_layout:
-                  grid-area: temp
-                entity: input_number.monitoring_outdoor_temperature
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);
-                    return isNaN(v) ? '—°C' : `${v.toFixed(1)}°C`;
-                  ]]]
-                styles:
-                  card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#e8e8e8"
-                    - white-space: nowrap
-
-              # WAN online dot
-              - type: custom:button-card
-                view_layout:
-                  grid-area: wan
-                entity: binary_sensor.zenwifi_bq16_ca38_wan_status
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';
-                  ]]]
-                styles:
-                  card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 13px
-                    - line-height: 1
-                state:
-                  - operator: template
-                    value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
-                    styles:
-                      label:
-                        - color: "#4caf6e"
-                  - operator: template
-                    value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
-                    styles:
-                      label:
-                        - color: "#e05555"
-
-              # Download speed
-              - type: custom:button-card
-                view_layout:
-                  grid-area: dl
-                entity: sensor.zenwifi_bq16_ca38_download_speed
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);
-                    return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)} KiB/s`;
-                  ]]]
-                styles:
-                  card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#888"
-                    - white-space: nowrap
-
-              # Upload speed
-              - type: custom:button-card
-                view_layout:
-                  grid-area: ul
-                entity: sensor.zenwifi_bq16_ca38_upload_speed
-                show_icon: false
-                show_state: false
-                show_name: false
-                show_label: true
-                label: |
-                  [[[
-                    const v = parseFloat(states['sensor.zenwifi_bq16_ca38_upload_speed'].state);
-                    return isNaN(v) ? '↑ —' : `↑ ${v.toFixed(1)} KiB/s`;
-                  ]]]
-                styles:
-                  card:
-                    - background: transparent
-                    - border: none
-                    - padding: 0
-                    - box-shadow: none
-                    - height: 36px
-                    - width: max-content
-                  label:
-                    - font-size: 11px
-                    - color: "#888"
-                    - white-space: nowrap
-
-          # ===================================================================
-          # SIDEBAR (col 1, row 2) — 7 icons + 1 horizontal separator
-          # ===================================================================
-          - type: vertical-stack
-            view_layout:
-              grid-area: sidebar
+                  - border-left: '3px solid #4caf6e'
+              tap_action:
+                action: more-info
+                entity: climate.office_area
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/office
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🛏 UPPER FLOOR
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(3, 1fr)
+              grid-gap: 10px
+              padding: 0 14px
             cards:
-
-              # 1. Home
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:home-variant
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: home
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'home'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # 2. Kitchen
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:silverware-fork-knife
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: kitchen
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'kitchen'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # Separator (28×1 px rule)
-              - type: custom:button-card
-                show_name: false
-                show_icon: false
+            - type: custom:button-card
+              icon: mdi:bed
+              name: Bedroom
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              label: "[[[\n  const chips = [];\n  const ac = states['climate.air_conditioning_bedroom'];\n  if (ac && ac.state !== 'unavailable' && ac.state !== 'unknown') {\n    chips.push('<span style=\"\
+                display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">AC</span>');\n  } else {\n    chips.push('<span\
+                \ style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">AC offline</span>');\n  }\n \
+                \ return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                - opacity: 0.75
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#555'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#888'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              tap_action:
+                action: more-info
+                entity: climate.air_conditioning_bedroom
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/bedroom
+            - type: custom:button-card
+              icon: mdi:teddy-bear
+              name: Jona's Room
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              label: "[[[\n  const chips = [];\n  const lg = states['light.jona_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id\
+                \ => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  } else if (lg && lg.state === 'unavailable') {\n    chips.push('<span style=\"display:inline-block;padding:2px\
+                \ 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Lights offline</span>');\n  }\n  const mp = states['media_player.jona_speaker'];\n\
+                \  if (mp && mp.state === 'playing') {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">▶ Playing</span>');\n  }\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              tap_action:
+                action: more-info
+                entity: light.jona_lights
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/jona_s_room
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ⬇️ DOWNSTAIRS
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(3, 1fr)
+              grid-gap: 10px
+              padding: 0 14px
+            cards:
+            - type: custom:button-card
+              icon: mdi:door
+              name: Entrance
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              entity: binary_sensor.entrance_motion_sensors
+              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on') {\n    chips.push('<span style=\"\
+                display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n  const lg\
+                \ = states['light.entrance_ceiling'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] && states[id].state\
+                \ === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">Auto</span>');\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              state:
+              - operator: template
+                value: '[[[ return !!states[''binary_sensor.entrance_motion_sensors''] && states[''binary_sensor.entrance_motion_sensors''].state === ''on''; ]]]'
                 styles:
                   card:
-                    - background: "#2a2a2a"
-                    - border: none
-                    - border-radius: 0
-                    - width: 28px
-                    - height: 1px
-                    - margin: 10px 15px
-                    - padding: 0
-                    - box-shadow: none
-                    - pointer-events: none
-
-              # 3. Climate
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:thermometer
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: climate
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'climate'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # 4. Media
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:music
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: media
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'media'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # 5. Network
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:wifi
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: network
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'network'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # 6. Energy
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:lightning-bolt
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: energy
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'energy'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-              # 7. Automations
-              - type: custom:button-card
-                template: fusion_nav_icon
-                icon: mdi:cog-outline
-                tap_action:
-                  action: call-service
-                  service: input_select.select_option
-                  target:
-                    entity_id: input_select.fusion_panel
-                  data:
-                    option: automations
-                state:
-                  - operator: template
-                    value: "[[[ return states['input_select.fusion_panel'].state === 'automations'; ]]]"
-                    styles:
-                      card:
-                        - background: "#161616"
-                        - border: "1px solid #2a2a2a"
-                      icon:
-                        - color: "#e8e8e8"
-
-          # ===================================================================
-          # CONTENT (col 2, row 2) — panel switcher via 7 conditional cards.
-          #
-          # Initially tried config-template-card with ${PANEL} substitution, but
-          # its internal JS template-literal eval choked on the backticks inside
-          # the markdown body. The plan's R3 fallback is to use parallel
-          # conditional cards — simpler, built-in HA, no JS eval, and for stubs
-          # the extra DOM nodes are negligible. Revisit config-template-card in
-          # Phase 2+ if/when real panel content makes 7 conditionals wasteful.
-          # ===================================================================
-          - type: vertical-stack
-            view_layout:
-              grid-area: content
+                  - border-left: '3px solid #4caf6e'
+              tap_action:
+                action: more-info
+                entity: light.entrance_ceiling
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/entrance
+            - type: custom:button-card
+              icon: mdi:garage
+              name: Garage
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              label: "[[[\n  const chips = [];\n  const lg = states['light.garage'];\n  if (lg && lg.state === 'on') {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px\
+                \ solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">1 light</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px\
+                \ solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Auto</span>');\n  return chips.join('');\n]]]\n"
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              tap_action:
+                action: more-info
+                entity: light.garage
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/garage
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🌿 OUTSIDE
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(3, 1fr)
+              grid-gap: 10px
+              padding: 0 14px
             cards:
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: home
+            - type: custom:button-card
+              icon: mdi:tree
+              name: Outdoor
+              show_name: true
+              show_icon: true
+              show_label: true
+              show_state: false
+              label: "[[[\n  const chips = [];\n  const lg = states['light.outdoor_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id\
+                \ => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
+                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  return chips.join('');\n]]]\n"
+              styles:
                 card:
-                  # =================================================================
-                  # HOME PANEL — Phase 2 (hero strip + floor grid + scenes row)
-                  # Architecture: vertical-stack of 6 sub-cards.
-                  # All state/count logic is client-side JS in button-card labels —
-                  # no template sensors or helpers (keeps recorder quiet; see
-                  # DECISIONS 2026-04-22 on writes/day).
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-
-                    # -----------------------------------------------------------------
-                    # HERO STRIP (5 tiles in a 5-col grid — Power tile omitted per
-                    # Phase 2 decision Q1: no whole-home energy monitor exists)
-                    # -----------------------------------------------------------------
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(5, 1fr)
-                        grid-gap: 10px
-                        padding: 14px 14px 4px 14px
-                      cards:
-
-                        # Tile 1 — Rooms Occupied
-                        - type: custom:button-card
-                          icon: mdi:home-group
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const sensors = [
-                                'binary_sensor.eve_motion_20eby9901_occupancy_2',
-                                'binary_sensor.office_motion_sensors',
-                                'binary_sensor.entrance_motion_sensors'
-                              ];
-                              const on = sensors.filter(id => states[id] && states[id].state === 'on').length;
-                              return `${on}/${sensors.length}`;
-                            ]]]
-                          label: Rooms Occupied
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 10px 12px
-                              - height: 64px
-                              - box-shadow: none
-                            icon:
-                              - width: 18px
-                              - height: 18px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - color: "#4caf6e"
-                              - text-align: left
-                              - padding-top: 2px
-                            label:
-                              - font-size: 9px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 2px
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-
-                        # Tile 2 — Lights On
-                        # Explicit list per Gate 2 review: `Object.values(states)` iterates
-                        # every HA entity (~500) on first render, registers them all for
-                        # change-detection, and re-evaluates on every state change. The
-                        # explicit list keeps the monitored-entities set small.
-                        - type: custom:button-card
-                          icon: mdi:lightbulb-group
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const groups = [
-                                'light.living_room_lights',
-                                'light.kitchen_lights',
-                                'light.office_lights',
-                                'light.entrance_ceiling',
-                                'light.outdoor_lights',
-                                'light.jona_lights',
-                                'light.upstairs_hall_lights'
-                              ];
-                              const singles = [
-                                'light.garage',
-                                'light.uplight_front',
-                                'light.uplight_back_left',
-                                'light.uplight_back_right'
-                              ];
-                              let total = 0;
-                              for (const g of groups) {
-                                const s = states[g];
-                                if (s && s.state === 'on') {
-                                  const members = s.attributes.entity_id || [];
-                                  total += members.filter(id => states[id] && states[id].state === 'on').length;
-                                }
-                              }
-                              for (const id of singles) {
-                                if (states[id] && states[id].state === 'on') total++;
-                              }
-                              return total;
-                            ]]]
-                          label: Lights On
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 10px 12px
-                              - height: 64px
-                              - box-shadow: none
-                            icon:
-                              - width: 18px
-                              - height: 18px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 2px
-                            label:
-                              - font-size: 9px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 2px
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-
-                        # Tile 3 — Avg Temp (Wiser 3-room average)
-                        - type: custom:button-card
-                          icon: mdi:thermometer
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const ids = ['climate.living_room_area', 'climate.kitchen_area', 'climate.office_area'];
-                              const temps = ids
-                                .map(id => states[id] && parseFloat(states[id].attributes.current_temperature))
-                                .filter(v => !isNaN(v));
-                              if (temps.length === 0) return '—°';
-                              const avg = temps.reduce((a,b) => a+b, 0) / temps.length;
-                              return `${avg.toFixed(1)}°`;
-                            ]]]
-                          label: Avg Temp
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 10px 12px
-                              - height: 64px
-                              - box-shadow: none
-                            icon:
-                              - width: 18px
-                              - height: 18px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 2px
-                            label:
-                              - font-size: 9px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 2px
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-
-                        # Tile 4 — Network (WAN status)
-                        - type: custom:button-card
-                          icon: mdi:wifi
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          entity: binary_sensor.zenwifi_bq16_ca38_wan_status
-                          name: |
-                            [[[
-                              return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? 'Online' : 'Offline';
-                            ]]]
-                          label: Network
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 10px 12px
-                              - height: 64px
-                              - box-shadow: none
-                            icon:
-                              - width: 18px
-                              - height: 18px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - text-align: left
-                              - padding-top: 2px
-                            label:
-                              - font-size: 9px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 2px
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                          state:
-                            - operator: template
-                              value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
-                              styles:
-                                name:
-                                  - color: "#4caf6e"
-                            - operator: template
-                              value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
-                              styles:
-                                name:
-                                  - color: "#e05555"
-
-                        # Tile 5 — Playing (explicit media_player list per Gate 2 review)
-                        - type: custom:button-card
-                          icon: mdi:play-circle
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const players = [
-                                'media_player.living_room',
-                                'media_player.homepod',
-                                'media_player.jona_speaker',
-                                'media_player.kitchen_speakers',
-                                'media_player.upstairs_speaker',
-                                'media_player.living_room_tv_2'
-                              ];
-                              return players.filter(id => states[id] && states[id].state === 'playing').length;
-                            ]]]
-                          label: Playing
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 10px 12px
-                              - height: 64px
-                              - box-shadow: none
-                            icon:
-                              - width: 18px
-                              - height: 18px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 2px
-                            label:
-                              - font-size: 9px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 2px
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-
-                    # -----------------------------------------------------------------
-                    # MAIN FLOOR — Living Room · Kitchen · Office
-                    # -----------------------------------------------------------------
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🏠 MAIN FLOOR
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(3, 1fr)
-                        grid-gap: 10px
-                        padding: 0 14px
-                      cards:
-
-                        # Living Room (no occupancy sensor — proxy via Entrance+Hall per DECISIONS 2026-04-14)
-                        - type: custom:button-card
-                          icon: mdi:sofa
-                          name: Living Room
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          # Phase 4: tap opens HA more-info; hold navigates to
-                          # area page. NOTE: /config/areas/area/<slug> is the
-                          # URL HA's Settings UI uses internally — it works as
-                          # of 2026.4 but is not publicly documented as a
-                          # stable route. If it breaks in a future HA release,
-                          # all 8 hold-actions need a new path or fall back
-                          # to more-info only.
-                          tap_action:
-                            action: more-info
-                            entity: light.living_room_lights
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/living_room
-                          label: |
-                            [[[
-                              const chips = [];
-                              const lg = states['light.living_room_lights'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              }
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
-                              const mp = states['media_player.living_room'];
-                              const hp = states['media_player.homepod'];
-                              if ((mp && mp.state === 'playing') || (hp && hp.state === 'playing')) {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">▶ Playing</span>');
-                              }
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-
-                        # Kitchen
-                        - type: custom:button-card
-                          icon: mdi:silverware-fork-knife
-                          name: Kitchen
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          entity: binary_sensor.eve_motion_20eby9901_occupancy_2
-                          tap_action:
-                            action: more-info
-                            entity: climate.kitchen_area
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/kitchen
-                          label: |
-                            [[[
-                              const chips = [];
-                              if (states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
-                              }
-                              const lg = states['light.kitchen_lights'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              }
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-                          state:
-                            - operator: template
-                              value: "[[[ return !!states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on'; ]]]"
-                              styles:
-                                card:
-                                  - border-left: "3px solid #4caf6e"
-
-                        # Office
-                        - type: custom:button-card
-                          icon: mdi:desk
-                          name: Office
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          entity: binary_sensor.office_motion_sensors
-                          tap_action:
-                            action: more-info
-                            entity: climate.office_area
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/office
-                          label: |
-                            [[[
-                              const chips = [];
-                              if (states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
-                              }
-                              const lg = states['light.office_lights'] || states['light.desk_lights'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              }
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-                          state:
-                            - operator: template
-                              value: "[[[ return !!states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on'; ]]]"
-                              styles:
-                                card:
-                                  - border-left: "3px solid #4caf6e"
-
-                    # -----------------------------------------------------------------
-                    # UPPER FLOOR — Bedroom · Jona's Room
-                    # -----------------------------------------------------------------
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🛏 UPPER FLOOR
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(3, 1fr)
-                        grid-gap: 10px
-                        padding: 0 14px
-                      cards:
-
-                        # Bedroom (AC unavailable, lights wall-switched off — graceful handling per Q4)
-                        - type: custom:button-card
-                          icon: mdi:bed
-                          name: Bedroom
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          tap_action:
-                            action: more-info
-                            entity: climate.air_conditioning_bedroom
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/bedroom
-                          label: |
-                            [[[
-                              const chips = [];
-                              const ac = states['climate.air_conditioning_bedroom'];
-                              if (ac && ac.state !== 'unavailable' && ac.state !== 'unknown') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">AC</span>');
-                              } else {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">AC offline</span>');
-                              }
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                              - opacity: 0.75
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#555"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#888"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-
-                        # Jona's Room
-                        - type: custom:button-card
-                          icon: mdi:teddy-bear
-                          name: Jona's Room
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          tap_action:
-                            action: more-info
-                            entity: light.jona_lights
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/jona_s_room
-                          label: |
-                            [[[
-                              const chips = [];
-                              const lg = states['light.jona_lights'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              } else if (lg && lg.state === 'unavailable') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Lights offline</span>');
-                              }
-                              const mp = states['media_player.jona_speaker'];
-                              if (mp && mp.state === 'playing') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">▶ Playing</span>');
-                              }
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-
-                    # -----------------------------------------------------------------
-                    # DOWNSTAIRS — Entrance · Garage
-                    # -----------------------------------------------------------------
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ⬇️ DOWNSTAIRS
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(3, 1fr)
-                        grid-gap: 10px
-                        padding: 0 14px
-                      cards:
-
-                        # Entrance
-                        - type: custom:button-card
-                          icon: mdi:door
-                          name: Entrance
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          entity: binary_sensor.entrance_motion_sensors
-                          tap_action:
-                            action: more-info
-                            entity: light.entrance_ceiling
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/entrance
-                          label: |
-                            [[[
-                              const chips = [];
-                              if (states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
-                              }
-                              const lg = states['light.entrance_ceiling'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              }
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-                          state:
-                            - operator: template
-                              value: "[[[ return !!states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on'; ]]]"
-                              styles:
-                                card:
-                                  - border-left: "3px solid #4caf6e"
-
-                        # Garage (no occupancy sensor found — Auto chip only)
-                        - type: custom:button-card
-                          icon: mdi:garage
-                          name: Garage
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          tap_action:
-                            action: more-info
-                            entity: light.garage
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/garage
-                          label: |
-                            [[[
-                              const chips = [];
-                              const lg = states['light.garage'];
-                              if (lg && lg.state === 'on') {
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">1 light</span>');
-                              }
-                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-
-                    # -----------------------------------------------------------------
-                    # OUTSIDE — Outdoor
-                    # -----------------------------------------------------------------
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🌿 OUTSIDE
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(3, 1fr)
-                        grid-gap: 10px
-                        padding: 0 14px
-                      cards:
-
-                        # Outdoor
-                        - type: custom:button-card
-                          icon: mdi:tree
-                          name: Outdoor
-                          show_name: true
-                          show_icon: true
-                          show_label: true
-                          show_state: false
-                          tap_action:
-                            action: more-info
-                            entity: light.outdoor_lights
-                          hold_action:
-                            action: navigate
-                            navigation_path: /config/areas/area/outdoor
-                          label: |
-                            [[[
-                              const chips = [];
-                              const lg = states['light.outdoor_lights'];
-                              if (lg && lg.state === 'on') {
-                                const members = lg.attributes.entity_id || [];
-                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
-                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
-                              }
-                              return chips.join('');
-                            ]]]
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 12px
-                              - height: 90px
-                              - box-shadow: none
-                              - text-align: left
-                            icon:
-                              - width: 22px
-                              - height: 22px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 13px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                              - justify-self: start
-                            label:
-                              - text-align: left
-                              - justify-self: start
-                              - align-self: end
-                              - padding-top: 4px
-                              - line-height: 1.4
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto auto 1fr
-
-                    # -----------------------------------------------------------------
-                    # SCENES ROW — only the 3 entities that actually exist today
-                    # Design spec lists 8; per Phase 2 decision Q2, skip the 5 missing
-                    # and backfill as BACKLOG items create them.
-                    # -----------------------------------------------------------------
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ✨ SCENES
-                    - type: horizontal-stack
-                      cards:
-                        - type: custom:button-card
-                          name: 🎬 Movie Night
-                          show_name: true
-                          show_icon: false
-                          tap_action:
-                            action: call-service
-                            service: script.turn_on
-                            target:
-                              entity_id: script.movie_mode
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 20px
-                              - padding: 8px 16px
-                              - height: 36px
-                              - margin: 0 6px 14px 14px
-                              - box-shadow: none
-                              - cursor: pointer
-                            name:
-                              - font-size: 12px
-                              - color: "#e8e8e8"
-                        - type: custom:button-card
-                          name: 🛋 LR Relax
-                          show_name: true
-                          show_icon: false
-                          tap_action:
-                            action: call-service
-                            service: script.turn_on
-                            target:
-                              entity_id: script.lr_relax
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 20px
-                              - padding: 8px 16px
-                              - height: 36px
-                              - margin: 0 6px 14px 0
-                              - box-shadow: none
-                              - cursor: pointer
-                            name:
-                              - font-size: 12px
-                              - color: "#e8e8e8"
-                        - type: custom:button-card
-                          name: ⚫ Lights Off
-                          show_name: true
-                          show_icon: false
-                          tap_action:
-                            action: call-service
-                            service: scene.turn_on
-                            target:
-                              entity_id: scene.lights_off
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 20px
-                              - padding: 8px 16px
-                              - height: 36px
-                              - margin: 0 14px 14px 0
-                              - box-shadow: none
-                              - cursor: pointer
-                            name:
-                              - font-size: 12px
-                              - color: "#e8e8e8"
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: kitchen
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 12px
+                - height: 90px
+                - box-shadow: none
+                - text-align: left
+                icon:
+                - width: 22px
+                - height: 22px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 13px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                - justify-self: start
+                label:
+                - text-align: left
+                - justify-self: start
+                - align-self: end
+                - padding-top: 4px
+                - line-height: 1.4
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto auto 1fr
+              tap_action:
+                action: more-info
+                entity: light.outdoor_lights
+              hold_action:
+                action: navigate
+                navigation_path: /config/areas/area/outdoor
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ✨ SCENES
+          - type: horizontal-stack
+            cards:
+            - type: custom:button-card
+              name: 🎬 Movie Night
+              show_name: true
+              show_icon: false
+              tap_action:
+                action: perform-action
+                target:
+                  entity_id: script.movie_mode
+                perform_action: script.turn_on
+              styles:
                 card:
-                  # =================================================================
-                  # KITCHEN PANEL — Phase 5 (timers + shopping list + scenes)
-                  # Uses:
-                  #   - timer.kitchen_timer_1, timer.kitchen_timer_2 (created Phase 5)
-                  #   - todo.shopping_list (HA built-in)
-                  #   - No kitchen-specific scenes exist yet; placeholder notes
-                  #     where they would go (BACKLOG candidates)
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ⏱ KITCHEN TIMERS
-                    - type: entities
-                      show_header_toggle: false
-                      entities:
-                        - entity: timer.kitchen_timer_1
-                          name: Timer 1 (5 min default)
-                        - entity: timer.kitchen_timer_2
-                          name: Timer 2 (10 min default)
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: #161616;
-                            border: 1px solid #2a2a2a;
-                            border-radius: 10px;
-                            margin: 0 14px 14px 14px;
-                          }
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🛒 SHOPPING LIST
-                    - type: todo-list
-                      entity: todo.shopping_list
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: #161616;
-                            border: 1px solid #2a2a2a;
-                            border-radius: 10px;
-                            margin: 0 14px 14px 14px;
-                          }
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📖 RECIPES
-                    - type: markdown
-                      content: |
-                        _Kitchen recipes / links TBD. Add static links here, or wire up a recipe integration later._
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: #161616;
-                            border: 1px solid #2a2a2a;
-                            border-radius: 10px;
-                            color: #888;
-                            padding: 14px;
-                            margin: 0 14px 14px 14px;
-                          }
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ✨ KITCHEN SCENES
-                    - type: markdown
-                      content: |
-                        _Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode) don't exist yet — create as `scene.*` entities and wire buttons here, or see BACKLOG._
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: #161616;
-                            border: 1px solid #2a2a2a;
-                            border-radius: 10px;
-                            color: #888;
-                            padding: 14px;
-                            margin: 0 14px 14px 14px;
-                          }
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: climate
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 20px
+                - padding: 8px 16px
+                - height: 36px
+                - margin: 0 6px 14px 14px
+                - box-shadow: none
+                - cursor: pointer
+                name:
+                - font-size: 12px
+                - color: '#e8e8e8'
+            - type: custom:button-card
+              name: 🛋 LR Relax
+              show_name: true
+              show_icon: false
+              tap_action:
+                action: perform-action
+                target:
+                  entity_id: script.lr_relax
+                perform_action: script.turn_on
+              styles:
                 card:
-                  # =================================================================
-                  # CLIMATE PANEL — Phase 3 (4 room climate cards + temperature chart)
-                  # Uses mushroom-climate-card for per-room controls; apexcharts-card
-                  # for 24h temperature history across the 3 Wiser rooms.
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🌡 CLIMATE
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(4, 1fr)
-                        grid-gap: 10px
-                        padding: 14px
-                      cards:
-                        - type: custom:mushroom-climate-card
-                          entity: climate.living_room_area
-                          name: Living Room
-                          icon: mdi:sofa
-                          hvac_modes:
-                            - "off"
-                            - heat
-                          show_temperature_control: true
-                          collapsible_controls: false
-                        - type: custom:mushroom-climate-card
-                          entity: climate.kitchen_area
-                          name: Kitchen
-                          icon: mdi:silverware-fork-knife
-                          hvac_modes:
-                            - "off"
-                            - heat
-                          show_temperature_control: true
-                          collapsible_controls: false
-                        - type: custom:mushroom-climate-card
-                          entity: climate.office_area
-                          name: Office
-                          icon: mdi:desk
-                          hvac_modes:
-                            - "off"
-                            - heat
-                          show_temperature_control: true
-                          collapsible_controls: false
-                        - type: custom:mushroom-climate-card
-                          entity: climate.air_conditioning_bedroom
-                          name: Bedroom
-                          icon: mdi:bed
-                          show_temperature_control: true
-                          collapsible_controls: false
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📈 TEMPERATURE · 24H
-                    - type: custom:apexcharts-card
-                      graph_span: 24h
-                      header:
-                        show: false
-                      apex_config:
-                        chart:
-                          height: 220
-                        grid:
-                          borderColor: "#2a2a2a"
-                        legend:
-                          labels:
-                            colors: "#888"
-                        stroke:
-                          width: 2
-                      series:
-                        - entity: climate.living_room_area
-                          attribute: current_temperature
-                          name: Living Room
-                          color: "#4f8ef7"
-                          stroke_width: 2
-                        - entity: climate.kitchen_area
-                          attribute: current_temperature
-                          name: Kitchen
-                          color: "#4caf6e"
-                          stroke_width: 2
-                        - entity: climate.office_area
-                          attribute: current_temperature
-                          name: Office
-                          color: "#d4a843"
-                          stroke_width: 2
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: media
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 20px
+                - padding: 8px 16px
+                - height: 36px
+                - margin: 0 6px 14px 0
+                - box-shadow: none
+                - cursor: pointer
+                name:
+                - font-size: 12px
+                - color: '#e8e8e8'
+            - type: custom:button-card
+              name: ⚫ Lights Off
+              show_name: true
+              show_icon: false
+              tap_action:
+                action: perform-action
+                target:
+                  entity_id: scene.lights_off
+                perform_action: scene.turn_on
+              styles:
                 card:
-                  # =================================================================
-                  # MEDIA PANEL — Phase 3 (per-room media players)
-                  # Uses mini-media-player (v1.16.11, already installed) for a
-                  # compact, controllable view. Offline players (Kitchen/Upstairs
-                  # speakers, LR TV) are kept — they may come back.
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 🎵 MEDIA PLAYERS
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(2, 1fr)
-                        grid-gap: 10px
-                        padding: 14px
-                      cards:
-                        - type: custom:mini-media-player
-                          entity: media_player.living_room
-                          name: Living Room · Sonos
-                          artwork: cover
-                          volume_stateless: false
-                          hide:
-                            power_state: false
-                        - type: custom:mini-media-player
-                          entity: media_player.homepod
-                          name: Living Room · HomePod
-                          artwork: cover
-                          hide:
-                            power_state: false
-                        - type: custom:mini-media-player
-                          entity: media_player.jona_speaker
-                          name: Jona · Nest Mini
-                          artwork: cover
-                          hide:
-                            power_state: false
-                        - type: custom:mini-media-player
-                          entity: media_player.kitchen_speakers
-                          name: Kitchen
-                          artwork: cover
-                          hide:
-                            power_state: false
-                        - type: custom:mini-media-player
-                          entity: media_player.upstairs_speaker
-                          name: Upstairs
-                          artwork: cover
-                          hide:
-                            power_state: false
-                        - type: custom:mini-media-player
-                          entity: media_player.living_room_tv_2
-                          name: VisionMaster Pro
-                          artwork: cover
-                          hide:
-                            power_state: false
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: network
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 20px
+                - padding: 8px 16px
+                - height: 36px
+                - margin: 0 14px 14px 0
+                - box-shadow: none
+                - cursor: pointer
+                name:
+                - font-size: 12px
+                - color: '#e8e8e8'
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: kitchen
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ⏱ KITCHEN TIMERS
+          - type: entities
+            show_header_toggle: false
+            entities:
+            - entity: timer.kitchen_timer_1
+              name: Timer 1 (5 min default)
+            - entity: timer.kitchen_timer_2
+              name: Timer 2 (10 min default)
+            card_mod:
+              style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🛒 SHOPPING LIST
+          - type: todo-list
+            entity: todo.shopping_list
+            card_mod:
+              style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📖 RECIPES
+          - type: markdown
+            content: '_Kitchen recipes / links TBD. Add static links here, or wire up a recipe integration later._
+
+              '
+            card_mod:
+              style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  color: #888;\n  padding: 14px;\n  margin: 0 14px 14px 14px;\n}\n"
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ✨ KITCHEN SCENES
+          - type: markdown
+            content: '_Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode) don''t exist yet — create as `scene.*` entities and wire buttons here, or see BACKLOG._
+
+              '
+            card_mod:
+              style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  color: #888;\n  padding: 14px;\n  margin: 0 14px 14px 14px;\n}\n"
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: climate
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🌡 CLIMATE
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(4, 1fr)
+              grid-gap: 10px
+              padding: 14px
+            cards:
+            - type: custom:mushroom-climate-card
+              entity: climate.living_room_area
+              name: Living Room
+              icon: mdi:sofa
+              hvac_modes:
+              - 'off'
+              - heat
+              show_temperature_control: true
+              collapsible_controls: false
+            - type: custom:mushroom-climate-card
+              entity: climate.kitchen_area
+              name: Kitchen
+              icon: mdi:silverware-fork-knife
+              hvac_modes:
+              - 'off'
+              - heat
+              show_temperature_control: true
+              collapsible_controls: false
+            - type: custom:mushroom-climate-card
+              entity: climate.office_area
+              name: Office
+              icon: mdi:desk
+              hvac_modes:
+              - 'off'
+              - heat
+              show_temperature_control: true
+              collapsible_controls: false
+            - type: custom:mushroom-climate-card
+              entity: climate.air_conditioning_bedroom
+              name: Bedroom
+              icon: mdi:bed
+              show_temperature_control: true
+              collapsible_controls: false
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📈 TEMPERATURE · 24H
+          - type: custom:apexcharts-card
+            graph_span: 24h
+            header:
+              show: false
+            apex_config:
+              chart:
+                height: 220
+              grid:
+                borderColor: '#2a2a2a'
+              legend:
+                labels:
+                  colors: '#888'
+              stroke:
+                width: 2
+            series:
+            - entity: climate.living_room_area
+              attribute: current_temperature
+              name: Living Room
+              color: '#4f8ef7'
+              stroke_width: 2
+            - entity: climate.kitchen_area
+              attribute: current_temperature
+              name: Kitchen
+              color: '#4caf6e'
+              stroke_width: 2
+            - entity: climate.office_area
+              attribute: current_temperature
+              name: Office
+              color: '#d4a843'
+              stroke_width: 2
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: media
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🎵 MEDIA PLAYERS
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(2, 1fr)
+              grid-gap: 10px
+              padding: 14px
+            cards:
+            - type: custom:mini-media-player
+              entity: media_player.living_room
+              name: Living Room · Sonos
+              artwork: cover
+              volume_stateless: false
+              hide:
+                power_state: false
+            - type: custom:mini-media-player
+              entity: media_player.homepod
+              name: Living Room · HomePod
+              artwork: cover
+              hide:
+                power_state: false
+            - type: custom:mini-media-player
+              entity: media_player.jona_speaker
+              name: Jona · Nest Mini
+              artwork: cover
+              hide:
+                power_state: false
+            - type: custom:mini-media-player
+              entity: media_player.kitchen_speakers
+              name: Kitchen
+              artwork: cover
+              hide:
+                power_state: false
+            - type: custom:mini-media-player
+              entity: media_player.upstairs_speaker
+              name: Upstairs
+              artwork: cover
+              hide:
+                power_state: false
+            - type: custom:mini-media-player
+              entity: media_player.living_room_tv_2
+              name: VisionMaster Pro
+              artwork: cover
+              hide:
+                power_state: false
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: network
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📡 NETWORK · ASUS BQ16
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(3, 1fr)
+              grid-gap: 10px
+              padding: 14px
+            cards:
+            - type: custom:button-card
+              entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+              icon: mdi:web
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const s = states['binary_sensor.zenwifi_bq16_ca38_wan_status'];\n  return s && s.state === 'on' ? 'Online' : 'Offline';\n]]]\n"
+              label: WAN Status
+              styles:
                 card:
-                  # =================================================================
-                  # NETWORK PANEL — Phase 3
-                  # ASUS ZenWiFi BQ16-CA38: WAN status, uptime, throughput (live +
-                  # 12h chart) + device tracker presence.
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📡 NETWORK · ASUS BQ16
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(3, 1fr)
-                        grid-gap: 10px
-                        padding: 14px
-                      cards:
-                        # WAN Status
-                        - type: custom:button-card
-                          entity: binary_sensor.zenwifi_bq16_ca38_wan_status
-                          icon: mdi:web
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const s = states['binary_sensor.zenwifi_bq16_ca38_wan_status'];
-                              return s && s.state === 'on' ? 'Online' : 'Offline';
-                            ]]]
-                          label: WAN Status
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 14px
-                              - height: 80px
-                              - box-shadow: none
-                            icon:
-                              - width: 20px
-                              - height: 20px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 22px
-                              - font-weight: 700
-                              - text-align: left
-                              - padding-top: 4px
-                            label:
-                              - font-size: 10px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                          state:
-                            - operator: template
-                              value: "[[[ return !!states['binary_sensor.zenwifi_bq16_ca38_wan_status'] && states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
-                              styles:
-                                name:
-                                  - color: "#4caf6e"
-                            - operator: template
-                              value: "[[[ return !states['binary_sensor.zenwifi_bq16_ca38_wan_status'] || states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
-                              styles:
-                                name:
-                                  - color: "#e05555"
-                        # Uptime
-                        - type: custom:button-card
-                          entity: sensor.zenwifi_bq16_ca38_uptime
-                          icon: mdi:clock-outline
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const s = states['sensor.zenwifi_bq16_ca38_uptime'];
-                              if (!s) return '—';
-                              const secs = parseFloat(s.state);
-                              if (isNaN(secs)) return '—';
-                              const d = Math.floor(secs / 86400);
-                              const h = Math.floor((secs % 86400) / 3600);
-                              return d + 'd ' + h + 'h';
-                            ]]]
-                          label: Uptime
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 14px
-                              - height: 80px
-                              - box-shadow: none
-                            icon:
-                              - width: 20px
-                              - height: 20px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 22px
-                              - font-weight: 700
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                            label:
-                              - font-size: 10px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                        # Throughput (combined)
-                        - type: custom:button-card
-                          icon: mdi:swap-vertical
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          triggers_update:
-                            - sensor.zenwifi_bq16_ca38_download_speed
-                            - sensor.zenwifi_bq16_ca38_upload_speed
-                          name: |
-                            [[[
-                              const dl = states['sensor.zenwifi_bq16_ca38_download_speed'];
-                              const ul = states['sensor.zenwifi_bq16_ca38_upload_speed'];
-                              const dlv = dl ? parseFloat(dl.state) : NaN;
-                              const ulv = ul ? parseFloat(ul.state) : NaN;
-                              const dlS = isNaN(dlv) ? '—' : dlv.toFixed(1);
-                              const ulS = isNaN(ulv) ? '—' : ulv.toFixed(1);
-                              return '↓ ' + dlS + ' / ↑ ' + ulS;
-                            ]]]
-                          label: Throughput KiB/s
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 14px
-                              - height: 80px
-                              - box-shadow: none
-                            icon:
-                              - width: 20px
-                              - height: 20px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 18px
-                              - font-weight: 700
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                            label:
-                              - font-size: 10px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📊 THROUGHPUT · 12H
-                    - type: custom:apexcharts-card
-                      graph_span: 12h
-                      header:
-                        show: false
-                      apex_config:
-                        chart:
-                          height: 200
-                        grid:
-                          borderColor: "#2a2a2a"
-                        legend:
-                          labels:
-                            colors: "#888"
-                        stroke:
-                          width: 2
-                      series:
-                        - entity: sensor.zenwifi_bq16_ca38_download_speed
-                          name: Download
-                          color: "#4f8ef7"
-                          type: area
-                          opacity: 0.3
-                        - entity: sensor.zenwifi_bq16_ca38_upload_speed
-                          name: Upload
-                          color: "#d4a843"
-                          type: area
-                          opacity: 0.3
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📱 DEVICE PRESENCE
-                    - type: entities
-                      show_header_toggle: false
-                      entities:
-                        - entity: device_tracker.edphone
-                          name: Edphone
-                          secondary_info: last-changed
-                        - entity: device_tracker.ipad
-                          name: iPad
-                          secondary_info: last-changed
-                        - entity: person.edgar
-                          name: Edgar
-                          secondary_info: last-changed
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: #161616;
-                            border: 1px solid #2a2a2a;
-                            border-radius: 10px;
-                            margin: 0 14px 14px 14px;
-                          }
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: energy
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 14px
+                - height: 80px
+                - box-shadow: none
+                icon:
+                - width: 20px
+                - height: 20px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 22px
+                - font-weight: 700
+                - text-align: left
+                - padding-top: 4px
+                label:
+                - font-size: 10px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+              state:
+              - operator: template
+                value: '[[[ return !!states[''binary_sensor.zenwifi_bq16_ca38_wan_status''] && states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+                styles:
+                  name:
+                  - color: '#4caf6e'
+              - operator: template
+                value: '[[[ return !states[''binary_sensor.zenwifi_bq16_ca38_wan_status''] || states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+                styles:
+                  name:
+                  - color: '#e05555'
+            - type: custom:button-card
+              entity: sensor.zenwifi_bq16_ca38_uptime
+              icon: mdi:clock-outline
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const s = states['sensor.zenwifi_bq16_ca38_uptime'];\n  if (!s) return '—';\n  const secs = parseFloat(s.state);\n  if (isNaN(secs)) return '—';\n  const d = Math.floor(secs\
+                \ / 86400);\n  const h = Math.floor((secs % 86400) / 3600);\n  return d + 'd ' + h + 'h';\n]]]\n"
+              label: Uptime
+              styles:
                 card:
-                  # =================================================================
-                  # ENERGY PANEL — Phase 3 (per-device only)
-                  # No whole-home energy monitor exists. Shows the 2 Eve Energy
-                  # plugs (Coffee Machine + Party Lights) — power + cumulative
-                  # energy + 24h power chart. If HA Energy dashboard gets wired
-                  # up later, expand this panel with whole-home power/cost tiles.
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ⚡ POWER · PER-DEVICE
-                    - type: markdown
-                      content: |
-                        _No whole-home energy monitor configured. The tiles below show the 2 Eve Energy smart plugs that ARE monitored (Coffee Machine + Party Lights). If HA Energy dashboard is set up later, this panel can expand to show whole-home power/cost._
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                            color: #888;
-                            font-size: 11px;
-                            padding: 0 14px;
-                          }
-                    - type: custom:layout-card
-                      layout_type: custom:grid-layout
-                      layout:
-                        grid-template-columns: repeat(2, 1fr)
-                        grid-gap: 10px
-                        padding: 14px
-                      cards:
-                        # Coffee Machine
-                        - type: custom:button-card
-                          entity: sensor.eve_energy_20ebo8301_power
-                          triggers_update:
-                            - sensor.eve_energy_20ebo8301_power
-                            - sensor.eve_energy_20ebo8301_energy
-                          icon: mdi:coffee
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const p = states['sensor.eve_energy_20ebo8301_power'];
-                              const e = states['sensor.eve_energy_20ebo8301_energy'];
-                              const pv = p ? parseFloat(p.state) : NaN;
-                              const ev = e ? parseFloat(e.state) : NaN;
-                              const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';
-                              const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';
-                              return pS + ' · ' + eS + ' total';
-                            ]]]
-                          label: Coffee Machine
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 14px
-                              - height: 80px
-                              - box-shadow: none
-                            icon:
-                              - width: 20px
-                              - height: 20px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 16px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                            label:
-                              - font-size: 10px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                        # Party Lights
-                        - type: custom:button-card
-                          entity: sensor.eve_energy_20ebo8301_power_2
-                          triggers_update:
-                            - sensor.eve_energy_20ebo8301_power_2
-                            - sensor.eve_energy_20ebo8301_energy_2
-                          icon: mdi:party-popper
-                          show_name: true
-                          show_label: true
-                          show_state: false
-                          name: |
-                            [[[
-                              const p = states['sensor.eve_energy_20ebo8301_power_2'];
-                              const e = states['sensor.eve_energy_20ebo8301_energy_2'];
-                              const pv = p ? parseFloat(p.state) : NaN;
-                              const ev = e ? parseFloat(e.state) : NaN;
-                              const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';
-                              const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';
-                              return pS + ' · ' + eS + ' total';
-                            ]]]
-                          label: Party Lights
-                          styles:
-                            card:
-                              - background: "#161616"
-                              - border: "1px solid #2a2a2a"
-                              - border-radius: 10px
-                              - padding: 14px
-                              - height: 80px
-                              - box-shadow: none
-                            icon:
-                              - width: 20px
-                              - height: 20px
-                              - color: "#888"
-                              - justify-self: start
-                            name:
-                              - font-size: 16px
-                              - font-weight: 600
-                              - color: "#e8e8e8"
-                              - text-align: left
-                              - padding-top: 4px
-                            label:
-                              - font-size: 10px
-                              - text-transform: uppercase
-                              - letter-spacing: 0.5px
-                              - color: "#888"
-                              - text-align: left
-                            grid:
-                              - grid-template-areas: '"i" "n" "l"'
-                              - grid-template-rows: auto 1fr auto
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: 📈 POWER · 24H
-                    - type: custom:apexcharts-card
-                      graph_span: 24h
-                      header:
-                        show: false
-                      apex_config:
-                        chart:
-                          height: 200
-                        grid:
-                          borderColor: "#2a2a2a"
-                        legend:
-                          labels:
-                            colors: "#888"
-                      series:
-                        - entity: sensor.eve_energy_20ebo8301_power
-                          name: Coffee Machine
-                          color: "#d4a843"
-                          type: area
-                          opacity: 0.3
-                        - entity: sensor.eve_energy_20ebo8301_power_2
-                          name: Party Lights
-                          color: "#4f8ef7"
-                          type: area
-                          opacity: 0.3
-              - type: conditional
-                conditions:
-                  - entity: input_select.fusion_panel
-                    state: automations
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 14px
+                - height: 80px
+                - box-shadow: none
+                icon:
+                - width: 20px
+                - height: 20px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 22px
+                - font-weight: 700
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                label:
+                - font-size: 10px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+            - type: custom:button-card
+              icon: mdi:swap-vertical
+              show_name: true
+              show_label: true
+              show_state: false
+              triggers_update:
+              - sensor.zenwifi_bq16_ca38_download_speed
+              - sensor.zenwifi_bq16_ca38_upload_speed
+              name: "[[[\n  const dl = states['sensor.zenwifi_bq16_ca38_download_speed'];\n  const ul = states['sensor.zenwifi_bq16_ca38_upload_speed'];\n  const dlv = dl ? parseFloat(dl.state) : NaN;\n\
+                \  const ulv = ul ? parseFloat(ul.state) : NaN;\n  const dlS = isNaN(dlv) ? '—' : dlv.toFixed(1);\n  const ulS = isNaN(ulv) ? '—' : ulv.toFixed(1);\n  return '↓ ' + dlS + ' / ↑ ' + ulS;\n\
+                ]]]\n"
+              label: Throughput KiB/s
+              styles:
                 card:
-                  # =================================================================
-                  # AUTOMATIONS PANEL — Phase 3
-                  # custom:auto-entities dynamically filters domain=automation and
-                  # renders as entities card with last-triggered secondary info.
-                  # No manual list — auto-updates as new automations are added.
-                  # Sort: by last-triggered desc (most-recent at top).
-                  # =================================================================
-                  type: vertical-stack
-                  cards:
-                    - type: custom:button-card
-                      template: fusion_floor_header
-                      name: ⚙️ AUTOMATIONS
-                    - type: markdown
-                      content: |
-                        _Sorted by most-recently-triggered. Toggle to enable/disable._
-                      card_mod:
-                        style: |
-                          ha-card {
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                            color: #888;
-                            font-size: 11px;
-                            padding: 0 14px;
-                          }
-                    - type: custom:auto-entities
-                      card:
-                        type: entities
-                        show_header_toggle: false
-                        state_color: true
-                      filter:
-                        include:
-                          - domain: automation
-                      sort:
-                        method: last_triggered
-                        reverse: true
-                      card_param: entities
-                      unique: true
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 14px
+                - height: 80px
+                - box-shadow: none
+                icon:
+                - width: 20px
+                - height: 20px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 18px
+                - font-weight: 700
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                label:
+                - font-size: 10px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📊 THROUGHPUT · 12H
+          - type: custom:apexcharts-card
+            graph_span: 12h
+            header:
+              show: false
+            apex_config:
+              chart:
+                height: 200
+              grid:
+                borderColor: '#2a2a2a'
+              legend:
+                labels:
+                  colors: '#888'
+              stroke:
+                width: 2
+            series:
+            - entity: sensor.zenwifi_bq16_ca38_download_speed
+              name: Download
+              color: '#4f8ef7'
+              type: area
+              opacity: 0.3
+            - entity: sensor.zenwifi_bq16_ca38_upload_speed
+              name: Upload
+              color: '#d4a843'
+              type: area
+              opacity: 0.3
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📱 DEVICE PRESENCE
+          - type: entities
+            show_header_toggle: false
+            entities:
+            - entity: device_tracker.edphone
+              name: Edphone
+              secondary_info: last-changed
+            - entity: device_tracker.ipad
+              name: iPad
+              secondary_info: last-changed
+            - entity: person.edgar
+              name: Edgar
+              secondary_info: last-changed
+            card_mod:
+              style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: energy
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ⚡ POWER · PER-DEVICE
+          - type: markdown
+            content: '_No whole-home energy monitor configured. The tiles below show the 2 Eve Energy smart plugs that ARE monitored (Coffee Machine + Party Lights). If HA Energy dashboard is set up later,
+              this panel can expand to show whole-home power/cost._
+
+              '
+            card_mod:
+              style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #888;\n  font-size: 11px;\n  padding: 0 14px;\n}\n"
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: repeat(2, 1fr)
+              grid-gap: 10px
+              padding: 14px
+            cards:
+            - type: custom:button-card
+              entity: sensor.eve_energy_20ebo8301_power
+              triggers_update:
+              - sensor.eve_energy_20ebo8301_power
+              - sensor.eve_energy_20ebo8301_energy
+              icon: mdi:coffee
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const p = states['sensor.eve_energy_20ebo8301_power'];\n  const e = states['sensor.eve_energy_20ebo8301_energy'];\n  const pv = p ? parseFloat(p.state) : NaN;\n  const ev = e\
+                \ ? parseFloat(e.state) : NaN;\n  const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';\n  const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';\n  return pS + ' · ' + eS + ' total';\n]]]\n"
+              label: Coffee Machine
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 14px
+                - height: 80px
+                - box-shadow: none
+                icon:
+                - width: 20px
+                - height: 20px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 16px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                label:
+                - font-size: 10px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+            - type: custom:button-card
+              entity: sensor.eve_energy_20ebo8301_power_2
+              triggers_update:
+              - sensor.eve_energy_20ebo8301_power_2
+              - sensor.eve_energy_20ebo8301_energy_2
+              icon: mdi:party-popper
+              show_name: true
+              show_label: true
+              show_state: false
+              name: "[[[\n  const p = states['sensor.eve_energy_20ebo8301_power_2'];\n  const e = states['sensor.eve_energy_20ebo8301_energy_2'];\n  const pv = p ? parseFloat(p.state) : NaN;\n  const ev\
+                \ = e ? parseFloat(e.state) : NaN;\n  const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';\n  const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';\n  return pS + ' · ' + eS + ' total';\n]]]\n"
+              label: Party Lights
+              styles:
+                card:
+                - background: '#161616'
+                - border: '1px solid #2a2a2a'
+                - border-radius: 10px
+                - padding: 14px
+                - height: 80px
+                - box-shadow: none
+                icon:
+                - width: 20px
+                - height: 20px
+                - color: '#888'
+                - justify-self: start
+                name:
+                - font-size: 16px
+                - font-weight: 600
+                - color: '#e8e8e8'
+                - text-align: left
+                - padding-top: 4px
+                label:
+                - font-size: 10px
+                - text-transform: uppercase
+                - letter-spacing: 0.5px
+                - color: '#888'
+                - text-align: left
+                grid:
+                - grid-template-areas: '"i" "n" "l"'
+                - grid-template-rows: auto 1fr auto
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 📈 POWER · 24H
+          - type: custom:apexcharts-card
+            graph_span: 24h
+            header:
+              show: false
+            apex_config:
+              chart:
+                height: 200
+              grid:
+                borderColor: '#2a2a2a'
+              legend:
+                labels:
+                  colors: '#888'
+            series:
+            - entity: sensor.eve_energy_20ebo8301_power
+              name: Coffee Machine
+              color: '#d4a843'
+              type: area
+              opacity: 0.3
+            - entity: sensor.eve_energy_20ebo8301_power_2
+              name: Party Lights
+              color: '#4f8ef7'
+              type: area
+              opacity: 0.3
+      - type: conditional
+        conditions:
+        - entity: input_select.fusion_panel
+          state: automations
+        card:
+          type: vertical-stack
+          cards:
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ⚙️ AUTOMATIONS
+          - type: markdown
+            content: '_Sorted by most-recently-triggered. Toggle to enable/disable._
+
+              '
+            card_mod:
+              style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #888;\n  font-size: 11px;\n  padding: 0 14px;\n}\n"
+          - type: custom:auto-entities
+            card:
+              type: entities
+              show_header_toggle: false
+              state_color: true
+            filter:
+              include:
+              - domain: automation
+            sort:
+              method: last_triggered
+              reverse: true
+            card_param: entities
+            unique: true
+    card_mod:
+      style: ":host {\n  --primary-color: #4f8ef7;\n  --paper-item-icon-color: #888;\n  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;\n}\n:host ::-webkit-scrollbar {\n  width:\
+        \ 8px;\n  height: 8px;\n}\n:host ::-webkit-scrollbar-track {\n  background: #111;\n}\n:host ::-webkit-scrollbar-thumb {\n  background: #2a2a2a;\n  border-radius: 4px;\n}\n:host ::-webkit-scrollbar-thumb:hover\
+        \ {\n  background: #3a3a3a;\n}\n"
+kiosk_mode:
+  entity_settings:
+  - entity:
+      input_boolean.fusion_kiosk: 'on'
+    kiosk: true
