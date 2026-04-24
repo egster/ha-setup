@@ -1402,48 +1402,568 @@ views:
                   - entity: input_select.fusion_panel
                     state: climate
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: climate
-
-                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # CLIMATE PANEL — Phase 3 (4 room climate cards + temperature chart)
+                  # Uses mushroom-climate-card for per-room controls; apexcharts-card
+                  # for 24h temperature history across the 3 Wiser rooms.
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🌡 CLIMATE
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(4, 1fr)
+                        grid-gap: 10px
+                        padding: 14px
+                      cards:
+                        - type: custom:mushroom-climate-card
+                          entity: climate.living_room_area
+                          name: Living Room
+                          icon: mdi:sofa
+                          hvac_modes:
+                            - "off"
+                            - heat
+                          show_temperature_control: true
+                          collapsible_controls: false
+                        - type: custom:mushroom-climate-card
+                          entity: climate.kitchen_area
+                          name: Kitchen
+                          icon: mdi:silverware-fork-knife
+                          hvac_modes:
+                            - "off"
+                            - heat
+                          show_temperature_control: true
+                          collapsible_controls: false
+                        - type: custom:mushroom-climate-card
+                          entity: climate.office_area
+                          name: Office
+                          icon: mdi:desk
+                          hvac_modes:
+                            - "off"
+                            - heat
+                          show_temperature_control: true
+                          collapsible_controls: false
+                        - type: custom:mushroom-climate-card
+                          entity: climate.air_conditioning_bedroom
+                          name: Bedroom
+                          icon: mdi:bed
+                          show_temperature_control: true
+                          collapsible_controls: false
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📈 TEMPERATURE · 24H
+                    - type: custom:apexcharts-card
+                      graph_span: 24h
+                      header:
+                        show: false
+                      apex_config:
+                        chart:
+                          height: 220
+                        grid:
+                          borderColor: "#2a2a2a"
+                        legend:
+                          labels:
+                            colors: "#888"
+                        stroke:
+                          width: 2
+                      series:
+                        - entity: climate.living_room_area
+                          attribute: current_temperature
+                          name: Living Room
+                          color: "#4f8ef7"
+                          stroke_width: 2
+                        - entity: climate.kitchen_area
+                          attribute: current_temperature
+                          name: Kitchen
+                          color: "#4caf6e"
+                          stroke_width: 2
+                        - entity: climate.office_area
+                          attribute: current_temperature
+                          name: Office
+                          color: "#d4a843"
+                          stroke_width: 2
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel
                     state: media
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: media
-
-                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # MEDIA PANEL — Phase 3 (per-room media players)
+                  # Uses mini-media-player (v1.16.11, already installed) for a
+                  # compact, controllable view. Offline players (Kitchen/Upstairs
+                  # speakers, LR TV) are kept — they may come back.
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🎵 MEDIA PLAYERS
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(2, 1fr)
+                        grid-gap: 10px
+                        padding: 14px
+                      cards:
+                        - type: custom:mini-media-player
+                          entity: media_player.living_room
+                          name: Living Room · Sonos
+                          artwork: cover
+                          volume_stateless: false
+                          hide:
+                            power_state: false
+                        - type: custom:mini-media-player
+                          entity: media_player.homepod
+                          name: Living Room · HomePod
+                          artwork: cover
+                          hide:
+                            power_state: false
+                        - type: custom:mini-media-player
+                          entity: media_player.jona_speaker
+                          name: Jona · Nest Mini
+                          artwork: cover
+                          hide:
+                            power_state: false
+                        - type: custom:mini-media-player
+                          entity: media_player.kitchen_speakers
+                          name: Kitchen
+                          artwork: cover
+                          hide:
+                            power_state: false
+                        - type: custom:mini-media-player
+                          entity: media_player.upstairs_speaker
+                          name: Upstairs
+                          artwork: cover
+                          hide:
+                            power_state: false
+                        - type: custom:mini-media-player
+                          entity: media_player.living_room_tv_2
+                          name: VisionMaster Pro
+                          artwork: cover
+                          hide:
+                            power_state: false
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel
                     state: network
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: network
-
-                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # NETWORK PANEL — Phase 3
+                  # ASUS ZenWiFi BQ16-CA38: WAN status, uptime, throughput (live +
+                  # 12h chart) + device tracker presence.
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📡 NETWORK · ASUS BQ16
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(3, 1fr)
+                        grid-gap: 10px
+                        padding: 14px
+                      cards:
+                        # WAN Status
+                        - type: custom:button-card
+                          entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+                          icon: mdi:web
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const s = states['binary_sensor.zenwifi_bq16_ca38_wan_status'];
+                              return s && s.state === 'on' ? 'Online' : 'Offline';
+                            ]]]
+                          label: WAN Status
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 14px
+                              - height: 80px
+                              - box-shadow: none
+                            icon:
+                              - width: 20px
+                              - height: 20px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 22px
+                              - font-weight: 700
+                              - text-align: left
+                              - padding-top: 4px
+                            label:
+                              - font-size: 10px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                          state:
+                            - operator: template
+                              value: "[[[ return !!states['binary_sensor.zenwifi_bq16_ca38_wan_status'] && states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
+                              styles:
+                                name:
+                                  - color: "#4caf6e"
+                            - operator: template
+                              value: "[[[ return !states['binary_sensor.zenwifi_bq16_ca38_wan_status'] || states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
+                              styles:
+                                name:
+                                  - color: "#e05555"
+                        # Uptime
+                        - type: custom:button-card
+                          entity: sensor.zenwifi_bq16_ca38_uptime
+                          icon: mdi:clock-outline
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const s = states['sensor.zenwifi_bq16_ca38_uptime'];
+                              if (!s) return '—';
+                              const secs = parseFloat(s.state);
+                              if (isNaN(secs)) return '—';
+                              const d = Math.floor(secs / 86400);
+                              const h = Math.floor((secs % 86400) / 3600);
+                              return d + 'd ' + h + 'h';
+                            ]]]
+                          label: Uptime
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 14px
+                              - height: 80px
+                              - box-shadow: none
+                            icon:
+                              - width: 20px
+                              - height: 20px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 22px
+                              - font-weight: 700
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                            label:
+                              - font-size: 10px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                        # Throughput (combined)
+                        - type: custom:button-card
+                          icon: mdi:swap-vertical
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          triggers_update:
+                            - sensor.zenwifi_bq16_ca38_download_speed
+                            - sensor.zenwifi_bq16_ca38_upload_speed
+                          name: |
+                            [[[
+                              const dl = states['sensor.zenwifi_bq16_ca38_download_speed'];
+                              const ul = states['sensor.zenwifi_bq16_ca38_upload_speed'];
+                              const dlv = dl ? parseFloat(dl.state) : NaN;
+                              const ulv = ul ? parseFloat(ul.state) : NaN;
+                              const dlS = isNaN(dlv) ? '—' : dlv.toFixed(1);
+                              const ulS = isNaN(ulv) ? '—' : ulv.toFixed(1);
+                              return '↓ ' + dlS + ' / ↑ ' + ulS;
+                            ]]]
+                          label: Throughput KiB/s
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 14px
+                              - height: 80px
+                              - box-shadow: none
+                            icon:
+                              - width: 20px
+                              - height: 20px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                            label:
+                              - font-size: 10px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📊 THROUGHPUT · 12H
+                    - type: custom:apexcharts-card
+                      graph_span: 12h
+                      header:
+                        show: false
+                      apex_config:
+                        chart:
+                          height: 200
+                        grid:
+                          borderColor: "#2a2a2a"
+                        legend:
+                          labels:
+                            colors: "#888"
+                        stroke:
+                          width: 2
+                      series:
+                        - entity: sensor.zenwifi_bq16_ca38_download_speed
+                          name: Download
+                          color: "#4f8ef7"
+                          type: area
+                          opacity: 0.3
+                        - entity: sensor.zenwifi_bq16_ca38_upload_speed
+                          name: Upload
+                          color: "#d4a843"
+                          type: area
+                          opacity: 0.3
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📱 DEVICE PRESENCE
+                    - type: entities
+                      show_header_toggle: false
+                      entities:
+                        - entity: device_tracker.edphone
+                          name: Edphone
+                          secondary_info: last-changed
+                        - entity: device_tracker.ipad
+                          name: iPad
+                          secondary_info: last-changed
+                        - entity: person.edgar
+                          name: Edgar
+                          secondary_info: last-changed
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: #161616;
+                            border: 1px solid #2a2a2a;
+                            border-radius: 10px;
+                            margin: 0 14px 14px 14px;
+                          }
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel
                     state: energy
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: energy
-
-                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # ENERGY PANEL — Phase 3 (per-device only)
+                  # No whole-home energy monitor exists. Shows the 2 Eve Energy
+                  # plugs (Coffee Machine + Party Lights) — power + cumulative
+                  # energy + 24h power chart. If HA Energy dashboard gets wired
+                  # up later, expand this panel with whole-home power/cost tiles.
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ⚡ POWER · PER-DEVICE
+                    - type: markdown
+                      content: |
+                        _No whole-home energy monitor configured. The tiles below show the 2 Eve Energy smart plugs that ARE monitored (Coffee Machine + Party Lights). If HA Energy dashboard is set up later, this panel can expand to show whole-home power/cost._
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                            color: #888;
+                            font-size: 11px;
+                            padding: 0 14px;
+                          }
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(2, 1fr)
+                        grid-gap: 10px
+                        padding: 14px
+                      cards:
+                        # Coffee Machine
+                        - type: custom:button-card
+                          entity: sensor.eve_energy_20ebo8301_power
+                          triggers_update:
+                            - sensor.eve_energy_20ebo8301_power
+                            - sensor.eve_energy_20ebo8301_energy
+                          icon: mdi:coffee
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const p = states['sensor.eve_energy_20ebo8301_power'];
+                              const e = states['sensor.eve_energy_20ebo8301_energy'];
+                              const pv = p ? parseFloat(p.state) : NaN;
+                              const ev = e ? parseFloat(e.state) : NaN;
+                              const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';
+                              const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';
+                              return pS + ' · ' + eS + ' total';
+                            ]]]
+                          label: Coffee Machine
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 14px
+                              - height: 80px
+                              - box-shadow: none
+                            icon:
+                              - width: 20px
+                              - height: 20px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 16px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                            label:
+                              - font-size: 10px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                        # Party Lights
+                        - type: custom:button-card
+                          entity: sensor.eve_energy_20ebo8301_power_2
+                          triggers_update:
+                            - sensor.eve_energy_20ebo8301_power_2
+                            - sensor.eve_energy_20ebo8301_energy_2
+                          icon: mdi:party-popper
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const p = states['sensor.eve_energy_20ebo8301_power_2'];
+                              const e = states['sensor.eve_energy_20ebo8301_energy_2'];
+                              const pv = p ? parseFloat(p.state) : NaN;
+                              const ev = e ? parseFloat(e.state) : NaN;
+                              const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';
+                              const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';
+                              return pS + ' · ' + eS + ' total';
+                            ]]]
+                          label: Party Lights
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 14px
+                              - height: 80px
+                              - box-shadow: none
+                            icon:
+                              - width: 20px
+                              - height: 20px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 16px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                            label:
+                              - font-size: 10px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📈 POWER · 24H
+                    - type: custom:apexcharts-card
+                      graph_span: 24h
+                      header:
+                        show: false
+                      apex_config:
+                        chart:
+                          height: 200
+                        grid:
+                          borderColor: "#2a2a2a"
+                        legend:
+                          labels:
+                            colors: "#888"
+                      series:
+                        - entity: sensor.eve_energy_20ebo8301_power
+                          name: Coffee Machine
+                          color: "#d4a843"
+                          type: area
+                          opacity: 0.3
+                        - entity: sensor.eve_energy_20ebo8301_power_2
+                          name: Party Lights
+                          color: "#4f8ef7"
+                          type: area
+                          opacity: 0.3
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel
                     state: automations
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: automations
-
-                    _Phase 1 stub — real content arrives in Phase 3 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # AUTOMATIONS PANEL — Phase 3
+                  # custom:auto-entities dynamically filters domain=automation and
+                  # renders as entities card with last-triggered secondary info.
+                  # No manual list — auto-updates as new automations are added.
+                  # Sort: by last-triggered desc (most-recent at top).
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ⚙️ AUTOMATIONS
+                    - type: markdown
+                      content: |
+                        _Sorted by most-recently-triggered. Toggle to enable/disable._
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                            color: #888;
+                            font-size: 11px;
+                            padding: 0 14px;
+                          }
+                    - type: custom:auto-entities
+                      card:
+                        type: entities
+                        show_header_toggle: false
+                        state_color: true
+                      filter:
+                        include:
+                          - domain: automation
+                      sort:
+                        method: last_triggered
+                        reverse: true
+                      card_param: entities
+                      unique: true
