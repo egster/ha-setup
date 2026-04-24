@@ -69,15 +69,15 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 **Status**: ✅ **All 6 phases deployed 2026-04-24** — shell + all 7 panels (Home, Kitchen, Climate, Media, Network, Energy, Automations) + room tap/hold actions + global polish live at `/dashboard-fusion`. See CHANGELOG 2026-04-24 for what shipped.
 
 **Open enhancements** (tracked separately below, not blocking dashboard use):
-1. **Bubble Card popups for room taps** — Attempted in Phase 6c, reverted. **Superseded by Phase 6d stacked-row design** which provides the same per-entity tap experience inline, no overlay needed. Bubble Card popups remain available if Edgar ever wants true modal popups (e.g. for richer content like slider controls, recipe selections), but not needed for the current use case.
+1. ⛔ **Bubble Card popups for room taps — SUPERSEDED** by the Phase 6d stacked-row design + Phase 6m button-shaped rows + green occupancy indicator. Inline rows give the per-entity tap experience without an overlay, and the 6m polish covers the visual cues popups would have provided. **Do not re-attempt** unless the use case shifts to richer content like slider controls or recipe selections — at that point, reopen as a new BACKLOG entry scoped to that specific use case, not as a generic "popups for rooms" rebuild. (Marked superseded 2026-04-24 FUSION retro.)
 2. Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode)
 3. Kitchen recipe integration / links
 4. ✅ **Kiosk Mode toggle** — Done 2026-04-24 Phase 6j. Switched from `entity_settings` array to top-level template strings (BubbleDash pattern): `hide_header/hide_sidebar/hide_overflow` each bound to `{{ is_state('input_boolean.fusion_kiosk','on') }}`. Toggle via sidebar icon or helper directly; HA header+drawer hide edge-to-edge.
-5. ✅ **Sidebar alignment hack** — Done 2026-04-24 Phase 6j. Dropped flex-center (which never applied) in favour of `padding-top: 121px` on the sidebar `mod-card`. Home icon now visually aligns with the Main Floor divider on the Home panel. Measured in Chrome (icon center & divider bottom at Y=248). If floor layouts or KPI row heights change, the offset will need re-tuning — it's not dynamic.
-5. BubbleDash v4 archival (after 1-2 weeks of trusting FUSION)
-6. ✅ **`call-service` → `perform-action`** migration — Done 2026-04-24 Phase 6c (11 sites: sidebar nav template + 7 icon overrides + 3 scene buttons).
-7. iPad VoiceOver accessibility pass
-8. Pulsing presence dot CSS keyframe animation
+5. ✅ **Sidebar alignment hack** — Done 2026-04-24 Phase 6j/6l. `padding-top: 130px` on the sidebar `mod-card` — Home icon visually aligned with the Main Floor divider. Not responsive; re-measure if KPI/statusbar heights change.
+6. 🔴 **BubbleDash v4 archival** — schedule for **2026-05-08** (2 weeks post-FUSION merge). Plan: export the dashboard YAML to `reference/bubbledash_v4_archive.yaml`, disable the dashboard via `ha_config_set_dashboard(show_in_sidebar=False)` (keep the storage file for rollback), audit HACS deps for BubbleDash-only dependencies and remove those, commit + document in CHANGELOG. Rollback: re-enable sidebar visibility. Priority bumped from Low to High 2026-04-24 FUSION retro. (Previously listed as "1–2 weeks" — now explicit date.)
+7. ✅ **`call-service` → `perform-action`** migration — Done 2026-04-24 Phase 6c.
+8. iPad VoiceOver accessibility pass
+9. Pulsing presence dot CSS keyframe animation
 **Design spec**: `00 - Agent Context/FUSION-DESIGN-SPEC.md` ← read this at the start of every implementation session
 **Plan (Phase 0+1)**: `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` — reference for how future phases are scoped + gated
 **YAML source of truth**: `config/dashboards/fusion.yaml` — **NEVER edit FUSION via the HA UI "Edit Dashboard" button** (see DECISIONS 2026-04-24). All changes go file → commit → MCP `ha_config_set_dashboard(config=...)`.
