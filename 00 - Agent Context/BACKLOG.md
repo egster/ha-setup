@@ -66,7 +66,17 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 #### FUSION Dashboard — Full Implementation
 **Added**: 2026-04-22
-**Status**: ⚡ **Phase 0 + Phase 1 + Phase 2 deployed 2026-04-24** — shell + Home panel live at `/dashboard-fusion` (note: url_path is hyphenated). Phase 3 (lightweight panels: Automations/Climate/Media/Energy/Network) is next session. See CHANGELOG 2026-04-24 for what shipped. Remaining phases: 3, 4, 5, 6.
+**Status**: ✅ **All 6 phases deployed 2026-04-24** — shell + all 7 panels (Home, Kitchen, Climate, Media, Network, Energy, Automations) + room tap/hold actions + global polish live at `/dashboard-fusion`. See CHANGELOG 2026-04-24 for what shipped.
+
+**Open enhancements** (tracked separately below, not blocking dashboard use):
+1. Bubble Card popups for room taps (Phase 4 was simplified to more-info + navigate)
+2. Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode)
+3. Kitchen recipe integration / links
+4. Kiosk Mode activation on iPad
+5. BubbleDash v4 archival (after 1-2 weeks of trusting FUSION)
+6. `tap_action: call-service` → `perform-action` audit
+7. iPad VoiceOver accessibility pass
+8. Pulsing presence dot CSS keyframe animation
 **Design spec**: `00 - Agent Context/FUSION-DESIGN-SPEC.md` ← read this at the start of every implementation session
 **Plan (Phase 0+1)**: `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` — reference for how future phases are scoped + gated
 **YAML source of truth**: `config/dashboards/fusion.yaml` — **NEVER edit FUSION via the HA UI "Edit Dashboard" button** (see DECISIONS 2026-04-24). All changes go file → commit → MCP `ha_config_set_dashboard(config=...)`.

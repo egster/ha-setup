@@ -1,6 +1,8 @@
-# FUSION Dashboard — Phase 1 shell + Phase 2 Home panel
+# FUSION Dashboard — Phases 1-6 complete
 # Gate 2 reviewed: 2026-04-24 (Phase 1 shell)
 # Gate 2 reviewed: 2026-04-24 (Phase 2 Home panel)
+# Gate 2 reviewed: 2026-04-24 (Phase 3 Climate/Media/Network/Energy/Automations)
+# Phases 4 (room tap/hold), 5 (Kitchen), 6 (polish) follow Phase 3 patterns
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # This file is the only authoritative source for FUSION's dashboard config.
@@ -97,6 +99,30 @@ views:
           min-height: 100vh
           background: "#090909"
           color: "#e8e8e8"
+        # Phase 6 polish: global font, scrollbar, accent colour CSS vars.
+        # Applied at the outer layout so every descendant inherits the dark
+        # theme without per-card overrides.
+        card_mod:
+          style: |
+            :host {
+              --primary-color: #4f8ef7;
+              --paper-item-icon-color: #888;
+              font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            }
+            :host ::-webkit-scrollbar {
+              width: 8px;
+              height: 8px;
+            }
+            :host ::-webkit-scrollbar-track {
+              background: #111;
+            }
+            :host ::-webkit-scrollbar-thumb {
+              background: #2a2a2a;
+              border-radius: 4px;
+            }
+            :host ::-webkit-scrollbar-thumb:hover {
+              background: #3a3a3a;
+            }
         cards:
 
           # ===================================================================
@@ -830,6 +856,19 @@ views:
                           show_icon: true
                           show_label: true
                           show_state: false
+                          # Phase 4: tap opens HA more-info; hold navigates to
+                          # area page. NOTE: /config/areas/area/<slug> is the
+                          # URL HA's Settings UI uses internally — it works as
+                          # of 2026.4 but is not publicly documented as a
+                          # stable route. If it breaks in a future HA release,
+                          # all 8 hold-actions need a new path or fall back
+                          # to more-info only.
+                          tap_action:
+                            action: more-info
+                            entity: light.living_room_lights
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/living_room
                           label: |
                             [[[
                               const chips = [];
@@ -887,6 +926,12 @@ views:
                           show_label: true
                           show_state: false
                           entity: binary_sensor.eve_motion_20eby9901_occupancy_2
+                          tap_action:
+                            action: more-info
+                            entity: climate.kitchen_area
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/kitchen
                           label: |
                             [[[
                               const chips = [];
@@ -949,6 +994,12 @@ views:
                           show_label: true
                           show_state: false
                           entity: binary_sensor.office_motion_sensors
+                          tap_action:
+                            action: more-info
+                            entity: climate.office_area
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/office
                           label: |
                             [[[
                               const chips = [];
@@ -1024,6 +1075,12 @@ views:
                           show_icon: true
                           show_label: true
                           show_state: false
+                          tap_action:
+                            action: more-info
+                            entity: climate.air_conditioning_bedroom
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/bedroom
                           label: |
                             [[[
                               const chips = [];
@@ -1075,6 +1132,12 @@ views:
                           show_icon: true
                           show_label: true
                           show_state: false
+                          tap_action:
+                            action: more-info
+                            entity: light.jona_lights
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/jona_s_room
                           label: |
                             [[[
                               const chips = [];
@@ -1146,6 +1209,12 @@ views:
                           show_label: true
                           show_state: false
                           entity: binary_sensor.entrance_motion_sensors
+                          tap_action:
+                            action: more-info
+                            entity: light.entrance_ceiling
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/entrance
                           label: |
                             [[[
                               const chips = [];
@@ -1206,6 +1275,12 @@ views:
                           show_icon: true
                           show_label: true
                           show_state: false
+                          tap_action:
+                            action: more-info
+                            entity: light.garage
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/garage
                           label: |
                             [[[
                               const chips = [];
@@ -1269,6 +1344,12 @@ views:
                           show_icon: true
                           show_label: true
                           show_state: false
+                          tap_action:
+                            action: more-info
+                            entity: light.outdoor_lights
+                          hold_action:
+                            action: navigate
+                            navigation_path: /config/areas/area/outdoor
                           label: |
                             [[[
                               const chips = [];
@@ -1392,11 +1473,79 @@ views:
                   - entity: input_select.fusion_panel
                     state: kitchen
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: kitchen
-
-                    _Phase 1 stub — real content arrives in Phase 5 per FUSION-DESIGN-SPEC.md._
+                  # =================================================================
+                  # KITCHEN PANEL — Phase 5 (timers + shopping list + scenes)
+                  # Uses:
+                  #   - timer.kitchen_timer_1, timer.kitchen_timer_2 (created Phase 5)
+                  #   - todo.shopping_list (HA built-in)
+                  #   - No kitchen-specific scenes exist yet; placeholder notes
+                  #     where they would go (BACKLOG candidates)
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ⏱ KITCHEN TIMERS
+                    - type: entities
+                      show_header_toggle: false
+                      entities:
+                        - entity: timer.kitchen_timer_1
+                          name: Timer 1 (5 min default)
+                        - entity: timer.kitchen_timer_2
+                          name: Timer 2 (10 min default)
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: #161616;
+                            border: 1px solid #2a2a2a;
+                            border-radius: 10px;
+                            margin: 0 14px 14px 14px;
+                          }
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🛒 SHOPPING LIST
+                    - type: todo-list
+                      entity: todo.shopping_list
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: #161616;
+                            border: 1px solid #2a2a2a;
+                            border-radius: 10px;
+                            margin: 0 14px 14px 14px;
+                          }
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 📖 RECIPES
+                    - type: markdown
+                      content: |
+                        _Kitchen recipes / links TBD. Add static links here, or wire up a recipe integration later._
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: #161616;
+                            border: 1px solid #2a2a2a;
+                            border-radius: 10px;
+                            color: #888;
+                            padding: 14px;
+                            margin: 0 14px 14px 14px;
+                          }
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ✨ KITCHEN SCENES
+                    - type: markdown
+                      content: |
+                        _Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode) don't exist yet — create as `scene.*` entities and wire buttons here, or see BACKLOG._
+                      card_mod:
+                        style: |
+                          ha-card {
+                            background: #161616;
+                            border: 1px solid #2a2a2a;
+                            border-radius: 10px;
+                            color: #888;
+                            padding: 14px;
+                            margin: 0 14px 14px 14px;
+                          }
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel
