@@ -5,6 +5,53 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6d — Stacked-row room cards (inline popup alternative)
+
+### What was done
+Replaced single-card-with-chips room cards with vertical-stacks of independently-clickable rows, per Edgar's proposed design. Each row shows live state for one entity (lights/climate/media/motion) and opens HA's native more-info dialog on tap — no modal overlay, no bubble-card complexity.
+
+### Design
+New button-card templates added to the dashboard root:
+- `fusion_room_header` — non-clickable header with room icon + name
+- `fusion_room_row_lights` — shows "X lights on" / "Lights off" / "Lights offline"
+- `fusion_room_row_climate` — shows "current° → target°" or "Heat off" / "Climate offline"
+- `fusion_room_row_media` — shows "<friendly_name> · playing: <track>" / idle / paused / offline
+- `fusion_room_row_motion` — shows "Occupied" / "No motion"
+
+Each row is a `custom:button-card` with `entity:` set per-card and a JS `name:` template that renders live state. `tap_action: more-info` targets the row's entity.
+
+### Room composition
+| Room | Rows |
+|---|---|
+| Living Room | Lights · Climate · Sonos · HomePod |
+| Kitchen | Motion · Lights · Climate |
+| Office | Motion · Lights · Climate |
+| Bedroom | Climate (AC) · Upstairs Speaker |
+| Jona's Room | Lights · Nest Mini |
+| Entrance | Motion · Lights |
+| Garage | Lights |
+| Outdoor | Lights |
+
+4 floor grids got `align-items: start` so variable-height rooms don't stretch.
+
+### Trade-offs
+- **Taller rooms** — home panel scrolls more (4-5 rooms per viewport vs 6-8 before)
+- **Clearer at-a-glance state** — you see "paused: Dracula" without tapping
+- **More tap targets** — tap exactly the entity you want
+- **No popup overlays** — HA's native more-info handles the detail view
+- **YAML size unchanged** — same ~45KB; templates dedupe styling across 24 row instances
+
+### Deploy + sync
+Applied via 2 `python_transform` calls (Living Room first as a test, then all 7 remaining + grid alignment). Local YAML regenerated via custom script that reads current YAML + patches in the templates + replaces rooms + adds align-items. Round-trip-safe.
+
+### Known follow-ups
+- **Row icons** could reflect entity state (green for on, grey for off) — currently static grey per row type. Easy polish via button-card `state:` blocks.
+- **Header tap action** is currently `action: none`. Per earlier conversation, Edgar wants this to eventually open a room popup — deferred until popups work (BACKLOG).
+- **Friendly names for media rows** — `media_player.upstairs_speaker` has no `friendly_name` when unavailable so the row shows "upstairs_speaker · offline" (snake_case). Can title-case the fallback in the template if needed.
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6c — perform-action migration + Kiosk toggle; popups attempted/reverted
 
 ### What was done

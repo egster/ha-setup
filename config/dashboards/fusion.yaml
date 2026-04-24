@@ -1,12 +1,9 @@
-# FUSION Dashboard — Phases 1-6 complete + 6c (perform-action migration + Kiosk toggle)
-# Gate 2 reviewed: 2026-04-24 (Phase 1 shell)
-# Gate 2 reviewed: 2026-04-24 (Phase 2 Home panel)
-# Gate 2 reviewed: 2026-04-24 (Phase 3 Climate/Media/Network/Energy/Automations)
-# Phases 4 (room tap/hold), 5 (Kitchen), 6 (polish) follow Phase 3 patterns.
-# Phase 6c: perform-action migration (11 sites), Kiosk toggle moved to sidebar bottom
-# (status bar ran out of horizontal space on narrow viewports).
-# Bubble Card popups attempted in Phase 6c but reverted — broke content rendering.
-# Popups tracked as BACKLOG item; tap_action reverted to more-info.
+# FUSION Dashboard — Phases 1-6 + 6c (perform-action + Kiosk) + 6d (stacked room rows)
+# Gate 2 reviewed: 2026-04-24 (Phases 1-3)
+# Phase 6d: Room cards are now vertical-stacks of independently-clickable rows
+# (one per entity) instead of single-card-with-chips. Each row opens HA's
+# more-info dialog for the row's entity. Tap an empty spot between rows: nothing.
+# Replaces the failed Bubble Card popup attempt (Phase 6c).
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # This file is the only authoritative source for FUSION's dashboard config.
@@ -62,6 +59,102 @@ button_card_templates:
       - letter-spacing: 1px
       - text-align: left
       - justify-self: start
+  fusion_room_header:
+    show_icon: true
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action:
+      action: none
+    styles:
+      card:
+      - background: '#161616'
+      - border: '1px solid #2a2a2a'
+      - border-radius: 8px
+      - padding: 10px 12px
+      - margin: 0 0 3px 0
+      - box-shadow: none
+      - cursor: default
+      - height: auto
+      icon:
+      - width: 20px
+      - color: '#e8e8e8'
+      - justify-self: start
+      name:
+      - font-size: 14px
+      - font-weight: 600
+      - color: '#e8e8e8'
+      - text-align: left
+      - justify-self: start
+      - padding-left: 10px
+      grid:
+      - grid-template-areas: '"i n"'
+      - grid-template-columns: auto 1fr
+  fusion_room_row_lights:
+    show_icon: true
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action:
+      action: more-info
+    styles: &id001
+      card:
+      - background: '#161616'
+      - border: '1px solid #2a2a2a'
+      - border-radius: 8px
+      - padding: 8px 10px
+      - margin: 0 0 3px 0
+      - box-shadow: none
+      - cursor: pointer
+      - height: auto
+      icon:
+      - width: 16px
+      - height: 16px
+      - color: '#888'
+      - justify-self: start
+      name:
+      - font-size: 12px
+      - color: '#e8e8e8'
+      - text-align: left
+      - justify-self: start
+      - padding-left: 10px
+      grid:
+      - grid-template-areas: '"i n"'
+      - grid-template-columns: auto 1fr
+    name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Lights offline';\n  if (entity.state !== 'on') return 'Lights off';\n  if (entity.attributes.entity_id) {\n    const on = entity.attributes.entity_id.filter(id\
+      \ => states[id] && states[id].state === 'on').length;\n    return on + ' light' + (on !== 1 ? 's' : '') + ' on';\n  }\n  return 'Light on';\n]]]\n"
+  fusion_room_row_climate:
+    show_icon: true
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action:
+      action: more-info
+    styles: *id001
+    name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Climate offline';\n  if (entity.state === 'off') return 'Heat off';\n  const t = entity.attributes.current_temperature;\n  const\
+      \ g = entity.attributes.temperature;\n  const ts = (t !== undefined && t !== null) ? t.toFixed(1) + '°' : '—';\n  const gs = (g !== undefined && g !== null) ? g + '°' : '—';\n  return ts + ' → ' +\
+      \ gs;\n]]]\n"
+  fusion_room_row_media:
+    show_icon: true
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action:
+      action: more-info
+    styles: *id001
+    name: "[[[\n  if (!entity) return 'Not available';\n  const fn = (entity.attributes.friendly_name || entity.entity_id).replace('media_player.', '');\n  if (entity.state === 'unavailable') return fn\
+      \ + ' · offline';\n  if (entity.state === 'off' || entity.state === 'idle' || entity.state === 'standby') return fn + ' · idle';\n  if (entity.state === 'paused') {\n    const title = entity.attributes.media_title;\n\
+      \    return title ? fn + ' · paused: ' + title : fn + ' · paused';\n  }\n  if (entity.state === 'playing') {\n    const title = entity.attributes.media_title;\n    const artist = entity.attributes.media_artist;\n\
+      \    if (title && artist) return fn + ' · ' + artist + ' — ' + title;\n    if (title) return fn + ' · ' + title;\n    return fn + ' · playing';\n  }\n  return fn + ' · ' + entity.state;\n]]]\n"
+  fusion_room_row_motion:
+    show_icon: true
+    show_name: true
+    show_state: false
+    show_label: false
+    tap_action:
+      action: more-info
+    styles: *id001
+    name: "[[[\n  if (!entity) return 'No sensor';\n  return entity.state === 'on' ? 'Occupied' : 'No motion';\n]]]\n"
 views:
 - title: FUSION
   path: fusion
@@ -672,170 +765,66 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
+              align-items: start
             cards:
-            - type: custom:button-card
-              icon: mdi:sofa
-              name: Living Room
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              label: "[[[\n  const chips = [];\n  const lg = states['light.living_room_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count =\
-                \ members.filter(id => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Floor ♨</span>');\n  const mp = states['media_player.living_room'];\n  const hp = states['media_player.homepod'];\n  if ((mp && mp.state === 'playing') || (hp && hp.state ===\
-                \ 'playing')) {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">▶ Playing</span>');\n  }\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              tap_action:
-                action: more-info
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:sofa
+                name: Living Room
+              - type: custom:button-card
+                template: fusion_room_row_lights
                 entity: light.living_room_lights
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/living_room
-            - type: custom:button-card
-              icon: mdi:silverware-fork-knife
-              name: Kitchen
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              entity: binary_sensor.eve_motion_20eby9901_occupancy_2
-              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on') {\n    chips.push('<span\
-                \ style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n\
-                \  const lg = states['light.kitchen_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] &&\
-                \ states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Auto</span>');\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Floor ♨</span>');\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              state:
-              - operator: template
-                value: '[[[ return !!states[''binary_sensor.eve_motion_20eby9901_occupancy_2''] && states[''binary_sensor.eve_motion_20eby9901_occupancy_2''].state === ''on''; ]]]'
-                styles:
-                  card:
-                  - border-left: '3px solid #4caf6e'
-              tap_action:
-                action: more-info
+                icon: mdi:lightbulb-group
+              - type: custom:button-card
+                template: fusion_room_row_climate
+                entity: climate.living_room_area
+                icon: mdi:radiator
+              - type: custom:button-card
+                template: fusion_room_row_media
+                entity: media_player.living_room
+                icon: mdi:speaker
+              - type: custom:button-card
+                template: fusion_room_row_media
+                entity: media_player.homepod
+                icon: mdi:speaker
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:silverware-fork-knife
+                name: Kitchen
+              - type: custom:button-card
+                template: fusion_room_row_motion
+                entity: binary_sensor.eve_motion_20eby9901_occupancy_2
+                icon: mdi:motion-sensor
+              - type: custom:button-card
+                template: fusion_room_row_lights
+                entity: light.kitchen_lights
+                icon: mdi:lightbulb-group
+              - type: custom:button-card
+                template: fusion_room_row_climate
                 entity: climate.kitchen_area
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/kitchen
-            - type: custom:button-card
-              icon: mdi:desk
-              name: Office
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              entity: binary_sensor.office_motion_sensors
-              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on') {\n    chips.push('<span style=\"display:inline-block;padding:2px\
-                \ 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n  const lg = states['light.office_lights']\
-                \ || states['light.desk_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] && states[id].state\
-                \ === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Auto</span>');\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Floor ♨</span>');\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              state:
-              - operator: template
-                value: '[[[ return !!states[''binary_sensor.office_motion_sensors''] && states[''binary_sensor.office_motion_sensors''].state === ''on''; ]]]'
-                styles:
-                  card:
-                  - border-left: '3px solid #4caf6e'
-              tap_action:
-                action: more-info
+                icon: mdi:radiator
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:desk
+                name: Office
+              - type: custom:button-card
+                template: fusion_room_row_motion
+                entity: binary_sensor.office_motion_sensors
+                icon: mdi:motion-sensor
+              - type: custom:button-card
+                template: fusion_room_row_lights
+                entity: light.office_lights
+                icon: mdi:lightbulb-group
+              - type: custom:button-card
+                template: fusion_room_row_climate
                 entity: climate.office_area
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/office
+                icon: mdi:radiator
           - type: custom:button-card
             template: fusion_floor_header
             name: 🛏 UPPER FLOOR
@@ -845,104 +834,36 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
+              align-items: start
             cards:
-            - type: custom:button-card
-              icon: mdi:bed
-              name: Bedroom
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              label: "[[[\n  const chips = [];\n  const ac = states['climate.air_conditioning_bedroom'];\n  if (ac && ac.state !== 'unavailable' && ac.state !== 'unknown') {\n    chips.push('<span style=\"\
-                display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">AC</span>');\n  } else {\n    chips.push('<span\
-                \ style=\"display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">AC offline</span>');\n  }\n \
-                \ return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                - opacity: 0.75
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#555'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#888'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              tap_action:
-                action: more-info
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:bed
+                name: Bedroom
+              - type: custom:button-card
+                template: fusion_room_row_climate
                 entity: climate.air_conditioning_bedroom
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/bedroom
-            - type: custom:button-card
-              icon: mdi:teddy-bear
-              name: Jona's Room
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              label: "[[[\n  const chips = [];\n  const lg = states['light.jona_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id\
-                \ => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  } else if (lg && lg.state === 'unavailable') {\n    chips.push('<span style=\"display:inline-block;padding:2px\
-                \ 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Lights offline</span>');\n  }\n  const mp = states['media_player.jona_speaker'];\n\
-                \  if (mp && mp.state === 'playing') {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">▶ Playing</span>');\n  }\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              tap_action:
-                action: more-info
+                icon: mdi:air-conditioner
+              - type: custom:button-card
+                template: fusion_room_row_media
+                entity: media_player.upstairs_speaker
+                icon: mdi:speaker
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:teddy-bear
+                name: Jona's Room
+              - type: custom:button-card
+                template: fusion_room_row_lights
                 entity: light.jona_lights
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/jona_s_room
+                icon: mdi:lightbulb-group
+              - type: custom:button-card
+                template: fusion_room_row_media
+                entity: media_player.jona_speaker
+                icon: mdi:speaker
           - type: custom:button-card
             template: fusion_floor_header
             name: ⬇️ DOWNSTAIRS
@@ -952,109 +873,32 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
+              align-items: start
             cards:
-            - type: custom:button-card
-              icon: mdi:door
-              name: Entrance
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              entity: binary_sensor.entrance_motion_sensors
-              label: "[[[\n  const chips = [];\n  if (states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on') {\n    chips.push('<span style=\"\
-                display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Occupied</span>');\n  }\n  const lg\
-                \ = states['light.entrance_ceiling'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id => states[id] && states[id].state\
-                \ === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">Auto</span>');\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              state:
-              - operator: template
-                value: '[[[ return !!states[''binary_sensor.entrance_motion_sensors''] && states[''binary_sensor.entrance_motion_sensors''].state === ''on''; ]]]'
-                styles:
-                  card:
-                  - border-left: '3px solid #4caf6e'
-              tap_action:
-                action: more-info
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:door
+                name: Entrance
+              - type: custom:button-card
+                template: fusion_room_row_motion
+                entity: binary_sensor.entrance_motion_sensors
+                icon: mdi:motion-sensor
+              - type: custom:button-card
+                template: fusion_room_row_lights
                 entity: light.entrance_ceiling
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/entrance
-            - type: custom:button-card
-              icon: mdi:garage
-              name: Garage
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              label: "[[[\n  const chips = [];\n  const lg = states['light.garage'];\n  if (lg && lg.state === 'on') {\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px\
-                \ solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">1 light</span>');\n  }\n  chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px\
-                \ solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;\">Auto</span>');\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              tap_action:
-                action: more-info
+                icon: mdi:lightbulb-group
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:garage
+                name: Garage
+              - type: custom:button-card
+                template: fusion_room_row_lights
                 entity: light.garage
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/garage
+                icon: mdi:lightbulb
           - type: custom:button-card
             template: fusion_floor_header
             name: 🌿 OUTSIDE
@@ -1064,53 +908,18 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
+              align-items: start
             cards:
-            - type: custom:button-card
-              icon: mdi:tree
-              name: Outdoor
-              show_name: true
-              show_icon: true
-              show_label: true
-              show_state: false
-              label: "[[[\n  const chips = [];\n  const lg = states['light.outdoor_lights'];\n  if (lg && lg.state === 'on') {\n    const members = lg.attributes.entity_id || [];\n    const count = members.filter(id\
-                \ => states[id] && states[id].state === 'on').length;\n    chips.push('<span style=\"display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px\
-                \ 4px 0 0;\">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');\n  }\n  return chips.join('');\n]]]\n"
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                - border-radius: 10px
-                - padding: 12px
-                - height: 90px
-                - box-shadow: none
-                - text-align: left
-                icon:
-                - width: 22px
-                - height: 22px
-                - color: '#888'
-                - justify-self: start
-                name:
-                - font-size: 13px
-                - font-weight: 600
-                - color: '#e8e8e8'
-                - text-align: left
-                - padding-top: 4px
-                - justify-self: start
-                label:
-                - text-align: left
-                - justify-self: start
-                - align-self: end
-                - padding-top: 4px
-                - line-height: 1.4
-                grid:
-                - grid-template-areas: '"i" "n" "l"'
-                - grid-template-rows: auto auto 1fr
-              tap_action:
-                action: more-info
+            - type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_room_header
+                icon: mdi:tree
+                name: Outdoor
+              - type: custom:button-card
+                template: fusion_room_row_lights
                 entity: light.outdoor_lights
-              hold_action:
-                action: navigate
-                navigation_path: /config/areas/area/outdoor
+                icon: mdi:lightbulb-group
           - type: custom:button-card
             template: fusion_floor_header
             name: ✨ SCENES
