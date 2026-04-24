@@ -5,6 +5,35 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6j — Kiosk Mode working + sidebar aligned with Main Floor
+
+### What was done
+Closed out the two known-issues left in Phase 6i by copying a working pattern from BubbleDash and replacing a broken flex centering attempt with a deterministic offset.
+
+### Kiosk Mode — fixed
+Replaced the `kiosk_mode.entity_settings` array with top-level Jinja templates (the pattern BubbleDash uses and Edgar confirmed works):
+
+```yaml
+kiosk_mode:
+  hide_header: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
+  hide_sidebar: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
+  hide_overflow: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
+```
+
+Verified end-to-end: toggling `input_boolean.fusion_kiosk` on + reload hides the HA header and drawer fully; toggling off restores them.
+
+### Sidebar alignment — hacked
+Flex-center on the `custom:mod-card` wrapper never applied (unknown why — possibly layout-card cell doesn't give the child a definite height). Replaced with a static `padding-top: 121px` on the sidebar `ha-card` so the first nav icon (Home) visually aligns with the Main Floor divider on the Home panel.
+
+Measured in Chrome: Home icon center and Main Floor divider bottom both at Y=248px. Non-responsive — if the KPI row or floor-header paddings change, this offset needs re-tuning.
+
+### Files touched
+- `config/dashboards/fusion.yaml` — `kiosk_mode` block + sidebar mod-card style
+- `BACKLOG.md` — both ⚠️ items flipped to ✅
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6d — Stacked-row room cards (inline popup alternative)
 
 ### What was done

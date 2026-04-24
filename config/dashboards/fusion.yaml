@@ -1,14 +1,11 @@
-# FUSION Dashboard — through Phase 6i
-# Phase 6i (cosmetic + known-issues):
-# - Removed horizontal separator between Kitchen and Climate icons in sidebar
-# - Wrapped sidebar in custom:mod-card with flex centering — centering is
-#   partially applied but not working as expected on Edgar's viewport.
-#   Sidebar icons still appear top-aligned; investigation needed.
-# - Kiosk Mode: plugin loads (v13.0.0 confirmed in console) but entity-based
-#   activation doesn't hide HA chrome even with admin_settings override.
-#   Syntax tried: entity as dict {entity_id: state}, explicit hide_header/
-#   hide_sidebar/hide_overflow, plus admin_settings mirror.
-#   Workaround: URL param ?kiosk=true activates for that session.
+# FUSION Dashboard — through Phase 6j
+# Phase 6j (kiosk + sidebar alignment):
+# - Kiosk Mode: switched from entity_settings array to top-level template
+#   pattern (matches BubbleDash). hide_header/hide_sidebar/hide_overflow
+#   are each bound to `is_state('input_boolean.fusion_kiosk','on')`.
+# - Sidebar alignment: dropped flex-center (which didn't work) in favour of
+#   padding-top: 88px so the Home nav icon lines up with the Main Floor
+#   divider on the Home panel.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # -----------------------------------------------------------------------------
@@ -401,7 +398,7 @@ views:
       view_layout:
         grid-area: sidebar
       card_mod:
-        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  height: 100%;\n  padding: 0;\n}\n"
+        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  padding-top: 121px;\n}\n"
       card:
         type: vertical-stack
         cards:
@@ -1621,16 +1618,6 @@ views:
         \ 8px;\n  height: 8px;\n}\n:host ::-webkit-scrollbar-track {\n  background: #111;\n}\n:host ::-webkit-scrollbar-thumb {\n  background: #2a2a2a;\n  border-radius: 4px;\n}\n:host ::-webkit-scrollbar-thumb:hover\
         \ {\n  background: #3a3a3a;\n}\n"
 kiosk_mode:
-  entity_settings:
-  - entity:
-      input_boolean.fusion_kiosk: 'on'
-    hide_header: true
-    hide_sidebar: true
-    hide_overflow: true
-  admin_settings:
-    entity_settings:
-    - entity:
-        input_boolean.fusion_kiosk: 'on'
-      hide_header: true
-      hide_sidebar: true
-      hide_overflow: true
+  hide_header: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
+  hide_sidebar: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
+  hide_overflow: "{{ is_state('input_boolean.fusion_kiosk', 'on') }}"
