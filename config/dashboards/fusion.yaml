@@ -1,11 +1,14 @@
-# FUSION Dashboard — through Phase 6h (dynamic stretch + 3-line min-height)
-# Phase 6h: adds min-height: 140px to each room's ha-card (roughly 3 lines —
-# header + 2 content rows). Combined with the existing align-items: stretch,
-# rooms in the same floor row resize dynamically:
-#   - Media rows are hidden via conditional cards (state-driven)
-#   - When a media row disappears, CSS grid recalculates the row's tallest
-#     sibling and all rooms in the row stretch to match
-#   - If all rooms shrink below 140px total, min-height kicks in as the floor
+# FUSION Dashboard — through Phase 6i
+# Phase 6i (cosmetic + known-issues):
+# - Removed horizontal separator between Kitchen and Climate icons in sidebar
+# - Wrapped sidebar in custom:mod-card with flex centering — centering is
+#   partially applied but not working as expected on Edgar's viewport.
+#   Sidebar icons still appear top-aligned; investigation needed.
+# - Kiosk Mode: plugin loads (v13.0.0 confirmed in console) but entity-based
+#   activation doesn't hide HA chrome even with admin_settings override.
+#   Syntax tried: entity as dict {entity_id: state}, explicit hide_header/
+#   hide_sidebar/hide_overflow, plus admin_settings mirror.
+#   Workaround: URL param ?kiosk=true activates for that session.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # -----------------------------------------------------------------------------
@@ -394,190 +397,180 @@ views:
           - font-size: 11px
           - color: '#888'
           - white-space: nowrap
-    - type: vertical-stack
+    - type: custom:mod-card
       view_layout:
         grid-area: sidebar
-      cards:
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:home-variant
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: home
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
+      card_mod:
+        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  height: 100%;\n  padding: 0;\n}\n"
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:home-variant
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: home
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:silverware-fork-knife
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: kitchen
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:thermometer
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: climate
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:music
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: media
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:wifi
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: network
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:lightning-bolt
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: energy
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          template: fusion_nav_icon
+          icon: mdi:cog-outline
+          tap_action:
+            action: perform-action
+            target:
+              entity_id: input_select.fusion_panel
+            data:
+              option: automations
+            perform_action: input_select.select_option
+          state:
+          - operator: template
+            value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
+            styles:
+              card:
+              - background: '#161616'
+              - border: '1px solid #2a2a2a'
+              icon:
+              - color: '#e8e8e8'
+        - type: custom:button-card
+          entity: input_boolean.fusion_kiosk
+          show_icon: true
+          show_state: false
+          show_name: false
+          show_label: false
+          icon: mdi:fullscreen
+          tap_action:
+            action: perform-action
+            perform_action: input_boolean.toggle
+            target:
+              entity_id: input_boolean.fusion_kiosk
           styles:
             card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
+            - background: transparent
+            - border: 1px solid transparent
+            - border-radius: 10px
+            - width: 42px
+            - height: 42px
+            - margin: 16px 8px 0 8px
+            - padding: 0
+            - box-shadow: none
+            - cursor: pointer
             icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:silverware-fork-knife
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: kitchen
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        show_name: false
-        show_icon: false
-        styles:
-          card:
-          - background: '#2a2a2a'
-          - border: none
-          - border-radius: 0
-          - width: 28px
-          - height: 1px
-          - margin: 10px 15px
-          - padding: 0
-          - box-shadow: none
-          - pointer-events: none
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:thermometer
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: climate
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:music
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: media
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:wifi
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: network
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:lightning-bolt
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: energy
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        template: fusion_nav_icon
-        icon: mdi:cog-outline
-        tap_action:
-          action: perform-action
-          target:
-            entity_id: input_select.fusion_panel
-          data:
-            option: automations
-          perform_action: input_select.select_option
-        state:
-        - operator: template
-          value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
-          styles:
-            card:
-            - background: '#161616'
-            - border: '1px solid #2a2a2a'
-            icon:
-            - color: '#e8e8e8'
-      - type: custom:button-card
-        entity: input_boolean.fusion_kiosk
-        show_icon: true
-        show_state: false
-        show_name: false
-        show_label: false
-        icon: mdi:fullscreen
-        tap_action:
-          action: perform-action
-          perform_action: input_boolean.toggle
-          target:
-            entity_id: input_boolean.fusion_kiosk
-        styles:
-          card:
-          - background: transparent
-          - border: 1px solid transparent
-          - border-radius: 10px
-          - width: 42px
-          - height: 42px
-          - margin: 16px 8px 0 8px
-          - padding: 0
-          - box-shadow: none
-          - cursor: pointer
-          icon:
-          - width: 20px
-          - height: 20px
-          - color: '#888'
-        state:
-        - value: 'on'
-          icon: mdi:fullscreen-exit
-          styles:
-            icon:
-            - color: '#4f8ef7'
+            - width: 20px
+            - height: 20px
+            - color: '#888'
+          state:
+          - value: 'on'
+            icon: mdi:fullscreen-exit
+            styles:
+              icon:
+              - color: '#4f8ef7'
     - type: vertical-stack
       view_layout:
         grid-area: content
@@ -1631,4 +1624,13 @@ kiosk_mode:
   entity_settings:
   - entity:
       input_boolean.fusion_kiosk: 'on'
-    kiosk: true
+    hide_header: true
+    hide_sidebar: true
+    hide_overflow: true
+  admin_settings:
+    entity_settings:
+    - entity:
+        input_boolean.fusion_kiosk: 'on'
+      hide_header: true
+      hide_sidebar: true
+      hide_overflow: true
