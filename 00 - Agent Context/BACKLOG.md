@@ -66,8 +66,22 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 #### FUSION Dashboard — Full Implementation
 **Added**: 2026-04-22
-**Status**: Backlog — design selected, not started
-**Design reference**: `/Users/edgar/Documents/Claude/Artifacts/ha-dashboard-design/index.html` → FUSION tab
+**Status**: ✅ **All 6 phases deployed 2026-04-24** — shell + all 7 panels (Home, Kitchen, Climate, Media, Network, Energy, Automations) + room tap/hold actions + global polish live at `/dashboard-fusion`. See CHANGELOG 2026-04-24 for what shipped.
+
+**Open enhancements** (tracked separately below, not blocking dashboard use):
+1. **Bubble Card popups for room taps** — Attempted in Phase 6c, reverted. **Superseded by Phase 6d stacked-row design** which provides the same per-entity tap experience inline, no overlay needed. Bubble Card popups remain available if Edgar ever wants true modal popups (e.g. for richer content like slider controls, recipe selections), but not needed for the current use case.
+2. Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode)
+3. Kitchen recipe integration / links
+4. ✅ **Kiosk Mode toggle** — Done 2026-04-24 Phase 6j. Switched from `entity_settings` array to top-level template strings (BubbleDash pattern): `hide_header/hide_sidebar/hide_overflow` each bound to `{{ is_state('input_boolean.fusion_kiosk','on') }}`. Toggle via sidebar icon or helper directly; HA header+drawer hide edge-to-edge.
+5. ✅ **Sidebar alignment hack** — Done 2026-04-24 Phase 6j. Dropped flex-center (which never applied) in favour of `padding-top: 121px` on the sidebar `mod-card`. Home icon now visually aligns with the Main Floor divider on the Home panel. Measured in Chrome (icon center & divider bottom at Y=248). If floor layouts or KPI row heights change, the offset will need re-tuning — it's not dynamic.
+5. BubbleDash v4 archival (after 1-2 weeks of trusting FUSION)
+6. ✅ **`call-service` → `perform-action`** migration — Done 2026-04-24 Phase 6c (11 sites: sidebar nav template + 7 icon overrides + 3 scene buttons).
+7. iPad VoiceOver accessibility pass
+8. Pulsing presence dot CSS keyframe animation
+**Design spec**: `00 - Agent Context/FUSION-DESIGN-SPEC.md` ← read this at the start of every implementation session
+**Plan (Phase 0+1)**: `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` — reference for how future phases are scoped + gated
+**YAML source of truth**: `config/dashboards/fusion.yaml` — **NEVER edit FUSION via the HA UI "Edit Dashboard" button** (see DECISIONS 2026-04-24). All changes go file → commit → MCP `ha_config_set_dashboard(config=...)`.
+**Visual mockup**: `/Users/edgar/Documents/Claude/Artifacts/ha-dashboard-design/index.html` → FUSION tab (secondary reference only — spec is authoritative)
 **Intent**: Replace BubbleDash v4 with a new dashboard built around a fixed icon sidebar + switchable content panels. Carbon dark aesthetic (`#090909` base). Layout: 36px top status bar + 58px left icon sidebar + scrollable main content area.
 
 ---
@@ -79,41 +93,27 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 ---
 
-**Phase 0 — Prerequisites (~30 min)**
-Install 3 missing HACS cards (all others already present):
-1. `custom:layout-card` v2.4.7 — grid/masonry layout control (essential)
-2. `custom:apexcharts-card` v2.2.3 — all charts (temperature, power, throughput)
-3. `custom:config-template-card` v1.3.6 — conditional panel switching from `input_select`
-
-Create helper:
-- `input_select.fusion_panel` with options: `home`, `kitchen`, `climate`, `media`, `network`, `energy`, `automations`
+**Phase 0 — Prerequisites (~30 min)** ✅ **done 2026-04-24**
+- HACS: `layout-card` v2.4.7, `apexcharts-card` v2.2.3, `config-template-card` 1.3.6 installed + resources auto-registered
+- Helper: `input_select.fusion_panel` live (7 options, default `home`)
 
 ---
 
-**Phase 1 — Shell: header + sidebar + panel switcher (~2–3 hrs)**
-1. Create new storage-mode dashboard `fusion` (leave BubbleDash v4 intact — run in parallel)
-2. Build outer grid with `custom:layout-card`:
-   - Row 1: 36px status bar — `button-card` row: presence dot · Edgar/iPad/Edphone badges · outdoor temp · WAN status · ↓↑ speeds. Entities: `person.edgar`, `device_tracker.*`, `sensor.outdoor_temp` (or met.no), `binary_sensor.wan_status`, `sensor.bq16_download`, `sensor.bq16_upload`
-   - Col 1: 58px icon sidebar — 7 `button-card` icons, each fires `input_select.select_option` for `fusion_panel`. Active state: `card-mod` checks `states['input_select.fusion_panel'].state` to highlight selected icon
-   - Col 2: main content — `custom:config-template-card` rendering different panel YAML based on `states['input_select.fusion_panel'].state`
-3. Gate: all 7 nav icons switch cleanly, active icon highlights, no layout overflow
+**Phase 1 — Shell: header + sidebar + panel switcher** ✅ **done 2026-04-24**
+- Dashboard created at `url_path: dashboard-fusion` (HA requires hyphen)
+- Outer `custom:layout-card` grid (36px × 58px), status bar + sidebar + content all wired
+- Active-icon highlight via `button-card` native `state:` (not card-mod — see DECISIONS 2026-04-24)
+- Panel switcher: 7 `conditional` cards (not `config-template-card` — see DECISIONS 2026-04-24; config-template-card kept installed for Phase 2+ use cases that don't involve backticks in content)
+- Dashboard added to HA sidebar (icon `mdi:hexagon-multiple`)
 
 ---
 
-**Phase 2 — Home panel (~4–5 hrs)**
-Build the most complex panel first so the architecture is proven before the simpler ones.
-
-*Hero strip (6 tiles):* `custom:layout-card` grid 6-col. Tiles:
-- Rooms occupied: count of `binary_sensor.*_occupancy` = `on`
-- Lights on: count of `light.*` = `on`
-- Avg temp: template average of room climate sensors
-- Power now: `sensor.current_power` (or energy dashboard sensor)
-- Network: `binary_sensor.wan_status`
-- Media playing: count of `media_player.*` = `playing`
-
-*Floor-grouped room grid:* One `custom:layout-card` (3-col grid) per floor section (Main / Upper / Downstairs / Outside), each preceded by a floor header row. Room cards: `custom:button-card` or `custom:mushroom-entity-card` with card-mod for the green occupancy left border. On tap: open Bubble Card popup (see Phase 4).
-
-*Scenes row:* `horizontal-stack` of `custom:button-card` buttons wired to existing scenes (`scene.good_morning`, `scene.evening`, `script.movie_mode`, etc.)
+**Phase 2 — Home panel** ✅ **done 2026-04-24**
+- Hero strip: 5 tiles (Power Now omitted — no whole-home monitor; see DECISIONS 2026-04-24)
+- Floor grid: 8 rooms across 4 floors; Kitchen/Office/Entrance get green-border occupied state
+- Scenes row: 3 pill buttons (the only scenes that currently exist; others added as BACKLOG items create them)
+- All logic client-side in button-card JS; no helpers
+- Row tap actions deferred to Phase 4 (Bubble Card popups)
 
 ---
 
