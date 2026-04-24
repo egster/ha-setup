@@ -1,5 +1,6 @@
-# FUSION Dashboard — Phase 1 shell (status bar + sidebar + panel switcher)
-# Gate 2 reviewed: 2026-04-24
+# FUSION Dashboard — Phase 1 shell + Phase 2 Home panel
+# Gate 2 reviewed: 2026-04-24 (Phase 1 shell)
+# Gate 2 reviewed: 2026-04-24 (Phase 2 Home panel)
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # This file is the only authoritative source for FUSION's dashboard config.
@@ -45,6 +46,32 @@ button_card_templates:
         - height: 20px
         - color: "#888"
 
+  # Shared template for Phase 2 floor section headers.
+  # Replaces the naive `type: markdown` + `style:` pattern, which silently
+  # drops styling (markdown card has no `style:` key). Per Gate 2 review.
+  fusion_floor_header:
+    show_name: true
+    show_icon: false
+    show_state: false
+    styles:
+      card:
+        - background: transparent
+        - border: none
+        - border-bottom: "1px solid #2a2a2a"
+        - border-radius: 0
+        - box-shadow: none
+        - padding: 14px 14px 6px 14px
+        - margin: 0 14px
+        - height: auto
+      name:
+        - color: "#888"
+        - font-size: 11px
+        - font-weight: 600
+        - text-transform: uppercase
+        - letter-spacing: 1px
+        - text-align: left
+        - justify-self: start
+
 views:
   - title: FUSION
     path: fusion
@@ -83,7 +110,10 @@ views:
               grid-area: statusbar
             layout_type: custom:grid-layout
             layout:
-              grid-template-columns: auto auto auto 1fr auto auto auto auto
+              # NOTE: auto columns collapse to 0 for button-cards inside a grid
+              # (they don't report intrinsic width). max-content forces each
+              # column to its max intrinsic width — the label text fits.
+              grid-template-columns: max-content max-content max-content 1fr max-content max-content max-content max-content
               grid-template-areas: |
                 "person edphone ipad . temp wan dl ul"
               grid-gap: 12px
@@ -103,6 +133,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const s = states['person.edgar'].state;
@@ -116,6 +147,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#e8e8e8"
@@ -135,6 +167,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const s = states['device_tracker.edphone'].state;
@@ -147,6 +180,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#888"
@@ -160,6 +194,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const s = states['device_tracker.ipad'].state;
@@ -172,6 +207,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#888"
@@ -185,6 +221,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);
@@ -197,6 +234,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#e8e8e8"
@@ -210,6 +248,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';
@@ -221,6 +260,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 13px
                     - line-height: 1
@@ -244,6 +284,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);
@@ -256,6 +297,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#888"
@@ -269,6 +311,7 @@ views:
                 show_icon: false
                 show_state: false
                 show_name: false
+                show_label: true
                 label: |
                   [[[
                     const v = parseFloat(states['sensor.zenwifi_bq16_ca38_upload_speed'].state);
@@ -281,6 +324,7 @@ views:
                     - padding: 0
                     - box-shadow: none
                     - height: 36px
+                    - width: max-content
                   label:
                     - font-size: 11px
                     - color: "#888"
@@ -476,11 +520,873 @@ views:
                   - entity: input_select.fusion_panel
                     state: home
                 card:
-                  type: markdown
-                  content: |
-                    # Panel: home
+                  # =================================================================
+                  # HOME PANEL — Phase 2 (hero strip + floor grid + scenes row)
+                  # Architecture: vertical-stack of 6 sub-cards.
+                  # All state/count logic is client-side JS in button-card labels —
+                  # no template sensors or helpers (keeps recorder quiet; see
+                  # DECISIONS 2026-04-22 on writes/day).
+                  # =================================================================
+                  type: vertical-stack
+                  cards:
 
-                    _Phase 1 stub — real content arrives in Phase 2 per FUSION-DESIGN-SPEC.md._
+                    # -----------------------------------------------------------------
+                    # HERO STRIP (5 tiles in a 5-col grid — Power tile omitted per
+                    # Phase 2 decision Q1: no whole-home energy monitor exists)
+                    # -----------------------------------------------------------------
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(5, 1fr)
+                        grid-gap: 10px
+                        padding: 14px 14px 4px 14px
+                      cards:
+
+                        # Tile 1 — Rooms Occupied
+                        - type: custom:button-card
+                          icon: mdi:home-group
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const sensors = [
+                                'binary_sensor.eve_motion_20eby9901_occupancy_2',
+                                'binary_sensor.office_motion_sensors',
+                                'binary_sensor.entrance_motion_sensors'
+                              ];
+                              const on = sensors.filter(id => states[id] && states[id].state === 'on').length;
+                              return `${on}/${sensors.length}`;
+                            ]]]
+                          label: Rooms Occupied
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 10px 12px
+                              - height: 64px
+                              - box-shadow: none
+                            icon:
+                              - width: 18px
+                              - height: 18px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - color: "#4caf6e"
+                              - text-align: left
+                              - padding-top: 2px
+                            label:
+                              - font-size: 9px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 2px
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+
+                        # Tile 2 — Lights On
+                        # Explicit list per Gate 2 review: `Object.values(states)` iterates
+                        # every HA entity (~500) on first render, registers them all for
+                        # change-detection, and re-evaluates on every state change. The
+                        # explicit list keeps the monitored-entities set small.
+                        - type: custom:button-card
+                          icon: mdi:lightbulb-group
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const groups = [
+                                'light.living_room_lights',
+                                'light.kitchen_lights',
+                                'light.office_lights',
+                                'light.entrance_ceiling',
+                                'light.outdoor_lights',
+                                'light.jona_lights',
+                                'light.upstairs_hall_lights'
+                              ];
+                              const singles = [
+                                'light.garage',
+                                'light.uplight_front',
+                                'light.uplight_back_left',
+                                'light.uplight_back_right'
+                              ];
+                              let total = 0;
+                              for (const g of groups) {
+                                const s = states[g];
+                                if (s && s.state === 'on') {
+                                  const members = s.attributes.entity_id || [];
+                                  total += members.filter(id => states[id] && states[id].state === 'on').length;
+                                }
+                              }
+                              for (const id of singles) {
+                                if (states[id] && states[id].state === 'on') total++;
+                              }
+                              return total;
+                            ]]]
+                          label: Lights On
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 10px 12px
+                              - height: 64px
+                              - box-shadow: none
+                            icon:
+                              - width: 18px
+                              - height: 18px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 2px
+                            label:
+                              - font-size: 9px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 2px
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+
+                        # Tile 3 — Avg Temp (Wiser 3-room average)
+                        - type: custom:button-card
+                          icon: mdi:thermometer
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const ids = ['climate.living_room_area', 'climate.kitchen_area', 'climate.office_area'];
+                              const temps = ids
+                                .map(id => states[id] && parseFloat(states[id].attributes.current_temperature))
+                                .filter(v => !isNaN(v));
+                              if (temps.length === 0) return '—°';
+                              const avg = temps.reduce((a,b) => a+b, 0) / temps.length;
+                              return `${avg.toFixed(1)}°`;
+                            ]]]
+                          label: Avg Temp
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 10px 12px
+                              - height: 64px
+                              - box-shadow: none
+                            icon:
+                              - width: 18px
+                              - height: 18px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 2px
+                            label:
+                              - font-size: 9px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 2px
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+
+                        # Tile 4 — Network (WAN status)
+                        - type: custom:button-card
+                          icon: mdi:wifi
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+                          name: |
+                            [[[
+                              return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? 'Online' : 'Offline';
+                            ]]]
+                          label: Network
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 10px 12px
+                              - height: 64px
+                              - box-shadow: none
+                            icon:
+                              - width: 18px
+                              - height: 18px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - text-align: left
+                              - padding-top: 2px
+                            label:
+                              - font-size: 9px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 2px
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+                          state:
+                            - operator: template
+                              value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on'; ]]]"
+                              styles:
+                                name:
+                                  - color: "#4caf6e"
+                            - operator: template
+                              value: "[[[ return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state !== 'on'; ]]]"
+                              styles:
+                                name:
+                                  - color: "#e05555"
+
+                        # Tile 5 — Playing (explicit media_player list per Gate 2 review)
+                        - type: custom:button-card
+                          icon: mdi:play-circle
+                          show_name: true
+                          show_label: true
+                          show_state: false
+                          name: |
+                            [[[
+                              const players = [
+                                'media_player.living_room',
+                                'media_player.homepod',
+                                'media_player.jona_speaker',
+                                'media_player.kitchen_speakers',
+                                'media_player.upstairs_speaker',
+                                'media_player.living_room_tv_2'
+                              ];
+                              return players.filter(id => states[id] && states[id].state === 'playing').length;
+                            ]]]
+                          label: Playing
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 10px 12px
+                              - height: 64px
+                              - box-shadow: none
+                            icon:
+                              - width: 18px
+                              - height: 18px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 18px
+                              - font-weight: 700
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 2px
+                            label:
+                              - font-size: 9px
+                              - text-transform: uppercase
+                              - letter-spacing: 0.5px
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 2px
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto 1fr auto
+
+                    # -----------------------------------------------------------------
+                    # MAIN FLOOR — Living Room · Kitchen · Office
+                    # -----------------------------------------------------------------
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🏠 MAIN FLOOR
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(3, 1fr)
+                        grid-gap: 10px
+                        padding: 0 14px
+                      cards:
+
+                        # Living Room (no occupancy sensor — proxy via Entrance+Hall per DECISIONS 2026-04-14)
+                        - type: custom:button-card
+                          icon: mdi:sofa
+                          name: Living Room
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          label: |
+                            [[[
+                              const chips = [];
+                              const lg = states['light.living_room_lights'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              }
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
+                              const mp = states['media_player.living_room'];
+                              const hp = states['media_player.homepod'];
+                              if ((mp && mp.state === 'playing') || (hp && hp.state === 'playing')) {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">▶ Playing</span>');
+                              }
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+
+                        # Kitchen
+                        - type: custom:button-card
+                          icon: mdi:silverware-fork-knife
+                          name: Kitchen
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          entity: binary_sensor.eve_motion_20eby9901_occupancy_2
+                          label: |
+                            [[[
+                              const chips = [];
+                              if (states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
+                              }
+                              const lg = states['light.kitchen_lights'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              }
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+                          state:
+                            - operator: template
+                              value: "[[[ return !!states['binary_sensor.eve_motion_20eby9901_occupancy_2'] && states['binary_sensor.eve_motion_20eby9901_occupancy_2'].state === 'on'; ]]]"
+                              styles:
+                                card:
+                                  - border-left: "3px solid #4caf6e"
+
+                        # Office
+                        - type: custom:button-card
+                          icon: mdi:desk
+                          name: Office
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          entity: binary_sensor.office_motion_sensors
+                          label: |
+                            [[[
+                              const chips = [];
+                              if (states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
+                              }
+                              const lg = states['light.office_lights'] || states['light.desk_lights'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              }
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Floor ♨</span>');
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+                          state:
+                            - operator: template
+                              value: "[[[ return !!states['binary_sensor.office_motion_sensors'] && states['binary_sensor.office_motion_sensors'].state === 'on'; ]]]"
+                              styles:
+                                card:
+                                  - border-left: "3px solid #4caf6e"
+
+                    # -----------------------------------------------------------------
+                    # UPPER FLOOR — Bedroom · Jona's Room
+                    # -----------------------------------------------------------------
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🛏 UPPER FLOOR
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(3, 1fr)
+                        grid-gap: 10px
+                        padding: 0 14px
+                      cards:
+
+                        # Bedroom (AC unavailable, lights wall-switched off — graceful handling per Q4)
+                        - type: custom:button-card
+                          icon: mdi:bed
+                          name: Bedroom
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          label: |
+                            [[[
+                              const chips = [];
+                              const ac = states['climate.air_conditioning_bedroom'];
+                              if (ac && ac.state !== 'unavailable' && ac.state !== 'unknown') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">AC</span>');
+                              } else {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">AC offline</span>');
+                              }
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                              - opacity: 0.75
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#555"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#888"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+
+                        # Jona's Room
+                        - type: custom:button-card
+                          icon: mdi:teddy-bear
+                          name: Jona's Room
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          label: |
+                            [[[
+                              const chips = [];
+                              const lg = states['light.jona_lights'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              } else if (lg && lg.state === 'unavailable') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1e1e1e;border:1px solid #2a2a2a;color:#555;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Lights offline</span>');
+                              }
+                              const mp = states['media_player.jona_speaker'];
+                              if (mp && mp.state === 'playing') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">▶ Playing</span>');
+                              }
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+
+                    # -----------------------------------------------------------------
+                    # DOWNSTAIRS — Entrance · Garage
+                    # -----------------------------------------------------------------
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ⬇️ DOWNSTAIRS
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(3, 1fr)
+                        grid-gap: 10px
+                        padding: 0 14px
+                      cards:
+
+                        # Entrance
+                        - type: custom:button-card
+                          icon: mdi:door
+                          name: Entrance
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          entity: binary_sensor.entrance_motion_sensors
+                          label: |
+                            [[[
+                              const chips = [];
+                              if (states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Occupied</span>');
+                              }
+                              const lg = states['light.entrance_ceiling'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              }
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+                          state:
+                            - operator: template
+                              value: "[[[ return !!states['binary_sensor.entrance_motion_sensors'] && states['binary_sensor.entrance_motion_sensors'].state === 'on'; ]]]"
+                              styles:
+                                card:
+                                  - border-left: "3px solid #4caf6e"
+
+                        # Garage (no occupancy sensor found — Auto chip only)
+                        - type: custom:button-card
+                          icon: mdi:garage
+                          name: Garage
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          label: |
+                            [[[
+                              const chips = [];
+                              const lg = states['light.garage'];
+                              if (lg && lg.state === 'on') {
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">1 light</span>');
+                              }
+                              chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a1e2a;border:1px solid #2d3d52;color:#4f8ef7;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">Auto</span>');
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+
+                    # -----------------------------------------------------------------
+                    # OUTSIDE — Outdoor
+                    # -----------------------------------------------------------------
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: 🌿 OUTSIDE
+                    - type: custom:layout-card
+                      layout_type: custom:grid-layout
+                      layout:
+                        grid-template-columns: repeat(3, 1fr)
+                        grid-gap: 10px
+                        padding: 0 14px
+                      cards:
+
+                        # Outdoor
+                        - type: custom:button-card
+                          icon: mdi:tree
+                          name: Outdoor
+                          show_name: true
+                          show_icon: true
+                          show_label: true
+                          show_state: false
+                          label: |
+                            [[[
+                              const chips = [];
+                              const lg = states['light.outdoor_lights'];
+                              if (lg && lg.state === 'on') {
+                                const members = lg.attributes.entity_id || [];
+                                const count = members.filter(id => states[id] && states[id].state === 'on').length;
+                                chips.push('<span style="display:inline-block;padding:2px 7px;background:#1a2a1e;border:1px solid #2d5237;color:#4caf6e;border-radius:4px;font-size:10px;margin:2px 4px 0 0;">' + count + ' light' + (count !== 1 ? 's' : '') + '</span>');
+                              }
+                              return chips.join('');
+                            ]]]
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 10px
+                              - padding: 12px
+                              - height: 90px
+                              - box-shadow: none
+                              - text-align: left
+                            icon:
+                              - width: 22px
+                              - height: 22px
+                              - color: "#888"
+                              - justify-self: start
+                            name:
+                              - font-size: 13px
+                              - font-weight: 600
+                              - color: "#e8e8e8"
+                              - text-align: left
+                              - padding-top: 4px
+                              - justify-self: start
+                            label:
+                              - text-align: left
+                              - justify-self: start
+                              - align-self: end
+                              - padding-top: 4px
+                              - line-height: 1.4
+                            grid:
+                              - grid-template-areas: '"i" "n" "l"'
+                              - grid-template-rows: auto auto 1fr
+
+                    # -----------------------------------------------------------------
+                    # SCENES ROW — only the 3 entities that actually exist today
+                    # Design spec lists 8; per Phase 2 decision Q2, skip the 5 missing
+                    # and backfill as BACKLOG items create them.
+                    # -----------------------------------------------------------------
+                    - type: custom:button-card
+                      template: fusion_floor_header
+                      name: ✨ SCENES
+                    - type: horizontal-stack
+                      cards:
+                        - type: custom:button-card
+                          name: 🎬 Movie Night
+                          show_name: true
+                          show_icon: false
+                          tap_action:
+                            action: call-service
+                            service: script.turn_on
+                            target:
+                              entity_id: script.movie_mode
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 20px
+                              - padding: 8px 16px
+                              - height: 36px
+                              - margin: 0 6px 14px 14px
+                              - box-shadow: none
+                              - cursor: pointer
+                            name:
+                              - font-size: 12px
+                              - color: "#e8e8e8"
+                        - type: custom:button-card
+                          name: 🛋 LR Relax
+                          show_name: true
+                          show_icon: false
+                          tap_action:
+                            action: call-service
+                            service: script.turn_on
+                            target:
+                              entity_id: script.lr_relax
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 20px
+                              - padding: 8px 16px
+                              - height: 36px
+                              - margin: 0 6px 14px 0
+                              - box-shadow: none
+                              - cursor: pointer
+                            name:
+                              - font-size: 12px
+                              - color: "#e8e8e8"
+                        - type: custom:button-card
+                          name: ⚫ Lights Off
+                          show_name: true
+                          show_icon: false
+                          tap_action:
+                            action: call-service
+                            service: scene.turn_on
+                            target:
+                              entity_id: scene.lights_off
+                          styles:
+                            card:
+                              - background: "#161616"
+                              - border: "1px solid #2a2a2a"
+                              - border-radius: 20px
+                              - padding: 8px 16px
+                              - height: 36px
+                              - margin: 0 14px 14px 0
+                              - box-shadow: none
+                              - cursor: pointer
+                            name:
+                              - font-size: 12px
+                              - color: "#e8e8e8"
               - type: conditional
                 conditions:
                   - entity: input_select.fusion_panel

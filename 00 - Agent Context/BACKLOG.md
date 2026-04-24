@@ -66,7 +66,7 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 #### FUSION Dashboard — Full Implementation
 **Added**: 2026-04-22
-**Status**: ⚡ **Phase 0 + Phase 1 deployed 2026-04-24** — shell live at `/dashboard-fusion` (note: url_path is hyphenated). Phase 2 (Home panel) is next session. See CHANGELOG 2026-04-24 for what shipped. Remaining phases: 2, 3, 4, 5, 6.
+**Status**: ⚡ **Phase 0 + Phase 1 + Phase 2 deployed 2026-04-24** — shell + Home panel live at `/dashboard-fusion` (note: url_path is hyphenated). Phase 3 (lightweight panels: Automations/Climate/Media/Energy/Network) is next session. See CHANGELOG 2026-04-24 for what shipped. Remaining phases: 3, 4, 5, 6.
 **Design spec**: `00 - Agent Context/FUSION-DESIGN-SPEC.md` ← read this at the start of every implementation session
 **Plan (Phase 0+1)**: `00 - Agent Context/2026-04-24_fusion_dashboard_phase0_phase1_plan.md` — reference for how future phases are scoped + gated
 **YAML source of truth**: `config/dashboards/fusion.yaml` — **NEVER edit FUSION via the HA UI "Edit Dashboard" button** (see DECISIONS 2026-04-24). All changes go file → commit → MCP `ha_config_set_dashboard(config=...)`.
@@ -97,20 +97,12 @@ No motion light in the master bedroom currently (lights are on the wall switch �
 
 ---
 
-**Phase 2 — Home panel (~4–5 hrs)**
-Build the most complex panel first so the architecture is proven before the simpler ones.
-
-*Hero strip (6 tiles):* `custom:layout-card` grid 6-col. Tiles:
-- Rooms occupied: count of `binary_sensor.*_occupancy` = `on`
-- Lights on: count of `light.*` = `on`
-- Avg temp: template average of room climate sensors
-- Power now: `sensor.current_power` (or energy dashboard sensor)
-- Network: `binary_sensor.wan_status`
-- Media playing: count of `media_player.*` = `playing`
-
-*Floor-grouped room grid:* One `custom:layout-card` (3-col grid) per floor section (Main / Upper / Downstairs / Outside), each preceded by a floor header row. Room cards: `custom:button-card` or `custom:mushroom-entity-card` with card-mod for the green occupancy left border. On tap: open Bubble Card popup (see Phase 4).
-
-*Scenes row:* `horizontal-stack` of `custom:button-card` buttons wired to existing scenes (`scene.good_morning`, `scene.evening`, `script.movie_mode`, etc.)
+**Phase 2 — Home panel** ✅ **done 2026-04-24**
+- Hero strip: 5 tiles (Power Now omitted — no whole-home monitor; see DECISIONS 2026-04-24)
+- Floor grid: 8 rooms across 4 floors; Kitchen/Office/Entrance get green-border occupied state
+- Scenes row: 3 pill buttons (the only scenes that currently exist; others added as BACKLOG items create them)
+- All logic client-side in button-card JS; no helpers
+- Row tap actions deferred to Phase 4 (Bubble Card popups)
 
 ---
 

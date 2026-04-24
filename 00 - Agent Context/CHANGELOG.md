@@ -5,6 +5,55 @@
 ---
 
 
+## 2026-04-24 — FUSION Dashboard Phase 2 Home panel deployed (same day)
+
+### What was done
+Phase 2 of the FUSION dashboard: replaced the `home` panel stub with the real Home panel content per FUSION-DESIGN-SPEC §5 — hero strip (5 tiles), floor-grouped room grid (8 rooms × 4 floors), and scenes row (3 buttons). The other 6 panel stubs are untouched; they arrive in Phases 3-5.
+
+### Architecture
+All state/count logic is client-side JS in button-card `label:` / `name:` templates. No helpers, no template sensors — consistent with DECISIONS 2026-04-22 write-frequency doctrine. 5 hero tiles + 8 room cards + 3 scene pills.
+
+### Decisions Edgar made at Gate 1
+- **Q1a** Skip the "Power Now" hero tile — no whole-home energy monitor exists
+- **Q2a** Scenes row shows only the 3 existing entities (`script.movie_mode`, `script.lr_relax`, `scene.lights_off`); backfill via BACKLOG
+- **Q3a** Room cards are display-only in Phase 2 — Bubble Card popups deferred to Phase 4
+- **Q4a** Bedroom card stays (dimmed) despite AC/lights being `unavailable`
+
+### Gate process
+- **Gate 1**: Entity-ID resolution via `ha_search_entities` (motion sensors, energy, scenes, media players, light groups). 3 entity IDs discovered stale (`light.jona_bedroom_left/right`, `light.signify_netherlands_b_v_929003812101_02`); corrected to group entities (`light.jona_lights`, `light.entrance_ceiling`) before review.
+- **Gate 2**: `ha-code-reviewer` returned BLOCKED on first pass — 2 🚫 + 3 ⚠️. Fixed inline: (1) markdown section headers' `style:` key silently ignored → pivoted to `button-card template: fusion_floor_header` (5 headers); (2) `Object.values(states)` in Tile 2 + Tile 5 registers ~500 entities for re-render → replaced with explicit lists (7 groups + 4 singletons for Lights On, 6 named players for Playing); (3) 6 motion-sensor dereferences guarded with `states[id] && …`. Re-review APPROVED (no new defects).
+- **Gate 3**: MCP `ha_config_set_dashboard` (full replace, 11,432 bytes) — success. Visual check via Chrome MCP revealed 2 post-deploy bugs not catchable by code review: (a) all 7 status-bar labels empty in DOM because `show_label: true` was missing — button-card defaults `show_label: false`; (b) status-bar card widths all `0px` because `auto` grid columns collapse when button-card doesn't report intrinsic width — fixed with `width: max-content` on card styles. Both fixes applied via MCP `python_transform`.
+
+### Files changed
+- `config/dashboards/fusion.yaml` — Phase 2 content replaces Phase 1 `home` stub (~870 new lines)
+- `00 - Agent Context/DECISIONS.md` — +1 row consolidating button-card gotchas (show_label default, grid-width collapse, Object.values pitfall)
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- HA server: `.storage/lovelace.dashboard_fusion` updated via MCP (new config hash `de32ac17ade04225`)
+
+### Verification (visual via Chrome MCP, viewport 1232×960)
+- ✅ Hero strip: `1/3` Rooms Occupied (green), `2` Lights On, `21.5°` Avg Temp, `Online` (green), `0` Playing
+- ✅ Status bar: `● Edgar · Home · Edphone 🏠 · iPad 🏠 … 20.5°C · ● · ↓ 14.7 KiB/s · ↑ 132.3 KiB/s`
+- ✅ MAIN FLOOR: Living Room (Floor ♨) · Kitchen (Auto, Floor ♨) · Office (green-border, Occupied, 2 lights, Auto, Floor ♨)
+- ✅ UPPER FLOOR: Bedroom (dimmed, AC) · Jona's Room (Lights offline)
+- ✅ DOWNSTAIRS: Entrance (Auto) · Garage (Auto)
+- ✅ OUTSIDE: Outdoor
+- ✅ SCENES: 🎬 Movie Night · 🛋 LR Relax · ⚫ Lights Off
+- ✅ Panel switching works (all 7 sidebar icons)
+- ✅ No red console errors after the show_label fix
+
+### Known non-blockers (BACKLOG follow-ups)
+- `tap_action: call-service` → `perform-action` migration needed before next HA major upgrade (reviewer flagged; same carry-over from Phase 1)
+- Pill buttons announce as "group" not "button" on iPad VoiceOver — Phase 6 accessibility polish
+- Pulsing dot on presence badge is static; Phase 6 CSS keyframe adds the animation
+- On mobile viewport (<768px) the HA left sidebar still shows despite `type: panel` — Kiosk Mode deferred to Phase 6
+- `media_player.kitchen_speakers` and `media_player.upstairs_speaker` are currently `unavailable`; counted in Playing tile but won't show as playing until restored
+
+### Next session
+Phase 3 — lightweight panels: Automations, Climate, Media, Energy, Network (~1 hr each per BACKLOG). First: Climate panel (uses `apexcharts-card` that's already installed from Phase 0).
+
+---
+
+
 ## 2026-04-24 — FUSION Dashboard Phase 0 + Phase 1 deployed
 
 ### What was done
