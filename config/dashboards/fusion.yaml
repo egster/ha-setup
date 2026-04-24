@@ -1,10 +1,9 @@
-# FUSION Dashboard — through Phase 6f (unified room cards via custom:mod-card)
-# Phase 6f tweaks over 6e:
-# - Icons now have explicit grid-area: 'i' + explicit column width (24px row / 28px header)
-#   so button-card places them correctly in the left column instead of collapsing to 0.
-# - Unified room container uses custom:mod-card wrapping a vertical-stack. The mod-card's
-#   card_mod targets ha-card inside the wrapper, giving each room a visible border +
-#   rounded corners + #161616 background.
+# FUSION Dashboard — through Phase 6g (equal-height rooms within each floor)
+# Phase 6g: floor grid align-items changed from 'start' to 'stretch' so all
+# rooms in a row match the tallest sibling's height. mod-card's ha-card
+# wrapper gets height: 100% + box-sizing: border-box so the card fills its
+# grid cell. Empty space at the bottom of a shorter room is filled with the
+# card's #161616 background.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # -----------------------------------------------------------------------------
@@ -801,11 +800,12 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
-              align-items: start
+              align-items: stretch
             cards:
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: &id002
+                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n  height: 100%;\n  box-sizing: border-box;\n\
+                  }\n"
               card:
                 type: vertical-stack
                 cards:
@@ -834,8 +834,7 @@ views:
                     entity: media_player.living_room
                     icon: mdi:speaker
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -868,8 +867,7 @@ views:
                     entity: media_player.kitchen_speakers
                     icon: mdi:speaker
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -910,11 +908,10 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
-              align-items: start
+              align-items: stretch
             cards:
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -939,8 +936,7 @@ views:
                     entity: media_player.upstairs_speaker
                     icon: mdi:speaker
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -973,11 +969,10 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
-              align-items: start
+              align-items: stretch
             cards:
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -994,8 +989,7 @@ views:
                   entity: light.entrance_ceiling
                   icon: mdi:lightbulb-group
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
@@ -1016,11 +1010,10 @@ views:
               grid-template-columns: repeat(3, 1fr)
               grid-gap: 10px
               padding: 0 14px
-              align-items: start
+              align-items: stretch
             cards:
             - type: custom:mod-card
-              card_mod:
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n}\n"
+              card_mod: *id002
               card:
                 type: vertical-stack
                 cards:
