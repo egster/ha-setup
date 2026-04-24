@@ -5,6 +5,43 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6l — Scale up + symmetric 16px panel-edge padding
+
+### What was done
+Bumped most dimensions ~20-25% larger and swapped the one-sided margin hack from 6k for a symmetric one.
+
+**Scale up:**
+- Sidebar col: 58px → 72px
+- Nav icon card: 42×42 → 52×52, margin `4px 8px` → `4px 10px`, border-radius 10 → 12
+- Nav ha-icon: 20×20 → 24×24
+- Status bar: height 36 → 42, grid-gap 12 → 14
+- Status bar cards height: 36 → 42
+- KPI tile height: 64 → 78
+- KPI icon: 18 → 20, name font: 18 → 22, label font: 9 → 10
+
+**Equal padding:**
+- Outer layout-card `margin: 0 0 0 -50px` → `margin: 0 16px 0 -84px`.
+  Left shift of 84 cancels hui-view-container's 100px padding-left down to 16px
+  from the HA panel edge. Right margin of 16px pulls the right edge inward so
+  both sides sit equal distance from the panel.
+- `width: calc(100% + 50px)` dropped — layout-card doesn't reliably honour a
+  width override for its inner wrapper, but it does respect margin-right, so
+  we use that instead.
+
+**Status bar re-alignment** (sidebar width changed, so its padding followed):
+- `padding: 0 14px 0 72px` → `padding: 0 16px 0 86px` (new sidebar 72 + 14).
+
+**Sidebar vs Main Floor divider re-align:**
+- `padding-top: 121px` → `130px` (status bar and KPI row both got taller, so
+  the divider moved down 9px — measured in Chrome, divider at Y=268, home
+  icon center at Y=268).
+
+### Files touched
+- `config/dashboards/fusion.yaml`
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6k — Content shift + status bar alignment
 
 ### What was done

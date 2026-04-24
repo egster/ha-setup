@@ -1,17 +1,17 @@
-# FUSION Dashboard — through Phase 6k
-# Phase 6k (content shift + status bar alignment):
-# - Outer layout-card now has `margin: 0 0 0 -50px` + `width: calc(100% + 50px)`
-#   to halve the hui-view-container padding left of the nav strip while keeping
-#   the right edge flush.
-# - Status bar inner grid has `padding: 0 14px 0 72px` (sidebar width + 14px)
-#   so the person cell left-aligns with the Rooms Occupied KPI tile.
+# FUSION Dashboard — through Phase 6l
+# Phase 6l (scale up + equal panel-edge padding):
+# - Sidebar col 58→72, nav icon 42→52 (icon 20→24), statusbar 36→42,
+#   KPI tile 64→78 (name 18→22, label 9→10, icon 18→20).
+# - Outer layout-card `margin: 0 16px 0 -84px` → symmetric 16px outer padding
+#   from the HA panel edges (left and right). `width: calc(...)` dropped —
+#   layout-card doesn't reliably honour it; margin-right does the right trim.
+# - Status bar inner grid padding: 0 14px 0 72px → 0 16px 0 86px (sidebar 72+14
+#   for person-cell alignment with Rooms Occupied KPI tile).
+# - Home nav padding-top: 121 → 130 (re-aligned for new statusbar+KPI heights).
 # Phase 6j (kiosk + sidebar alignment):
 # - Kiosk Mode: switched from entity_settings array to top-level template
 #   pattern (matches BubbleDash). hide_header/hide_sidebar/hide_overflow
 #   are each bound to `is_state('input_boolean.fusion_kiosk','on')`.
-# - Sidebar alignment: dropped flex-center (which didn't work) in favour of
-#   padding-top: 121px so the Home nav icon lines up with the Main Floor
-#   divider on the Home panel.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # -----------------------------------------------------------------------------
@@ -29,17 +29,17 @@ button_card_templates:
       card:
       - background: transparent
       - border: 1px solid transparent
-      - border-radius: 10px
-      - width: 42px
-      - height: 42px
-      - margin: 4px 8px
+      - border-radius: 12px
+      - width: 52px
+      - height: 52px
+      - margin: 4px 10px
       - padding: 0
       - box-shadow: none
       - cursor: pointer
       - transition: background 120ms ease, border-color 120ms ease
       icon:
-      - width: 20px
-      - height: 20px
+      - width: 24px
+      - height: 24px
       - color: '#888'
   fusion_floor_header:
     show_name: true
@@ -206,17 +206,16 @@ views:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: 58px 1fr
-      grid-template-rows: 36px 1fr
+      grid-template-columns: 72px 1fr
+      grid-template-rows: 42px 1fr
       grid-template-areas: '"statusbar statusbar"
 
         "sidebar content"
 
         '
       grid-gap: 0
-      margin: 0 0 0 -50px
+      margin: 0 16px 0 -84px
       padding: 0
-      width: calc(100% + 50px)
       min-height: 100vh
       background: '#090909'
       color: '#e8e8e8'
@@ -230,10 +229,10 @@ views:
         grid-template-areas: '"person edphone ipad . temp wan dl ul"
 
           '
-        grid-gap: 12px
+        grid-gap: 14px
         align-items: center
-        padding: 0 14px 0 72px
-        height: 36px
+        padding: 0 16px 0 86px
+        height: 42px
         background: '#000'
         border-bottom: '1px solid #222'
         box-sizing: border-box
@@ -253,7 +252,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -280,7 +279,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -301,7 +300,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -322,7 +321,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -343,7 +342,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 13px
@@ -374,7 +373,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -395,7 +394,7 @@ views:
           - border: none
           - padding: 0
           - box-shadow: none
-          - height: 36px
+          - height: 42px
           - width: max-content
           label:
           - font-size: 11px
@@ -405,7 +404,7 @@ views:
       view_layout:
         grid-area: sidebar
       card_mod:
-        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  padding-top: 121px;\n}\n"
+        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  padding-top: 130px;\n}\n"
       card:
         type: vertical-stack
         cards:
@@ -607,21 +606,21 @@ views:
                 - border: '1px solid #2a2a2a'
                 - border-radius: 10px
                 - padding: 10px 12px
-                - height: 64px
+                - height: 78px
                 - box-shadow: none
                 icon:
-                - width: 18px
-                - height: 18px
+                - width: 20px
+                - height: 20px
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - color: '#4caf6e'
                 - text-align: left
                 - padding-top: 2px
                 label:
-                - font-size: 9px
+                - font-size: 10px
                 - text-transform: uppercase
                 - letter-spacing: 0.5px
                 - color: '#888'
@@ -646,21 +645,21 @@ views:
                 - border: '1px solid #2a2a2a'
                 - border-radius: 10px
                 - padding: 10px 12px
-                - height: 64px
+                - height: 78px
                 - box-shadow: none
                 icon:
-                - width: 18px
-                - height: 18px
+                - width: 20px
+                - height: 20px
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - color: '#e8e8e8'
                 - text-align: left
                 - padding-top: 2px
                 label:
-                - font-size: 9px
+                - font-size: 10px
                 - text-transform: uppercase
                 - letter-spacing: 0.5px
                 - color: '#888'
@@ -683,21 +682,21 @@ views:
                 - border: '1px solid #2a2a2a'
                 - border-radius: 10px
                 - padding: 10px 12px
-                - height: 64px
+                - height: 78px
                 - box-shadow: none
                 icon:
-                - width: 18px
-                - height: 18px
+                - width: 20px
+                - height: 20px
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - color: '#e8e8e8'
                 - text-align: left
                 - padding-top: 2px
                 label:
-                - font-size: 9px
+                - font-size: 10px
                 - text-transform: uppercase
                 - letter-spacing: 0.5px
                 - color: '#888'
@@ -720,20 +719,20 @@ views:
                 - border: '1px solid #2a2a2a'
                 - border-radius: 10px
                 - padding: 10px 12px
-                - height: 64px
+                - height: 78px
                 - box-shadow: none
                 icon:
-                - width: 18px
-                - height: 18px
+                - width: 20px
+                - height: 20px
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - text-align: left
                 - padding-top: 2px
                 label:
-                - font-size: 9px
+                - font-size: 10px
                 - text-transform: uppercase
                 - letter-spacing: 0.5px
                 - color: '#888'
@@ -767,21 +766,21 @@ views:
                 - border: '1px solid #2a2a2a'
                 - border-radius: 10px
                 - padding: 10px 12px
-                - height: 64px
+                - height: 78px
                 - box-shadow: none
                 icon:
-                - width: 18px
-                - height: 18px
+                - width: 20px
+                - height: 20px
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - color: '#e8e8e8'
                 - text-align: left
                 - padding-top: 2px
                 label:
-                - font-size: 9px
+                - font-size: 10px
                 - text-transform: uppercase
                 - letter-spacing: 0.5px
                 - color: '#888'
@@ -1402,7 +1401,7 @@ views:
                 - color: '#888'
                 - justify-self: start
                 name:
-                - font-size: 18px
+                - font-size: 22px
                 - font-weight: 700
                 - color: '#e8e8e8'
                 - text-align: left
