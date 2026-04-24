@@ -5,6 +5,23 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6n — Bigger fonts + symmetric row margins + dynamic heights
+
+### What was done
+Three more room-card tweaks from Edgar after 6m:
+
+1. **Fonts bigger again** — header name 16→18 / icon 22→24, row name 14→15 / row icon 18→20.
+
+2. **Row right/left margin symmetric** — 6m used `margin: 3px 10px` on the row template, which caused rows to overflow 9px past the card's right edge (button-card's inner ha-card inherited 100% width + added margin, ending up wider than the card). First attempted fix (`width: calc(100% - 20px)` + `box-sizing: border-box`) collapsed rows to content-width (because calc % resolved against the button-card host, which is itself content-sized). **Working fix**: remove the horizontal row margin and put the inset on the mod-card wrapper as `padding: 0 10px 11px 10px`. Rows now span the full content box with equal 11px on both sides.
+
+3. **Dynamic floor heights** — Room `min-height` dropped 180 → 120. With `align-items: stretch` on the floor grid, floors where all rooms have the same row count collapse to that size (UPPER / OUTSIDE go to ~130px), while mixed floors pick the tallest (MAIN FLOOR still ~220px for its 3-row rooms). Bottom padding of 11px on the mod-card, combined with the last row's 3px bottom margin, gives 14px of empty space below the last row — matches the 14px header top padding, so top/bottom padding inside the card are visually symmetric.
+
+### Files touched
+- `config/dashboards/fusion.yaml` — `fusion_room_header` padding, `fusion_room_row_*` templates, and 8 room `card_mod` style strings (1 shared anchor + 3 inline for motion rooms).
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6m — Room polish: button rows + occupancy indicator
 
 ### What was done
