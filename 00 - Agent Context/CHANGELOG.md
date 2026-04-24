@@ -5,6 +5,21 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6k — Content shift + status bar alignment
+
+### What was done
+Two small polish tweaks on top of 6j:
+
+1. **Status bar "Edgar · Home" now left-aligns with the Rooms Occupied KPI tile.** Added a 58px left padding to the status bar inner grid (matches the sidebar column width) so the person cell starts at the same X as the content column. Before: person at x=374, Rooms Occupied at x=432. After: both at x=382.
+
+2. **Left padding of the navigation strip halved.** HA's `hui-view-container` has a 100px default `padding-left` on panel views. Shifted the outer layout-card 50px left via `margin: 0 0 0 -50px` and compensated the width loss with `width: calc(100% + 50px)` so tiles still reach the right edge. Nav icons now sit ~50px closer to the HA drawer.
+
+### Files touched
+- `config/dashboards/fusion.yaml` — outer layout-card `margin` + `width`, statusbar grid `padding`.
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6j — Kiosk Mode working + sidebar aligned with Main Floor
 
 ### What was done

@@ -1,10 +1,16 @@
-# FUSION Dashboard — through Phase 6j
+# FUSION Dashboard — through Phase 6k
+# Phase 6k (content shift + status bar alignment):
+# - Outer layout-card now has `margin: 0 0 0 -50px` + `width: calc(100% + 50px)`
+#   to halve the hui-view-container padding left of the nav strip while keeping
+#   the right edge flush.
+# - Status bar inner grid has `padding: 0 14px 0 72px` (sidebar width + 14px)
+#   so the person cell left-aligns with the Rooms Occupied KPI tile.
 # Phase 6j (kiosk + sidebar alignment):
 # - Kiosk Mode: switched from entity_settings array to top-level template
 #   pattern (matches BubbleDash). hide_header/hide_sidebar/hide_overflow
 #   are each bound to `is_state('input_boolean.fusion_kiosk','on')`.
 # - Sidebar alignment: dropped flex-center (which didn't work) in favour of
-#   padding-top: 88px so the Home nav icon lines up with the Main Floor
+#   padding-top: 121px so the Home nav icon lines up with the Main Floor
 #   divider on the Home panel.
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
@@ -208,8 +214,9 @@ views:
 
         '
       grid-gap: 0
-      margin: 0
+      margin: 0 0 0 -50px
       padding: 0
+      width: calc(100% + 50px)
       min-height: 100vh
       background: '#090909'
       color: '#e8e8e8'
@@ -225,7 +232,7 @@ views:
           '
         grid-gap: 12px
         align-items: center
-        padding: 0 14px
+        padding: 0 14px 0 72px
         height: 36px
         background: '#000'
         border-bottom: '1px solid #222'
