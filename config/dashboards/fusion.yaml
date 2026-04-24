@@ -1,13 +1,22 @@
-# FUSION Dashboard — through Phase 6l
+# FUSION Dashboard — through Phase 6m
+# Phase 6m (room polish — button rows + bigger fonts + motion indicator):
+# - Room header font 14→16, icon 20→22. Row font 12→14, icon 16→18.
+# - Row template: now styled as buttons — background #1e1e1e, border 1px
+#   solid #2a2a2a, border-radius 6px, margin 3px 10px. Replaces the plain
+#   border-top separator from 6d.
+# - Motion rooms (Kitchen, Office, Entrance) get a Jinja-templated
+#   border-left: 4px solid green (#4caf6e) when their motion sensor is on,
+#   same #2a2a2a grey as default border otherwise. Brings back the
+#   BubbleDash-style occupancy indicator.
+# - Room min-height 140 → 180 (taller rows need more breathing room).
 # Phase 6l (scale up + equal panel-edge padding):
 # - Sidebar col 58→72, nav icon 42→52 (icon 20→24), statusbar 36→42,
 #   KPI tile 64→78 (name 18→22, label 9→10, icon 18→20).
 # - Outer layout-card `margin: 0 16px 0 -84px` → symmetric 16px outer padding
-#   from the HA panel edges (left and right). `width: calc(...)` dropped —
-#   layout-card doesn't reliably honour it; margin-right does the right trim.
-# - Status bar inner grid padding: 0 14px 0 72px → 0 16px 0 86px (sidebar 72+14
-#   for person-cell alignment with Rooms Occupied KPI tile).
-# - Home nav padding-top: 121 → 130 (re-aligned for new statusbar+KPI heights).
+#   from the HA panel edges.
+# - Status bar inner grid padding: `0 16px 0 86px` — person cell aligned
+#   with Rooms Occupied KPI tile.
+# - Home nav padding-top: 130 — home icon center at Main Floor divider Y.
 # Phase 6j (kiosk + sidebar alignment):
 # - Kiosk Mode: switched from entity_settings array to top-level template
 #   pattern (matches BubbleDash). hide_header/hide_sidebar/hide_overflow
@@ -75,18 +84,19 @@ button_card_templates:
       - background: transparent
       - border: none
       - border-radius: 0
-      - padding: 10px 12px
+      - padding: 12px 14px 8px 14px
       - margin: 0
       - box-shadow: none
       - cursor: default
       - height: auto
       icon:
-      - width: 20px
+      - width: 22px
+      - height: 22px
       - color: '#e8e8e8'
       - justify-self: start
       - grid-area: i
       name:
-      - font-size: 14px
+      - font-size: 16px
       - font-weight: 600
       - color: '#e8e8e8'
       - text-align: left
@@ -95,7 +105,7 @@ button_card_templates:
       - grid-area: n
       grid:
       - grid-template-areas: '"i n"'
-      - grid-template-columns: 28px 1fr
+      - grid-template-columns: 30px 1fr
   fusion_room_row_lights:
     show_icon: true
     show_name: true
@@ -105,23 +115,22 @@ button_card_templates:
       action: more-info
     styles: &id001
       card:
-      - background: transparent
-      - border: none
-      - border-top: '1px solid #2a2a2a'
-      - border-radius: 0
-      - padding: 8px 12px
-      - margin: 0
+      - background: '#1e1e1e'
+      - border: '1px solid #2a2a2a'
+      - border-radius: 6px
+      - padding: 10px 12px
+      - margin: 3px 10px
       - box-shadow: none
       - cursor: pointer
       - height: auto
       icon:
-      - width: 16px
-      - height: 16px
+      - width: 18px
+      - height: 18px
       - color: '#888'
       - justify-self: start
       - grid-area: i
       name:
-      - font-size: 12px
+      - font-size: 14px
       - color: '#e8e8e8'
       - text-align: left
       - justify-self: start
@@ -129,7 +138,7 @@ button_card_templates:
       - grid-area: n
       grid:
       - grid-template-areas: '"i n"'
-      - grid-template-columns: 24px 1fr
+      - grid-template-columns: 26px 1fr
     name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Lights offline';\n  if (entity.state !== 'on') return 'Lights off';\n  if (entity.attributes.entity_id) {\n    const on = entity.attributes.entity_id.filter(id\
       \ => states[id] && states[id].state === 'on').length;\n    return on + ' light' + (on !== 1 ? 's' : '') + ' on';\n  }\n  return 'Light on';\n]]]\n"
     state:
@@ -802,7 +811,7 @@ views:
             cards:
             - type: custom:mod-card
               card_mod: &id002
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n  height: 100%;\n  min-height: 140px;\n\
+                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n  height: 100%;\n  min-height: 180px;\n\
                   \  box-sizing: border-box;\n}\n"
               card:
                 type: vertical-stack
@@ -832,7 +841,20 @@ views:
                     entity: media_player.living_room
                     icon: mdi:speaker
             - type: custom:mod-card
-              card_mod: *id002
+              card_mod:
+                style: |
+                  ha-card {
+                    background: #161616;
+                    border: 1px solid #2a2a2a;
+                    border-left: 4px solid {% if is_state('binary_sensor.eve_motion_20eby9901_occupancy_2', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: none;
+                    padding: 0;
+                    height: 100%;
+                    min-height: 180px;
+                    box-sizing: border-box;
+                  }
               card:
                 type: vertical-stack
                 cards:
@@ -865,7 +887,20 @@ views:
                     entity: media_player.kitchen_speakers
                     icon: mdi:speaker
             - type: custom:mod-card
-              card_mod: *id002
+              card_mod:
+                style: |
+                  ha-card {
+                    background: #161616;
+                    border: 1px solid #2a2a2a;
+                    border-left: 4px solid {% if is_state('binary_sensor.office_motion_sensors', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: none;
+                    padding: 0;
+                    height: 100%;
+                    min-height: 180px;
+                    box-sizing: border-box;
+                  }
               card:
                 type: vertical-stack
                 cards:
@@ -970,7 +1005,20 @@ views:
               align-items: stretch
             cards:
             - type: custom:mod-card
-              card_mod: *id002
+              card_mod:
+                style: |
+                  ha-card {
+                    background: #161616;
+                    border: 1px solid #2a2a2a;
+                    border-left: 4px solid {% if is_state('binary_sensor.entrance_motion_sensors', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: none;
+                    padding: 0;
+                    height: 100%;
+                    min-height: 180px;
+                    box-sizing: border-box;
+                  }
               card:
                 type: vertical-stack
                 cards:

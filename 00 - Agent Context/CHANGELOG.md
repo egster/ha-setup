@@ -5,6 +5,25 @@
 ---
 
 
+## 2026-04-24 — FUSION Phase 6m — Room polish: button rows + occupancy indicator
+
+### What was done
+Three room-card tweaks Edgar asked for after 6l:
+
+1. **Fonts bigger (again)** — room header 14→16 / icon 20→22, row name 12→14 / icon 16→18. Reads more comfortably on the iPad.
+
+2. **Rows styled as buttons** — replaced the 6d border-top separator with proper button-shaped rows: `background #1e1e1e`, `border: 1px solid #2a2a2a`, `border-radius: 6px`, `margin: 3px 10px`. Each row now looks like its own clickable pill inside the room card.
+
+3. **Green occupancy indicator** — motion rooms (Kitchen, Office, Entrance) now get a Jinja-templated `border-left: 4px solid #4caf6e` when their motion sensor is `on`, falling back to the default `#2a2a2a` grey otherwise. Non-motion rooms keep their standard 1px border. Brings back the BubbleDash-style visible-at-a-glance room occupancy cue.
+
+Room card `min-height` bumped 140 → 180 to give the taller rows more breathing room.
+
+### Files touched
+- `config/dashboards/fusion.yaml` — `fusion_room_header`, `fusion_room_row_*` templates, and 3 room-card inline `card_mod` blocks (Kitchen, Office, Entrance).
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6l — Scale up + symmetric 16px panel-edge padding
 
 ### What was done
