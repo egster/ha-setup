@@ -1,9 +1,11 @@
-# FUSION Dashboard — through Phase 6g (equal-height rooms within each floor)
-# Phase 6g: floor grid align-items changed from 'start' to 'stretch' so all
-# rooms in a row match the tallest sibling's height. mod-card's ha-card
-# wrapper gets height: 100% + box-sizing: border-box so the card fills its
-# grid cell. Empty space at the bottom of a shorter room is filled with the
-# card's #161616 background.
+# FUSION Dashboard — through Phase 6h (dynamic stretch + 3-line min-height)
+# Phase 6h: adds min-height: 140px to each room's ha-card (roughly 3 lines —
+# header + 2 content rows). Combined with the existing align-items: stretch,
+# rooms in the same floor row resize dynamically:
+#   - Media rows are hidden via conditional cards (state-driven)
+#   - When a media row disappears, CSS grid recalculates the row's tallest
+#     sibling and all rooms in the row stretch to match
+#   - If all rooms shrink below 140px total, min-height kicks in as the floor
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
 # -----------------------------------------------------------------------------
@@ -804,8 +806,8 @@ views:
             cards:
             - type: custom:mod-card
               card_mod: &id002
-                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n  height: 100%;\n  box-sizing: border-box;\n\
-                  }\n"
+                style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0;\n  height: 100%;\n  min-height: 140px;\n\
+                  \  box-sizing: border-box;\n}\n"
               card:
                 type: vertical-stack
                 cards:
