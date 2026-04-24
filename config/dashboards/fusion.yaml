@@ -1,15 +1,13 @@
-# FUSION Dashboard — Phases 1-6 + 6c (perform-action + Kiosk) + 6d (stacked room rows)
+# FUSION Dashboard — through Phase 6e (unified room cards + state icons + conditional media)
 # Gate 2 reviewed: 2026-04-24 (Phases 1-3)
-# Phase 6d: Room cards are now vertical-stacks of independently-clickable rows
-# (one per entity) instead of single-card-with-chips. Each row opens HA's
-# more-info dialog for the row's entity. Tap an empty spot between rows: nothing.
-# Replaces the failed Bubble Card popup attempt (Phase 6c).
+# Phase 6e: room cards wrapped in custom:layout-card for unified container look;
+# row icons colored by entity state (motion green, lights amber, heat red/blue,
+# media green/blue); media rows conditional-hidden when not playing/paused;
+# HomePod relocated from Living Room to Office; row order consistent across
+# all rooms (Motion → Lights → Climate → Media); motion text changed to
+# "Occupied" / "Not occupied".
 # -----------------------------------------------------------------------------
 # SOURCE OF TRUTH — DO NOT EDIT VIA HA UI
-# This file is the only authoritative source for FUSION's dashboard config.
-# NEVER edit FUSION via the HA UI "Edit Dashboard" button. All edits go:
-#   edit this file  →  git commit  →  ha_config_set_dashboard(config=...) via MCP
-# See DECISIONS.md (2026-04-24) for rationale.
 # -----------------------------------------------------------------------------
 title: Fusion
 button_card_templates:
@@ -68,11 +66,11 @@ button_card_templates:
       action: none
     styles:
       card:
-      - background: '#161616'
-      - border: '1px solid #2a2a2a'
-      - border-radius: 8px
+      - background: transparent
+      - border: none
+      - border-radius: 0
       - padding: 10px 12px
-      - margin: 0 0 3px 0
+      - margin: 0
       - box-shadow: none
       - cursor: default
       - height: auto
@@ -99,11 +97,12 @@ button_card_templates:
       action: more-info
     styles: &id001
       card:
-      - background: '#161616'
-      - border: '1px solid #2a2a2a'
-      - border-radius: 8px
-      - padding: 8px 10px
-      - margin: 0 0 3px 0
+      - background: transparent
+      - border: none
+      - border-top: '1px solid #2a2a2a'
+      - border-radius: 0
+      - padding: 8px 12px
+      - margin: 0
       - box-shadow: none
       - cursor: pointer
       - height: auto
@@ -123,6 +122,12 @@ button_card_templates:
       - grid-template-columns: auto 1fr
     name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Lights offline';\n  if (entity.state !== 'on') return 'Lights off';\n  if (entity.attributes.entity_id) {\n    const on = entity.attributes.entity_id.filter(id\
       \ => states[id] && states[id].state === 'on').length;\n    return on + ' light' + (on !== 1 ? 's' : '') + ' on';\n  }\n  return 'Light on';\n]]]\n"
+    state:
+    - operator: template
+      value: '[[[ return entity && entity.state === ''on''; ]]]'
+      styles:
+        icon:
+        - color: '#d4a843'
   fusion_room_row_climate:
     show_icon: true
     show_name: true
@@ -134,6 +139,17 @@ button_card_templates:
     name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Climate offline';\n  if (entity.state === 'off') return 'Heat off';\n  const t = entity.attributes.current_temperature;\n  const\
       \ g = entity.attributes.temperature;\n  const ts = (t !== undefined && t !== null) ? t.toFixed(1) + '°' : '—';\n  const gs = (g !== undefined && g !== null) ? g + '°' : '—';\n  return ts + ' → ' +\
       \ gs;\n]]]\n"
+    state:
+    - operator: template
+      value: '[[[ return entity && entity.attributes && entity.attributes.hvac_action === ''heating''; ]]]'
+      styles:
+        icon:
+        - color: '#e05555'
+    - operator: template
+      value: '[[[ return entity && entity.state !== ''off'' && entity.state !== ''unavailable'' && (!entity.attributes || entity.attributes.hvac_action !== ''heating''); ]]]'
+      styles:
+        icon:
+        - color: '#4f8ef7'
   fusion_room_row_media:
     show_icon: true
     show_name: true
@@ -142,10 +158,21 @@ button_card_templates:
     tap_action:
       action: more-info
     styles: *id001
-    name: "[[[\n  if (!entity) return 'Not available';\n  const fn = (entity.attributes.friendly_name || entity.entity_id).replace('media_player.', '');\n  if (entity.state === 'unavailable') return fn\
-      \ + ' · offline';\n  if (entity.state === 'off' || entity.state === 'idle' || entity.state === 'standby') return fn + ' · idle';\n  if (entity.state === 'paused') {\n    const title = entity.attributes.media_title;\n\
-      \    return title ? fn + ' · paused: ' + title : fn + ' · paused';\n  }\n  if (entity.state === 'playing') {\n    const title = entity.attributes.media_title;\n    const artist = entity.attributes.media_artist;\n\
-      \    if (title && artist) return fn + ' · ' + artist + ' — ' + title;\n    if (title) return fn + ' · ' + title;\n    return fn + ' · playing';\n  }\n  return fn + ' · ' + entity.state;\n]]]\n"
+    name: "[[[\n  if (!entity) return 'Not available';\n  const fn = (entity.attributes.friendly_name || entity.entity_id).replace('media_player.', '');\n  if (entity.state === 'paused') {\n    const title\
+      \ = entity.attributes.media_title;\n    return title ? fn + ' · paused: ' + title : fn + ' · paused';\n  }\n  if (entity.state === 'playing') {\n    const title = entity.attributes.media_title;\n\
+      \    const artist = entity.attributes.media_artist;\n    if (title && artist) return fn + ' · ' + artist + ' — ' + title;\n    if (title) return fn + ' · ' + title;\n    return fn + ' · playing';\n\
+      \  }\n  return fn + ' · ' + entity.state;\n]]]\n"
+    state:
+    - operator: template
+      value: '[[[ return entity && entity.state === ''playing''; ]]]'
+      styles:
+        icon:
+        - color: '#4caf6e'
+    - operator: template
+      value: '[[[ return entity && entity.state === ''paused''; ]]]'
+      styles:
+        icon:
+        - color: '#4f8ef7'
   fusion_room_row_motion:
     show_icon: true
     show_name: true
@@ -154,7 +181,13 @@ button_card_templates:
     tap_action:
       action: more-info
     styles: *id001
-    name: "[[[\n  if (!entity) return 'No sensor';\n  return entity.state === 'on' ? 'Occupied' : 'No motion';\n]]]\n"
+    name: "[[[\n  if (!entity) return 'No sensor';\n  return entity.state === 'on' ? 'Occupied' : 'Not occupied';\n]]]\n"
+    state:
+    - operator: template
+      value: '[[[ return entity && entity.state === ''on''; ]]]'
+      styles:
+        icon:
+        - color: '#4caf6e'
 views:
 - title: FUSION
   path: fusion
@@ -767,7 +800,15 @@ views:
               padding: 0 14px
               align-items: start
             cards:
-            - type: vertical-stack
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -781,15 +822,27 @@ views:
                 template: fusion_room_row_climate
                 entity: climate.living_room_area
                 icon: mdi:radiator
-              - type: custom:button-card
-                template: fusion_room_row_media
-                entity: media_player.living_room
-                icon: mdi:speaker
-              - type: custom:button-card
-                template: fusion_room_row_media
-                entity: media_player.homepod
-                icon: mdi:speaker
-            - type: vertical-stack
+              - type: conditional
+                conditions:
+                - condition: state
+                  entity: media_player.living_room
+                  state:
+                  - playing
+                  - paused
+                card:
+                  type: custom:button-card
+                  template: fusion_room_row_media
+                  entity: media_player.living_room
+                  icon: mdi:speaker
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -807,7 +860,27 @@ views:
                 template: fusion_room_row_climate
                 entity: climate.kitchen_area
                 icon: mdi:radiator
-            - type: vertical-stack
+              - type: conditional
+                conditions:
+                - condition: state
+                  entity: media_player.kitchen_speakers
+                  state:
+                  - playing
+                  - paused
+                card:
+                  type: custom:button-card
+                  template: fusion_room_row_media
+                  entity: media_player.kitchen_speakers
+                  icon: mdi:speaker
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -825,6 +898,18 @@ views:
                 template: fusion_room_row_climate
                 entity: climate.office_area
                 icon: mdi:radiator
+              - type: conditional
+                conditions:
+                - condition: state
+                  entity: media_player.homepod
+                  state:
+                  - playing
+                  - paused
+                card:
+                  type: custom:button-card
+                  template: fusion_room_row_media
+                  entity: media_player.homepod
+                  icon: mdi:speaker
           - type: custom:button-card
             template: fusion_floor_header
             name: 🛏 UPPER FLOOR
@@ -836,7 +921,15 @@ views:
               padding: 0 14px
               align-items: start
             cards:
-            - type: vertical-stack
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -846,11 +939,27 @@ views:
                 template: fusion_room_row_climate
                 entity: climate.air_conditioning_bedroom
                 icon: mdi:air-conditioner
-              - type: custom:button-card
-                template: fusion_room_row_media
-                entity: media_player.upstairs_speaker
-                icon: mdi:speaker
-            - type: vertical-stack
+              - type: conditional
+                conditions:
+                - condition: state
+                  entity: media_player.upstairs_speaker
+                  state:
+                  - playing
+                  - paused
+                card:
+                  type: custom:button-card
+                  template: fusion_room_row_media
+                  entity: media_player.upstairs_speaker
+                  icon: mdi:speaker
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -860,10 +969,18 @@ views:
                 template: fusion_room_row_lights
                 entity: light.jona_lights
                 icon: mdi:lightbulb-group
-              - type: custom:button-card
-                template: fusion_room_row_media
-                entity: media_player.jona_speaker
-                icon: mdi:speaker
+              - type: conditional
+                conditions:
+                - condition: state
+                  entity: media_player.jona_speaker
+                  state:
+                  - playing
+                  - paused
+                card:
+                  type: custom:button-card
+                  template: fusion_room_row_media
+                  entity: media_player.jona_speaker
+                  icon: mdi:speaker
           - type: custom:button-card
             template: fusion_floor_header
             name: ⬇️ DOWNSTAIRS
@@ -875,7 +992,15 @@ views:
               padding: 0 14px
               align-items: start
             cards:
-            - type: vertical-stack
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -889,7 +1014,15 @@ views:
                 template: fusion_room_row_lights
                 entity: light.entrance_ceiling
                 icon: mdi:lightbulb-group
-            - type: vertical-stack
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
@@ -910,7 +1043,15 @@ views:
               padding: 0 14px
               align-items: start
             cards:
-            - type: vertical-stack
+            - type: custom:layout-card
+              layout_type: custom:grid-layout
+              layout:
+                grid-template-columns: 1fr
+                grid-gap: 0
+                background: '#161616'
+                border: '1px solid #2a2a2a'
+                border-radius: 8px
+                overflow: hidden
               cards:
               - type: custom:button-card
                 template: fusion_room_header
