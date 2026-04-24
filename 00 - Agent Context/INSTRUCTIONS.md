@@ -201,6 +201,8 @@ At the end of every session where files are created, modified, or deleted — or
 
 **Context files reflect completed state only.** CHANGELOG entries say "package committed, deploy pending" if Gate 3 hasn't run; they say "deployed" only after Gate 3 Steps 6–8 pass. BACKLOG statuses follow the same discipline. Do not write a session-end entry that implies work is further along than it actually is. (Rule W3, 2026-04-19 meta session.)
 
+**Commit cadence on feature branches.** When work is iterative cosmetic tuning on a feature branch that will be squash-merged (e.g. the FUSION 6j–6n polish passes), prefer one end-of-session commit over per-tweak commits. Reserve per-phase commits for milestones that could genuinely be reverted in isolation. (Rule R3, 2026-04-24 FUSION retro.)
+
 ---
 
 ## Privacy & Public Repo Safety
