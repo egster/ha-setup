@@ -5,6 +5,49 @@
 ---
 
 
+## 2026-04-26 — Low Battery Alerts deployed + FUSION HA Settings panel
+
+### What was done
+Closed the 🔴 BACKLOG item "Low Battery Alerts". Two deliverables shipped end-to-end (Gate 1→3 complete, deploy verified live):
+
+1. **`config/packages/low_battery_alerts.yaml`** (new):
+   - `binary_sensor.low_battery_present` — template sensor, `on` when any entity with `device_class: battery` is below 20%, `off` otherwise. Auto-discovers — no entity list to maintain. Currently `on` (sensor.extra_battery at 0%).
+   - `automation.low_battery_daily_check` — fires daily at 09:00, gated on the binary_sensor, sends one mobile notification listing every low device by friendly_name + level (sorted lowest first). Manual smoke-test fired notification correctly: title "🔋 Low batteries", body "• Extra  Battery: 0.0%". Trace clean, no errors.
+
+2. **`config/dashboards/fusion.yaml` — Automations panel becomes HA Settings**:
+   - Three section headers stack: `⚙️ HA SETTINGS` (panel title) → `🔋 BATTERIES` (live-filtered list when low; "✓ All batteries above 20%" placeholder when none) → `⚙️ AUTOMATIONS` (existing list).
+   - Internal `input_select.fusion_panel` option value left as `automations` (zero-migration); only visible labels and content changed.
+   - Pushed via `ha_config_set_dashboard(python_transform=...)` — surgical edit of `views[0].cards[0].cards[2].cards[6].card.cards`.
+
+### Threshold
+20%. Earlier than HA's 15% default, since most Zigbee devices begin erratic behaviour below this. Threshold literal duplicated in the binary_sensor template, the message template, and the dashboard auto-entities filter — header comment lists all three places.
+
+### Process notes
+- **Pre-flight via MCP** (Gate 1 fetch-live-state) caught coverage scope: 17 numeric `sensor.*_battery` entities exist, 0 `binary_sensor.*` battery-low flags. Reviewer's ⚠️ #2 (binary-flag coverage gap) resolved.
+- **Gate 2 reviewer**: APPROVED with no blocking findings; 2 ⚠️ + 5 advisory notes. Cadence rationale comment in the package header was tightened post-review (cosmetic-only, no re-review).
+- **`deploy.sh`'s `ha core reload-all` step** silently failed (printed help dump because that subcommand doesn't exist on this HA version). Worked around by calling `template.reload` + `automation.reload` services via MCP. **This confirms the existing BACKLOG item under Infrastructure & Tooling — `Update deploy.sh to auto-reload input helper domains`. Should now also explicitly cover template/automation reloads.**
+- **One in-the-wild finding**: `sensor.extra_battery` (0.0%, friendly_name "Extra  Battery" with literal double-space) is firing the notification. Looks orphaned. Worth investigating whether the device behind it is dead or whether the entity itself should be removed. Adding to BACKLOG.
+
+### Entities affected
+- `binary_sensor.low_battery_present` (new, state=on)
+- `automation.low_battery_daily_check` (new, enabled, last_triggered=2026-04-26 20:13 UTC via manual test)
+- `dashboard-fusion` HA Settings panel (renamed/restructured)
+
+### Files
+- `config/packages/low_battery_alerts.yaml` (new, committed `d1f7df3`)
+- `config/dashboards/fusion.yaml` (modified, committed `d1f7df3`)
+- Backup `b12d315b` (Pre_Low_Battery_Alerts_2026-04-26) created before deploy.
+
+---
+
+
+## 2026-04-26 — Weekly HA health check (scheduled)
+
+- Health check: ⚪️ NOT RUN — Home Assistant MCP not connected in scheduled-task session. See `healthcheck.md` for required action (reconnect HA MCP to restore weekly cadence).
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6n — Bigger fonts + symmetric row margins + dynamic heights
 
 ### What was done
