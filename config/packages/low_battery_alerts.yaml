@@ -1,0 +1,114 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Low Battery Alerts
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Gate 2 reviewed: 2026-04-26
+#
+# Auto-discovers every entity with `device_class: battery` and warns when any
+# device falls below 20%.
+#
+# ── Components ───────────────────────────────────────────────────────────────
+#
+# 1) binary_sensor.low_battery_present
+#    Template sensor. ON when ≥1 battery is below 20%, OFF otherwise.
+#    Drives the FUSION HA Settings panel's empty-state switch (battery list
+#    when on, "all OK" placeholder when off).
+#    Low write volume — only changes when devices cross the 20% threshold
+#    (a few writes per device per year).
+#
+# 2) automation.low_battery_daily_check
+#    Daily at 09:00. If binary_sensor.low_battery_present is on, sends a
+#    single notify.mobile_app_edphone notification listing each low device
+#    by friendly_name + level, sorted ascending (lowest first).
+#
+# ── Why daily summary, not per-device numeric_state triggers ─────────────────
+#
+# Two alternatives considered and rejected:
+#
+#   (a) Per-device numeric_state trigger with `below: 20` listing every
+#       battery sensor entity_id. Fires reliably on each crossing, but breaks
+#       the auto-discovery property — every new battery device requires a
+#       YAML edit. Maintenance burden grows with device count.
+#
+#   (b) Single template trigger watching binary_sensor.low_battery_present
+#       going to `on`. Coalesces: once the binary sensor is on, a second
+#       device crossing 20% while the first is still low won't re-fire.
+#
+# Daily-summary sidesteps both: always re-evaluates every battery on a
+# fixed schedule, lists everything currently low, predictable cadence, no
+# device list to maintain. Trade-off: notifications lag up to ~24h behind
+# the crossing, which is acceptable for a metric that drifts over weeks.
+#
+# ── Threshold ────────────────────────────────────────────────────────────────
+#
+# 20%. Earlier warning than HA's 15% default; most Zigbee devices begin
+# erratic behaviour below this. Raise to 25% if false-positives become
+# annoying for short-lived devices; lower to 15% if the daily summary
+# becomes noisy. The 20 literal is duplicated across the binary_sensor
+# template, the automation message template, and the FUSION dashboard
+# auto-entities filter — keep all three in sync if changing it.
+#
+# ── Recorder impact ──────────────────────────────────────────────────────────
+#
+# +1 template binary_sensor. Writes ≈ a few per device per year (only on
+# threshold crossings). Negligible. No input_* helpers added.
+# ──────────────────────────────────────────────────────────────────────────────
+
+template:
+  - binary_sensor:
+      - name: "Low Battery Present"
+        # ON when any device with device_class: battery is below 20%.
+        # Drives the FUSION HA Settings panel's empty-state switch.
+        # NOTE: threshold (20) duplicated in automation message template
+        # and config/dashboards/fusion.yaml — keep in sync.
+        unique_id: low_battery_present
+        device_class: battery
+        icon: mdi:battery-alert
+        state: >
+          {% set ns = namespace(count=0) %}
+          {% for s in states.sensor %}
+            {% if s.attributes.device_class == 'battery'
+                  and s.state not in ['unknown', 'unavailable', 'none']
+                  and s.state | float(101) < 20 %}
+              {% set ns.count = ns.count + 1 %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.count > 0 }}
+
+automation:
+  - id: low_battery_daily_check
+    alias: Low Battery Daily Check
+    description: >-
+      Daily at 09:00, sends a single mobile notification listing every device
+      whose battery is below 20%. Auto-discovers via device_class: battery, so
+      new sensors are included automatically. Skips notification entirely
+      when all batteries are OK (gated on binary_sensor.low_battery_present).
+    mode: single
+    trigger:
+      - platform: time
+        at: "09:00:00"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.low_battery_present
+        state: "on"
+    action:
+      - action: notify.mobile_app_edphone
+        data:
+          title: "🔋 Low batteries"
+          message: >-
+            {% set ns = namespace(low=[]) %}
+            {% for s in states.sensor %}
+              {% if s.attributes.device_class == 'battery'
+                    and s.state not in ['unknown', 'unavailable', 'none']
+                    and s.state | float(101) < 20 %}
+                {% set ns.low = ns.low + [{
+                  'name': s.attributes.friendly_name,
+                  'pct': s.state,
+                  'pct_n': s.state | float(0)
+                }] %}
+              {% endif %}
+            {% endfor %}
+            {% for item in ns.low | sort(attribute='pct_n') -%}
+            • {{ item.name }}: {{ item.pct }}%
+            {% endfor %}

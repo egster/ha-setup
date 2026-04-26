@@ -1644,6 +1644,10 @@ views:
               color: '#4f8ef7'
               type: area
               opacity: 0.3
+      # HA Settings panel.
+      # NOTE: input_select.fusion_panel option value is still 'automations' for
+      # backwards-compat / zero-migration risk. Visible label is HA SETTINGS
+      # since the panel hosts batteries + automations (added 2026-04-26).
       - type: conditional
         conditions:
         - entity: input_select.fusion_panel
@@ -1651,6 +1655,50 @@ views:
         card:
           type: vertical-stack
           cards:
+          # ── Panel title ──────────────────────────────────────
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: ⚙️ HA SETTINGS
+          # ── Batteries section ────────────────────────────────
+          - type: custom:button-card
+            template: fusion_floor_header
+            name: 🔋 BATTERIES
+          # When any battery is below 20%, show the list (sorted lowest first)
+          - type: conditional
+            conditions:
+            - entity: binary_sensor.low_battery_present
+              state: 'on'
+            card:
+              type: custom:auto-entities
+              card:
+                type: entities
+                show_header_toggle: false
+                state_color: false
+              filter:
+                template: |
+                  {% for s in states.sensor
+                     | selectattr('attributes.device_class', 'eq', 'battery') -%}
+                  {%- if s.state not in ['unknown', 'unavailable', 'none']
+                        and s.state | float(101) < 20 -%}
+                  {{ s.entity_id }},
+                  {%- endif -%}
+                  {%- endfor %}
+              sort:
+                method: state
+                numeric: true
+              card_param: entities
+              unique: true
+          # When all batteries are OK, show placeholder
+          - type: conditional
+            conditions:
+            - entity: binary_sensor.low_battery_present
+              state: 'off'
+            card:
+              type: markdown
+              content: '✓ All batteries above 20%'
+              card_mod:
+                style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #4caf6e;\n  font-size: 12px;\n  padding: 8px 14px;\n}\n"
+          # ── Automations section ──────────────────────────────
           - type: custom:button-card
             template: fusion_floor_header
             name: ⚙️ AUTOMATIONS
