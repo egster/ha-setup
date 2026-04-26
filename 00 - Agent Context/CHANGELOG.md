@@ -5,6 +5,38 @@
 ---
 
 
+## 2026-04-26 — FUSION Phase 7 / WP1 — Test harness + visual baseline
+
+### What was done
+Built the Test-Driven Design harness for FUSION Phase 7 — every subsequent WP (WP2–WP6) must add tests first and verify the full suite passes before Gate 2.
+
+**Deliverables:**
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` — 27 tests across 6 categories (13 DOM, 4 visual, 3 behavioural, 2 yaml_schema, 3 entity_existence, 2 template_eval).
+- `scripts/run-fusion-tests.sh` — bash runner. Parses fusion-tests.md, dispatches yaml_schema in-process via `ssh ha "ha core check"` + local yamllint; defers DOM / visual / behavioural / entity_existence / template_eval to Chrome MCP via JSONL spec emission; consolidates results in `--report` mode.
+- `00 - Agent Context/fusion-phase7/baseline-measurements.md` — empirical baseline numbers (hui-view padding-left, sidebar nav cell positions, structural counts) at 1280 / 900 / 700 / 526 px.
+- `00 - Agent Context/fusion-phase7/screenshots/baseline/README.md` — capture procedure (Chrome MCP `save_to_disk: true` did not return paths on this harness, so PNGs are session-bound; documented regeneration steps).
+- `00 - Agent Context/fusion-phase7/COORDINATION.md` + per-WP briefs (WP1–WP6) + STATUS.md committed alongside.
+
+**Empirical baseline run (2026-04-26):**
+- 25 tests pass, 2 known failures (TEST-007 + TEST-008 — sidebar nav cell at `left = −84px` on viewports ≤700; the documented WP3+WP4 fix target).
+- `--allow-baseline-failures` flag flips exit 1 → exit 0 for the 2 known failures.
+- HA breakpoint confirmed: `hui-view-container` `padding-left` collapses from 100px → 0px between 900 and 700, leaving the layout-card's `margin-left: −84px` shifting the sidebar off-screen.
+
+**Gate 2:** ha-code-reviewer round 1 returned BLOCKED with 4 required revisions (broken SSH-side template eval auth, dead `count=$count` payload in entity_existence, fragile awk parser continuation rule, over-broad yamllint disable list). All 4 fixed; round 2 returned APPROVED.
+
+### Known limits
+- Chrome window minimum on macOS prevented hitting 375px directly — smallest reachable inner width was 526. Real 375 must be tested on phone or DevTools emulation when WP3+WP4 ship.
+- Visual regression tests are documentation, not assertions (`tolerance: manual`). Comparison is by human review against captured screenshot IDs until on-disk PNG capture is wired.
+- `run_template_eval` deliberately defers to browser — SSH path was prototyped via `/data/options.json` supervisor token but rejected as wrong auth source; reintroduce only with a documented `HA_TOKEN` env var from a long-lived access token.
+
+### Files touched
+- `00 - Agent Context/fusion-phase7/` — new directory, 13 files (planning + WP1 deliverables).
+- `scripts/run-fusion-tests.sh` — new file.
+- `00 - Agent Context/CHANGELOG.md` — this entry.
+
+---
+
+
 ## 2026-04-24 — FUSION Phase 6n — Bigger fonts + symmetric row margins + dynamic heights
 
 ### What was done
