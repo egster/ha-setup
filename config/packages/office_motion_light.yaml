@@ -1,0 +1,99 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Office Motion Light — presence-driven, time-varying off-delay
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Gate 2 reviewed: 2026-04-27
+#
+# Why this exists:
+#   The original Office Motion Light automation triggered only on PIR motion
+#   (binary_sensor.office_motion_sensors). That signal fires briefly on
+#   movement and then clears, so the blueprint's 5-min `time_delay` would run
+#   out while Edgar was sitting still at the desk — typing/reading produces
+#   too little gross motion to keep PIR re-triggering. The two office sensors
+#   each also expose an `_occupancy` entity (true presence) which holds 'on'
+#   continuously while a person is in range — the signal we actually want.
+#
+# ── Components defined here ──────────────────────────────────────────────────
+#
+# 1) binary_sensor.office_presence
+#    Group OR'ing all four office sensor signals (2× motion + 2× occupancy).
+#    Used as the trigger source for the main motion light automation (which
+#    lives in HA storage and is edited separately via MCP — see CHANGELOG
+#    2026-04-27 for the matching trigger / time_delay edit).
+#    Recorder impact: ~zero — group state mirrors its inputs, no extra writes
+#    beyond what those sensors already produce.
+#
+#    ⚠ Naming drift: two of the four input entities carry "hall_motion_sensor_2"
+#    in their entity_id but are physically the OFFICE DESK sensor. They were
+#    renamed at the friendly-name layer (now "Office Desk Motion Sensor") and
+#    re-assigned to area `office`, but the entity_id was kept stable to avoid
+#    breaking existing consumers. Confirmed via:
+#      - friendly_name: "Office Desk Motion Sensor" / "...Occupancy"
+#      - area_id: office
+#      - already present as a member of the existing
+#        binary_sensor.office_motion_sensors group
+#    Same pattern as `light.bijkeuken` (Dutch IDs, English friendly names).
+#
+# 2) automation.office_motion_light_evening_quick_off
+#    Companion that overrides the main automation's 8-min daytime delay with
+#    a 2-min cut during 20:00–08:00 so the desk lights don't linger after
+#    Edgar has left in the evening.
+#    The two automations cooperate by both targeting `light.desk_lights` for
+#    turn_off — whichever delay completes first wins. There's no race because
+#    both end states are identical (off).
+#
+# ── Day vs evening delays ────────────────────────────────────────────────────
+#
+# 08:00–20:00  → main automation's 8-min `time_delay` applies.
+# 20:00–08:00  → this companion fires after 2 min and the main one's 8-min
+#                countdown is rendered moot.
+#
+# ── Out of scope (separately handled) ────────────────────────────────────────
+#
+#   • Trigger swap + time_delay update on the main `automation.office_motion_light`
+#     (UI-stored) — done via ha_config_set_automation.
+#   • Removal of stale `light.signify_netherlands_b_v_915005996701` from
+#     `light.office_lights` group, `automation.office_motion_light` targets,
+#     and `automation.office_dimmer` Power_Press target — done in the same
+#     session via MCP.
+#
+# ──────────────────────────────────────────────────────────────────────────────
+
+binary_sensor:
+  - platform: group
+    name: Office Presence
+    unique_id: office_presence
+    device_class: motion
+    entities:
+      - binary_sensor.motion_sensor_office
+      - binary_sensor.motion_sensor_office_occupancy
+      - binary_sensor.hall_motion_sensor_2
+      - binary_sensor.hall_motion_sensor_2_occupancy
+
+automation:
+  - id: office_motion_light_evening_quick_off
+    alias: Office Motion Light - Evening Quick-Off
+    description: >
+      Cuts the desk lights 2 minutes after Edgar leaves the office during
+      evening/night hours (20:00–08:00). The main Office Motion Light
+      automation runs an 8-min delay during the day; this override fires
+      first when the time condition matches, so evening lights don't linger.
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.office_presence
+        to: "off"
+        for:
+          minutes: 2
+    conditions:
+      - condition: time
+        after: "20:00:00"
+        before: "08:00:00"
+      - condition: state
+        entity_id: light.desk_lights
+        state: "on"
+    actions:
+      - action: light.turn_off
+        target:
+          entity_id: light.desk_lights

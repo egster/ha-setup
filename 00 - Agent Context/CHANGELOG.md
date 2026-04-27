@@ -5,6 +5,44 @@
 ---
 
 
+## 2026-04-27 — Office Motion Light: presence-driven + ghost-entity cleanup
+
+### What was done
+Closed Edgar's complaint that the office desk lights drop while he's working ("I sit too still"). Two-part change in one Gate 3 pipeline:
+
+1. **`config/packages/office_motion_light.yaml`** (new — package committed, deploy pending):
+   - `binary_sensor.office_presence` — group OR'ing the 4 office sensors (`motion_sensor_office` + `_occupancy`, `hall_motion_sensor_2` + `_occupancy`). Occupancy entities hold `on` continuously while present, fixing the still-sitter blind spot.
+   - `automation.office_motion_light_evening_quick_off` — companion firing 2 min after presence clears, gated by `condition: time` 20:00→08:00, so the lights don't linger when Edgar's left for the evening. `mode: restart` debounces brief re-entries.
+
+2. **MCP storage edits** (in same session, deploy pending):
+   - `automation.office_motion_light` — change motion_trigger from `binary_sensor.office_motion_sensors` to `binary_sensor.office_presence`, set `time_delay: 8` (was unset = 5 default), drop the ghost light from `light_switch` targets.
+   - `automation.office_dimmer` — drop the ghost light from `Power_Press` action target.
+   - `light.office_lights` group — remove the ghost light from members.
+
+### Why
+- PIR motion sensors fire briefly on movement and clear; sitting still at the desk produces too little gross motion to keep them re-triggering. The `_occupancy` entities (true-presence variant on the same Zigbee devices) hold `on` for as long as someone is in range — exactly the signal needed.
+- 8-min daytime / 2-min evening split came from Edgar's request to keep delays generous during work hours but short at night so lights don't waste energy.
+- `light.signify_netherlands_b_v_915005996701` is no longer in the entity registry (physical device gone). It still appeared in 3 stale references; cleaned up alongside.
+
+### Process notes
+- **Naming drift documented in package header**: `binary_sensor.hall_motion_sensor_2*` is the office desk sensor (renamed at the friendly_name + area_id layer; entity_id kept stable to avoid breaking consumers). Same pattern as `light.bijkeuken`. Worth a History note in PROFILE.md.
+- **Gate 2 reviewer**: BLOCKED on first pass for the entity-ID drift (legitimate audit concern). Re-submitted with explanatory header → APPROVED.
+- **Two-automation cooperation**: main blueprint with 8-min `time_delay`; companion with 2-min `for:` + time condition. Whichever delay completes first wins on the off-action — no race because terminal state is identical.
+
+### Entities affected
+- `binary_sensor.office_presence` (new)
+- `automation.office_motion_light_evening_quick_off` (new)
+- `automation.office_motion_light` (edited: trigger, time_delay, light_switch)
+- `automation.office_dimmer` (edited: Power_Press target)
+- `light.office_lights` (edited: ghost member removed)
+
+### Files
+- `config/packages/office_motion_light.yaml` (new)
+- Backup `0a795e9c` (Pre_Office_Motion_Light_2026-04-27) created before deploy.
+
+---
+
+
 ## 2026-04-27 — FUSION Phase 7 / WP2 — File restructure + YAML-mode (committed, deploy pending)
 
 ### What was done
