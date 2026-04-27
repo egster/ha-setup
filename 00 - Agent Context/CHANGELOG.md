@@ -41,6 +41,51 @@ Deployed the WP2 YAML-mode FUSION dashboard to HA Green. The earlier 2026-04-27 
 ---
 
 
+## 2026-04-27 — Office Motion Light: presence-driven + ghost-entity cleanup (deployed)
+
+### What was done
+Closed Edgar's complaint that the office desk lights drop while he's working ("I sit too still"). Gate 3 deploy verified live:
+
+1. **`config/packages/office_motion_light.yaml`** (deployed, reloaded):
+   - `binary_sensor.office_presence` — group OR'ing the 4 office sensors (`motion_sensor_office` + `_occupancy`, `hall_motion_sensor_2` + `_occupancy`). Live state confirms occupancy entities hold `on` continuously while present (`hall_motion_sensor_2_occupancy` held `on` for 25+ min during this session's desk work) — fixes the still-sitter blind spot.
+   - `automation.office_motion_light_evening_quick_off` — companion firing 2 min after presence clears, gated by `condition: time` 20:00→08:00, so the lights don't linger when Edgar's left for the evening. `mode: restart` debounces brief re-entries. State `on`, last_triggered=null (will not fire until presence + evening conditions converge).
+
+2. **MCP storage edits** (deployed):
+   - `automation.office_motion_light` — motion_trigger swapped from `binary_sensor.office_motion_sensors` to `binary_sensor.office_presence`; `time_delay: 8` set (was unset = 5 default); ghost light dropped from `light_switch.entity_id`. Verified post-edit: motion_sensors group transitioned at 09:23:39 UTC and the automation did NOT fire — proving the trigger swap took effect.
+   - `automation.office_dimmer` (Office Remote Mapping) — ghost dropped from `Power_Press` target; remote now toggles `light.desk_lights` only.
+   - `light.office_lights` group — ghost member removed via `ha_set_config_entry_helper(group, entry_id=01K198J6178FH9200KQVYVSFYJ)`. Members now `[light.office_bureau, light.desk_lights]`.
+
+### Why
+- PIR motion sensors fire briefly on movement and clear; sitting still at the desk produces too little gross motion to keep them re-triggering. The `_occupancy` entities (true-presence variant on the same Zigbee devices) hold `on` for as long as someone is in range — exactly the signal needed.
+- 8-min daytime / 2-min evening split came from Edgar's request to keep delays generous during work hours but short at night so lights don't waste energy.
+- `light.signify_netherlands_b_v_915005996701` is no longer in the entity registry (physical device gone). It still appeared in 3 stale references; cleaned up alongside.
+
+### Process notes
+- **Naming drift documented in package header**: `binary_sensor.hall_motion_sensor_2*` is the office desk sensor (renamed at the friendly_name + area_id layer; entity_id kept stable to avoid breaking consumers). Same pattern as `light.bijkeuken`. Logged in PROFILE.md History.
+- **Gate 2 reviewer**: BLOCKED on first pass for the entity-ID drift (legitimate audit concern). Re-submitted with explanatory header → APPROVED.
+- **Two-automation cooperation**: main blueprint with 8-min `time_delay`; companion with 2-min `for:` + time condition. Whichever delay completes first wins on the off-action — no race because terminal state is identical. Pattern logged in DECISIONS 2026-04-27 ("Blackshome blueprint + small companion automation for time-of-day-varying off-delays") for future reuse.
+- **Trigger source decision**: occupancy + motion OR'd into a presence group, not just one or the other — logged in DECISIONS 2026-04-27.
+- **`deploy.sh` race condition**: First two attempts failed with "Another job is running for job group container_homeassistant" while a previous `ha core check` was still completing. The check actually returned valid in the background. Third attempt succeeded after waiting for all jobs to settle. **Deploy.sh should be hardened to wait for previous supervisor jobs before starting.** Adding to BACKLOG.
+- **`ha core reload-all` step in deploy.sh** still silently prints help dump (known issue from 2026-04-26 low_battery_alerts session). Worked around by `ha_reload_core(target=all)` via MCP. Already on BACKLOG.
+- **Stray `group.office_lights` entity**: a misdirected `ha_config_set_group(remove_entities=...)` call hit the legacy group integration before I switched to `ha_set_config_entry_helper` (the right tool for Light Group helpers). The legacy group lingers as `group.office_lights` (state=unknown, empty entity_id list). Functionally harmless (nothing references it) but flagging for cleanup as low-priority backlog.
+
+### Entities affected
+- `binary_sensor.office_presence` (new, state=on)
+- `automation.office_motion_light_evening_quick_off` (new, enabled)
+- `automation.office_motion_light` (edited: trigger, time_delay=8, light_switch)
+- `automation.office_dimmer` (edited: Power_Press target)
+- `light.office_lights` (edited: ghost member removed; members now `[light.office_bureau, light.desk_lights]`)
+- `group.office_lights` (stray; flagged for cleanup)
+
+### Files
+- `config/packages/office_motion_light.yaml` (new, committed `adbdcc4`)
+- `00 - Agent Context/DECISIONS.md` (2 new rows: time-varying delay pattern + occupancy-as-trigger)
+- `00 - Agent Context/PROFILE.md` (History note: hall_motion_sensor_2 naming drift)
+- Backup `0a795e9c` (Pre_Office_Motion_Light_2026-04-27) created before deploy.
+
+---
+
+
 ## 2026-04-27 — FUSION Phase 7 / WP2 — File restructure + YAML-mode (committed, deploy pending)
 
 ### What was done

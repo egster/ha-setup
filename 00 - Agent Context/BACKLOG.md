@@ -265,6 +265,13 @@ Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find i
 **Fix**: Locate the physical device (likely an Eve sensor that's been moved or a sensor in storage). Either replace the battery and re-deploy, or remove the entity if the device is no longer in use.
 **Effort**: 5–15 min depending on hunt difficulty.
 
+#### Stray `group.office_lights` legacy group
+**Added**: 2026-04-27
+**Status**: Backlog — surfaced during office motion light refactor
+**What**: An accidental `ha_config_set_group(remove_entities=...)` call hit the legacy `group` integration (instead of the Light Group helper that owns `light.office_lights`). The MCP tool created a new `group.office_lights` (state=unknown, empty entity_id list) before I switched to the correct `ha_set_config_entry_helper` path. Functionally inert — nothing references it.
+**Fix**: `ha_config_remove_group("office_lights")` in a session where the user explicitly authorises group deletion. Or leave indefinitely — it's harmless clutter.
+**Effort**: 1 min (one MCP call) once authorised.
+
 #### Clean Up jlnbln Reference Files
 **Added**: 2026-04-20
 **Status**: Backlog — low priority
@@ -322,6 +329,8 @@ as sweep fix #3.
 **Why**: Today's Zocci+Beamer and Vacation Mode deploys both hit the same snag — `ha core reload-all` (what `deploy.sh` calls) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Had to call `input_number.reload` / `input_text.reload` / `automation.reload` manually via MCP after each deploy.
 
 **2026-04-26 update**: deploying `low_battery_alerts.yaml` revealed that `ha core reload-all` is **not even a valid `ha` CLI subcommand on HA core-2026.4.2** — it silently prints the `ha core` help dump. So the script's reload step has been a no-op the whole time, and every package deploy has needed manual `template.reload` / `automation.reload` follow-ups. Bumping priority and expanding scope.
+
+**2026-04-27 update**: deploying `office_motion_light.yaml` hit a **supervisor-job race**: two consecutive `deploy.sh` runs failed with `Error: Another job is running for job group container_homeassistant` because the supervisor returned the error transiently while the previous `ha core check` was still in flight. The check actually completed successfully ~70 seconds later (per supervisor logs), but `deploy.sh` had already rolled back the file. Add a pre-check guard to `deploy.sh`: poll `ha jobs info` until no `done: false` jobs are present before issuing `ha core check`. Cost: another ~30 sec on the deploy step but eliminates spurious rollbacks.
 
 **Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains a relevant top-level key, issue the corresponding `reload` service call over the HA API:
 - `template:` → `template.reload`
