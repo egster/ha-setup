@@ -16,7 +16,7 @@ This repo is operated from two distinct agent environments. Know which you're in
 
 - **Live session** — Claude Code running on Edgar's laptop with the HA MCP server connected and `ssh ha` reachable. This is the default mode and the only one that can execute the full Gate 3 pipeline (backup, entity validation, template evaluation, `deploy.sh`, trace inspection).
 
-- **GitHub agent** — Claude invoked from a GitHub workflow (branches like `claude/*`). No HA MCP, no SSH to Green. Scope is limited to: writing/editing files, running the tracked pre-commit hook, committing, and pushing. Gate 3 Steps 1–8 **cannot be executed here** — they remain for Edgar to run live after merging the branch. In this mode, CHANGELOG/BACKLOG entries must say "package committed" or "PR open", never "deployed", until the live session catches up.
+- **GitHub agent** — Claude invoked from a GitHub workflow (branches like `claude/*`). No HA MCP, no SSH to Green. Scope is limited to: writing/editing files, running the tracked pre-commit hook, committing, and pushing. Gate 3 Steps 1–8 **cannot be executed here** — they remain for Edgar to run live after merging the branch. In this mode, CHANGELOG/BACKLOG entries must say "package committed" or "PR open", never "deployed", until the live session catches up. Same-commit CHANGELOG pairing (Rule W4) is mandatory — silent commits to `config/` are not allowed in this mode.
 
 If you are unsure which mode you're in, check for HA MCP tools (`ha_get_state`, `ha_backup_create`, etc.) in your tool list. If they are absent, you are in GitHub-agent mode.
 
@@ -200,6 +200,8 @@ At the end of every session where files are created, modified, or deleted — or
 3. **Update `LAST_UPDATED`** — overwrite with today's date (`YYYY-MM-DD`).
 
 **Context files reflect completed state only.** CHANGELOG entries say "package committed, deploy pending" if Gate 3 hasn't run; they say "deployed" only after Gate 3 Steps 6–8 pass. BACKLOG statuses follow the same discipline. Do not write a session-end entry that implies work is further along than it actually is. (Rule W3, 2026-04-19 meta session.)
+
+**Same-commit CHANGELOG pairing.** Any commit touching `config/` MUST also modify `00 - Agent Context/CHANGELOG.md` in the same commit. The entry can be a single line ("- low_battery_alerts.yaml committed — Gate 3 deploy pending"), but it must exist before the commit lands. Applies in both live and GitHub-agent modes, and at Gate 3 Step 4. Cosmetic-only commits (whitespace, comment typos with no behavioural change) are exempted only if the commit message starts with `chore:` or `style:`. (Rule W4, 2026-04-26 — the Apr 18 GitHub-agent low-battery commits never made it into CHANGELOG and stayed invisible for 8 days.)
 
 **Commit cadence on feature branches.** When work is iterative cosmetic tuning on a feature branch that will be squash-merged (e.g. the FUSION 6j–6n polish passes), prefer one end-of-session commit over per-tweak commits. Reserve per-phase commits for milestones that could genuinely be reverted in isolation. (Rule R3, 2026-04-24 FUSION retro.)
 

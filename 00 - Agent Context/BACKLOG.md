@@ -15,12 +15,11 @@ _Last reviewed: 2026-04-19_
 **Scope**: Script + optional automation for voice trigger. No new helpers expected.
 **Effort**: ~30 min.
 
-#### Low Battery Alerts
-**Added**: 2026-04-17
-**Status**: Backlog — not started
-**What it does**: Single automation that monitors all `sensor.*_battery` entities. Fires a notification when any device drops below 15%. Set-and-forget — covers all Zigbee motion sensors, remotes, and any future battery devices automatically.
-**Scope**: One automation, no helpers. Uses a numeric_state trigger with a template or a group.
-**Effort**: ~20 min.
+#### Low Battery Alerts — live on 2026-04-26
+**Status**: Deployed and verified (see CHANGELOG 2026-04-26). Threshold 20% (raised from BACKLOG-stated 15% to give earlier warning before erratic Zigbee behaviour). Daily 09:00 mobile notification listing all low devices, gated on `binary_sensor.low_battery_present`. Dashboard live on FUSION HA Settings panel with empty-state switch. Manual smoke-test verified — notification fired with correct content; trace clean.
+
+**Open follow-up:**
+- `sensor.extra_battery` (friendly_name "Extra  Battery", state 0.0%) is currently firing the notification daily. Looks orphaned (entity-without-device or dead device). Investigate whether to delete the entity or replace the battery. Tracked under Structure & Housekeeping below.
 
 ### 🟡 Medium
 
@@ -259,6 +258,13 @@ Most experimental panel — depends on HA integrations:
 #### "Tradfi 1" — Identify & Clean Up
 Single orphaned IKEA E14 bulb, unavailable, no clear purpose or location. Find it physically or remove the entity.
 
+#### "Extra Battery" — Identify & Clean Up
+**Added**: 2026-04-26
+**Status**: Backlog — surfaced by Low Battery Alerts deploy
+**What**: `sensor.extra_battery` (friendly_name "Extra  Battery" — note the literal double space) reports 0.0% and is now firing the daily low-battery notification. Source device unclear. Entity attributes show `battery_size: CR1632, battery_voltage: 2.76V` so there IS a real device behind it, but it's not clearly tied to any room.
+**Fix**: Locate the physical device (likely an Eve sensor that's been moved or a sensor in storage). Either replace the battery and re-deploy, or remove the entity if the device is no longer in use.
+**Effort**: 5–15 min depending on hunt difficulty.
+
 #### Clean Up jlnbln Reference Files
 **Added**: 2026-04-20
 **Status**: Backlog — low priority
@@ -311,12 +317,24 @@ baseline-flagged?). Scope creep risk.
 **Provenance**: Identified during 2026-04-22 ha-health-check improvement session
 as sweep fix #3.
 
-#### Update `deploy.sh` to auto-reload input helper domains
-**Added**: 2026-04-16
+#### Update `deploy.sh` to auto-reload input helper domains AND template/automation
+**Added**: 2026-04-16, expanded 2026-04-26
 **Why**: Today's Zocci+Beamer and Vacation Mode deploys both hit the same snag — `ha core reload-all` (what `deploy.sh` calls) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Had to call `input_number.reload` / `input_text.reload` / `automation.reload` manually via MCP after each deploy.
-**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains `input_number:`, `input_text:`, `input_boolean:`, `input_datetime:`, `input_select:`, or `script:` top-level keys, issue the corresponding `reload` service call over the HA API. Also unconditionally call `automation.reload`.
+
+**2026-04-26 update**: deploying `low_battery_alerts.yaml` revealed that `ha core reload-all` is **not even a valid `ha` CLI subcommand on HA core-2026.4.2** — it silently prints the `ha core` help dump. So the script's reload step has been a no-op the whole time, and every package deploy has needed manual `template.reload` / `automation.reload` follow-ups. Bumping priority and expanding scope.
+
+**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains a relevant top-level key, issue the corresponding `reload` service call over the HA API:
+- `template:` → `template.reload`
+- `input_number:` / `input_text:` / `input_boolean:` / `input_datetime:` / `input_select:` → `<domain>.reload`
+- `script:` → `script.reload`
+- `automation:` → `automation.reload`
+- Unconditionally also call `automation.reload` (catches package-level alias changes).
+
+Replace the broken `ha core reload-all` invocation with a real `ha core check` (already done) plus the reload chain above via the HA REST API (token-authed).
+
 **Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
-**Effort**: ~20 min.
+
+**Effort**: ~30 min (was ~20; +10 for replacing `ha core reload-all` with API calls).
 
 #### ~~Track pre-commit hook in the repo~~ ✅ done 2026-04-19
 **Added**: 2026-04-16 — **Completed**: 2026-04-19
