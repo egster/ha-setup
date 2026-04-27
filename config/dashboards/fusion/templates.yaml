@@ -1,0 +1,181 @@
+fusion_nav_icon:
+  show_name: false
+  show_state: false
+  tap_action:
+    action: perform-action
+    target:
+      entity_id: input_select.fusion_panel
+    perform_action: input_select.select_option
+  styles:
+    card:
+    - background: transparent
+    - border: 1px solid transparent
+    - border-radius: 12px
+    - width: 52px
+    - height: 52px
+    - margin: 4px 10px
+    - padding: 0
+    - box-shadow: none
+    - cursor: pointer
+    - transition: background 120ms ease, border-color 120ms ease
+    icon:
+    - width: 24px
+    - height: 24px
+    - color: '#888'
+fusion_floor_header:
+  show_name: true
+  show_icon: false
+  show_state: false
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - border-bottom: '1px solid #2a2a2a'
+    - border-radius: 0
+    - box-shadow: none
+    - padding: 14px 14px 6px 14px
+    - margin: 0 14px
+    - height: auto
+    name:
+    - color: '#888'
+    - font-size: 11px
+    - font-weight: 600
+    - text-transform: uppercase
+    - letter-spacing: 1px
+    - text-align: left
+    - justify-self: start
+fusion_room_header:
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: none
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - border-radius: 0
+    - padding: 14px 12px 10px 12px
+    - margin: 0
+    - box-shadow: none
+    - cursor: default
+    - height: auto
+    icon:
+    - width: 24px
+    - height: 24px
+    - color: '#e8e8e8'
+    - justify-self: start
+    - grid-area: i
+    name:
+    - font-size: 18px
+    - font-weight: 600
+    - color: '#e8e8e8'
+    - text-align: left
+    - justify-self: start
+    - padding-left: 10px
+    - grid-area: n
+    grid:
+    - grid-template-areas: '"i n"'
+    - grid-template-columns: 32px 1fr
+fusion_room_row_lights:
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: more-info
+  styles: &id001
+    card:
+    - background: '#1e1e1e'
+    - border: '1px solid #2a2a2a'
+    - border-radius: 6px
+    - padding: 10px 12px
+    - margin: 3px 0
+    - box-shadow: none
+    - cursor: pointer
+    - height: auto
+    icon:
+    - width: 20px
+    - height: 20px
+    - color: '#888'
+    - justify-self: start
+    - grid-area: i
+    name:
+    - font-size: 15px
+    - color: '#e8e8e8'
+    - text-align: left
+    - justify-self: start
+    - padding-left: 10px
+    - grid-area: n
+    grid:
+    - grid-template-areas: '"i n"'
+    - grid-template-columns: 28px 1fr
+  name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Lights offline';\n  if (entity.state !== 'on') return 'Lights off';\n  if (entity.attributes.entity_id) {\n    const on = entity.attributes.entity_id.filter(id\
+    \ => states[id] && states[id].state === 'on').length;\n    return on + ' light' + (on !== 1 ? 's' : '') + ' on';\n  }\n  return 'Light on';\n]]]\n"
+  state:
+  - operator: template
+    value: '[[[ return entity && entity.state === ''on''; ]]]'
+    styles:
+      icon:
+      - color: '#d4a843'
+fusion_room_row_climate:
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: more-info
+  styles: *id001
+  name: "[[[\n  if (!entity || entity.state === 'unavailable') return 'Climate offline';\n  if (entity.state === 'off') return 'Heat off';\n  const t = entity.attributes.current_temperature;\n  const\
+    \ g = entity.attributes.temperature;\n  const ts = (t !== undefined && t !== null) ? t.toFixed(1) + '°' : '—';\n  const gs = (g !== undefined && g !== null) ? g + '°' : '—';\n  return ts + ' → ' +\
+    \ gs;\n]]]\n"
+  state:
+  - operator: template
+    value: '[[[ return entity && entity.attributes && entity.attributes.hvac_action === ''heating''; ]]]'
+    styles:
+      icon:
+      - color: '#e05555'
+  - operator: template
+    value: '[[[ return entity && entity.state !== ''off'' && entity.state !== ''unavailable'' && (!entity.attributes || entity.attributes.hvac_action !== ''heating''); ]]]'
+    styles:
+      icon:
+      - color: '#4f8ef7'
+fusion_room_row_media:
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: more-info
+  styles: *id001
+  name: "[[[\n  if (!entity) return 'Not available';\n  const fn = (entity.attributes.friendly_name || entity.entity_id).replace('media_player.', '');\n  if (entity.state === 'paused') {\n    const title\
+    \ = entity.attributes.media_title;\n    return title ? fn + ' · paused: ' + title : fn + ' · paused';\n  }\n  if (entity.state === 'playing') {\n    const title = entity.attributes.media_title;\n\
+    \    const artist = entity.attributes.media_artist;\n    if (title && artist) return fn + ' · ' + artist + ' — ' + title;\n    if (title) return fn + ' · ' + title;\n    return fn + ' · playing';\n\
+    \  }\n  return fn + ' · ' + entity.state;\n]]]\n"
+  state:
+  - operator: template
+    value: '[[[ return entity && entity.state === ''playing''; ]]]'
+    styles:
+      icon:
+      - color: '#4caf6e'
+  - operator: template
+    value: '[[[ return entity && entity.state === ''paused''; ]]]'
+    styles:
+      icon:
+      - color: '#4f8ef7'
+fusion_room_row_motion:
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: more-info
+  styles: *id001
+  name: "[[[\n  if (!entity) return 'No sensor';\n  return entity.state === 'on' ? 'Occupied' : 'Not occupied';\n]]]\n"
+  state:
+  - operator: template
+    value: '[[[ return entity && entity.state === ''on''; ]]]'
+    styles:
+      icon:
+      - color: '#4caf6e'

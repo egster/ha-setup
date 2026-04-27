@@ -1,0 +1,130 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: energy
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ⚡ POWER · PER-DEVICE
+  - type: markdown
+    content: '_No whole-home energy monitor configured. The tiles below show the 2 Eve Energy smart plugs that ARE monitored (Coffee Machine + Party Lights). If HA Energy dashboard is set up later,
+      this panel can expand to show whole-home power/cost._
+
+      '
+    card_mod:
+      style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #888;\n  font-size: 11px;\n  padding: 0 14px;\n}\n"
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(2, 1fr)
+      grid-gap: 10px
+      padding: 14px
+    cards:
+    - type: custom:button-card
+      entity: sensor.eve_energy_20ebo8301_power
+      triggers_update:
+      - sensor.eve_energy_20ebo8301_power
+      - sensor.eve_energy_20ebo8301_energy
+      icon: mdi:coffee
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const p = states['sensor.eve_energy_20ebo8301_power'];\n  const e = states['sensor.eve_energy_20ebo8301_energy'];\n  const pv = p ? parseFloat(p.state) : NaN;\n  const ev = e\
+        \ ? parseFloat(e.state) : NaN;\n  const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';\n  const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';\n  return pS + ' · ' + eS + ' total';\n]]]\n"
+      label: Coffee Machine
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 14px
+        - height: 80px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 16px
+        - font-weight: 600
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 4px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+    - type: custom:button-card
+      entity: sensor.eve_energy_20ebo8301_power_2
+      triggers_update:
+      - sensor.eve_energy_20ebo8301_power_2
+      - sensor.eve_energy_20ebo8301_energy_2
+      icon: mdi:party-popper
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const p = states['sensor.eve_energy_20ebo8301_power_2'];\n  const e = states['sensor.eve_energy_20ebo8301_energy_2'];\n  const pv = p ? parseFloat(p.state) : NaN;\n  const ev\
+        \ = e ? parseFloat(e.state) : NaN;\n  const pS = isNaN(pv) ? '—' : pv.toFixed(1) + ' W';\n  const eS = isNaN(ev) ? '—' : ev.toFixed(1) + ' kWh';\n  return pS + ' · ' + eS + ' total';\n]]]\n"
+      label: Party Lights
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 14px
+        - height: 80px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 16px
+        - font-weight: 600
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 4px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📈 POWER · 24H
+  - type: custom:apexcharts-card
+    graph_span: 24h
+    header:
+      show: false
+    apex_config:
+      chart:
+        height: 200
+      grid:
+        borderColor: '#2a2a2a'
+      legend:
+        labels:
+          colors: '#888'
+    series:
+    - entity: sensor.eve_energy_20ebo8301_power
+      name: Coffee Machine
+      color: '#d4a843'
+      type: area
+      opacity: 0.3
+    - entity: sensor.eve_energy_20ebo8301_power_2
+      name: Party Lights
+      color: '#4f8ef7'
+      type: area
+      opacity: 0.3

@@ -1,0 +1,54 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: media
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🎵 MEDIA PLAYERS
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(2, 1fr)
+      grid-gap: 10px
+      padding: 14px
+    cards:
+    - type: custom:mini-media-player
+      entity: media_player.living_room
+      name: Living Room · Sonos
+      artwork: cover
+      volume_stateless: false
+      hide:
+        power_state: false
+    - type: custom:mini-media-player
+      entity: media_player.homepod
+      name: Living Room · HomePod
+      artwork: cover
+      hide:
+        power_state: false
+    - type: custom:mini-media-player
+      entity: media_player.jona_speaker
+      name: Jona · Nest Mini
+      artwork: cover
+      hide:
+        power_state: false
+    - type: custom:mini-media-player
+      entity: media_player.kitchen_speakers
+      name: Kitchen
+      artwork: cover
+      hide:
+        power_state: false
+    - type: custom:mini-media-player
+      entity: media_player.upstairs_speaker
+      name: Upstairs
+      artwork: cover
+      hide:
+        power_state: false
+    - type: custom:mini-media-player
+      entity: media_player.living_room_tv_2
+      name: VisionMaster Pro
+      artwork: cover
+      hide:
+        power_state: false

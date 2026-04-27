@@ -1,0 +1,44 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: kitchen
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ⏱ KITCHEN TIMERS
+  - type: entities
+    show_header_toggle: false
+    entities:
+    - entity: timer.kitchen_timer_1
+      name: Timer 1 (5 min default)
+    - entity: timer.kitchen_timer_2
+      name: Timer 2 (10 min default)
+    card_mod:
+      style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🛒 SHOPPING LIST
+  - type: todo-list
+    entity: todo.shopping_list
+    card_mod:
+      style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📖 RECIPES
+  - type: markdown
+    content: '_Kitchen recipes / links TBD. Add static links here, or wire up a recipe integration later._
+
+      '
+    card_mod:
+      style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  color: #888;\n  padding: 14px;\n  margin: 0 14px 14px 14px;\n}\n"
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ✨ KITCHEN SCENES
+  - type: markdown
+    content: '_Kitchen-specific scenes (Morning Brew, Cooking Mode, Dinner Ambience, Cleaning Mode) don''t exist yet — create as `scene.*` entities and wire buttons here, or see BACKLOG._
+
+      '
+    card_mod:
+      style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  color: #888;\n  padding: 14px;\n  margin: 0 14px 14px 14px;\n}\n"

@@ -1,0 +1,180 @@
+type: custom:layout-card
+view_layout:
+  grid-area: statusbar
+layout_type: custom:grid-layout
+layout:
+  grid-template-columns: max-content max-content max-content 1fr max-content max-content max-content max-content
+  grid-template-areas: '"person edphone ipad . temp wan dl ul"
+
+    '
+  grid-gap: 14px
+  align-items: center
+  padding: 0 16px 0 86px
+  height: 42px
+  background: '#000'
+  border-bottom: '1px solid #222'
+  box-sizing: border-box
+cards:
+- type: custom:button-card
+  view_layout:
+    grid-area: person
+  entity: person.edgar
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const s = states['person.edgar'].state;\n  const dot = s === 'home' ? '●' : '○';\n  return `${dot} Edgar · ${s === 'home' ? 'Home' : 'Away'}`;\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#e8e8e8'
+    - white-space: nowrap
+  state:
+  - operator: template
+    value: '[[[ return states[''person.edgar''].state === ''home''; ]]]'
+    styles:
+      label:
+      - color: '#4caf6e'
+- type: custom:button-card
+  view_layout:
+    grid-area: edphone
+  entity: device_tracker.edphone
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const s = states['device_tracker.edphone'].state;\n  return s === 'home' ? 'Edphone \U0001F3E0' : 'Edphone ·';\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#888'
+    - white-space: nowrap
+- type: custom:button-card
+  view_layout:
+    grid-area: ipad
+  entity: device_tracker.ipad
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const s = states['device_tracker.ipad'].state;\n  return s === 'home' ? 'iPad \U0001F3E0' : 'iPad ·';\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#888'
+    - white-space: nowrap
+- type: custom:button-card
+  view_layout:
+    grid-area: temp
+  entity: input_number.monitoring_outdoor_temperature
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);\n  return isNaN(v) ? '—°C' : `${v.toFixed(1)}°C`;\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#e8e8e8'
+    - white-space: nowrap
+- type: custom:button-card
+  view_layout:
+    grid-area: wan
+  entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 13px
+    - line-height: 1
+  state:
+  - operator: template
+    value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+    styles:
+      label:
+      - color: '#4caf6e'
+  - operator: template
+    value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+    styles:
+      label:
+      - color: '#e05555'
+- type: custom:button-card
+  view_layout:
+    grid-area: dl
+  entity: sensor.zenwifi_bq16_ca38_download_speed
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);\n  return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)} KiB/s`;\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#888'
+    - white-space: nowrap
+- type: custom:button-card
+  view_layout:
+    grid-area: ul
+  entity: sensor.zenwifi_bq16_ca38_upload_speed
+  show_icon: false
+  show_state: false
+  show_name: false
+  show_label: true
+  label: "[[[\n  const v = parseFloat(states['sensor.zenwifi_bq16_ca38_upload_speed'].state);\n  return isNaN(v) ? '↑ —' : `↑ ${v.toFixed(1)} KiB/s`;\n]]]\n"
+  styles:
+    card:
+    - background: transparent
+    - border: none
+    - padding: 0
+    - box-shadow: none
+    - height: 42px
+    - width: max-content
+    label:
+    - font-size: 11px
+    - color: '#888'
+    - white-space: nowrap

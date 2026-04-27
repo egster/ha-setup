@@ -1,0 +1,83 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: climate
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🌡 CLIMATE
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(4, 1fr)
+      grid-gap: 10px
+      padding: 14px
+    cards:
+    - type: custom:mushroom-climate-card
+      entity: climate.living_room_area
+      name: Living Room
+      icon: mdi:sofa
+      hvac_modes:
+      - 'off'
+      - heat
+      show_temperature_control: true
+      collapsible_controls: false
+    - type: custom:mushroom-climate-card
+      entity: climate.kitchen_area
+      name: Kitchen
+      icon: mdi:silverware-fork-knife
+      hvac_modes:
+      - 'off'
+      - heat
+      show_temperature_control: true
+      collapsible_controls: false
+    - type: custom:mushroom-climate-card
+      entity: climate.office_area
+      name: Office
+      icon: mdi:desk
+      hvac_modes:
+      - 'off'
+      - heat
+      show_temperature_control: true
+      collapsible_controls: false
+    - type: custom:mushroom-climate-card
+      entity: climate.air_conditioning_bedroom
+      name: Bedroom
+      icon: mdi:bed
+      show_temperature_control: true
+      collapsible_controls: false
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📈 TEMPERATURE · 24H
+  - type: custom:apexcharts-card
+    graph_span: 24h
+    header:
+      show: false
+    apex_config:
+      chart:
+        height: 220
+      grid:
+        borderColor: '#2a2a2a'
+      legend:
+        labels:
+          colors: '#888'
+      stroke:
+        width: 2
+    series:
+    - entity: climate.living_room_area
+      attribute: current_temperature
+      name: Living Room
+      color: '#4f8ef7'
+      stroke_width: 2
+    - entity: climate.kitchen_area
+      attribute: current_temperature
+      name: Kitchen
+      color: '#4caf6e'
+      stroke_width: 2
+    - entity: climate.office_area
+      attribute: current_temperature
+      name: Office
+      color: '#d4a843'
+      stroke_width: 2
