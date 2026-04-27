@@ -283,6 +283,43 @@ yaml.load(open(sys.argv[1]), L)
       else echo "FAIL ($fails of $total files failed to parse)"
       fi
       ;;
+    TEST-400)
+      # WP5a — _template.yaml is valid YAML and exports a popup_template
+      # mapping. Same loader as TEST-107 (tolerant of !include).
+      if ! command -v python3 >/dev/null 2>&1; then
+        echo "SKIP python3 not installed"
+        return
+      fi
+      local f="$REPO_ROOT/config/dashboards/fusion/popups/_template.yaml"
+      if [ ! -f "$f" ]; then echo "FAIL ($f does not exist)"; return; fi
+      local result
+      result="$(python3 -c "
+import yaml, sys
+class L(yaml.SafeLoader): pass
+for t in ['!include','!include_dir_list','!include_dir_named','!include_dir_merge_list','!include_dir_merge_named','!secret']:
+    L.add_constructor(t, lambda loader, node: None)
+d = yaml.load(open(sys.argv[1]), L)
+print('ok' if isinstance(d, dict) and 'popup_template' in d else 'fail')
+" "$f" 2>&1)" || result="parse_error"
+      if [ "$result" = "ok" ]; then echo "PASS"
+      else echo "FAIL ($result)"; fi
+      ;;
+    TEST-401)
+      # WP5a — living-room.yaml is valid YAML.
+      if ! command -v python3 >/dev/null 2>&1; then
+        echo "SKIP python3 not installed"
+        return
+      fi
+      local f="$REPO_ROOT/config/dashboards/fusion/popups/living-room.yaml"
+      if [ ! -f "$f" ]; then echo "FAIL ($f does not exist)"; return; fi
+      python3 -c "
+import yaml, sys
+class L(yaml.SafeLoader): pass
+for t in ['!include','!include_dir_list','!include_dir_named','!include_dir_merge_list','!include_dir_merge_named','!secret']:
+    L.add_constructor(t, lambda loader, node: None)
+yaml.load(open(sys.argv[1]), L)
+" "$f" 2>/dev/null && echo "PASS" || echo "FAIL (parse error)"
+      ;;
     *)
       echo "FAIL (unknown yaml_schema test id: $id)"
       ;;

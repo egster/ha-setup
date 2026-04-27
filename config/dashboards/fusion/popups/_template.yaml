@@ -1,0 +1,63 @@
+# FUSION popup — shared template reference (WP5a, Phase 7).
+#
+# This file documents the canonical Bubble Card popup wrapper used by every
+# room popup in FUSION. Each room popup file (living-room.yaml, kitchen.yaml,
+# office.yaml, outdoor.yaml) replicates this wrapper, overriding `hash:` with
+# its own kebab-case slug. The styles block below is duplicated verbatim into
+# every room popup.
+#
+# Why duplicated, not !included: HA's `!include` substitutes a whole mapping,
+# not a sub-key. There is no clean way to share `styles:` across popup files
+# without restructuring; with only 4 popups, duplication is the smaller cost.
+# If a 5th popup arrives or the styles drift, lift `styles:` into a shared
+# `_styles.yaml` and `!include` it.
+#
+# DO NOT modify the styles block here without coordinating across all four
+# popup WPs (WP5a … WP5d). Any divergence is a bug.
+#
+# Bubble Card v3.1.6 popup contract:
+#   - `card_type: popup` makes the card a hash-routed slide-up sheet
+#   - `hash: '#popup-<slug>'` matches the URL fragment to open the popup
+#   - `button_type: card` controls the appearance of the (offscreen) trigger
+#   - `cards:` array holds the popup's content
+#   - body-level class `bubble-popup-open` is set while any popup is active
+#     (WP6 hooks this for bottom-nav-hide via card-mod)
+#
+# This file is NOT !included anywhere; it is reference-only. Tests only
+# assert that the file exists and parses with `popup_template:` at the root.
+
+popup_template:
+  type: custom:bubble-card
+  card_type: popup
+  hash: '#popup-PLACEHOLDER'
+  button_type: card
+  styles: |
+    .bubble-popup-container {
+      background: #161616 !important;
+      border-top: 1px solid #2a2a2a !important;
+      border-radius: 12px 12px 0 0 !important;
+      padding: 16px !important;
+      max-width: 700px !important;
+      margin: 0 auto !important;
+      color: #e8e8e8 !important;
+    }
+    .bubble-header-container .bubble-name {
+      color: #e8e8e8 !important;
+      font-size: 18px !important;
+      font-weight: 600 !important;
+    }
+    .bubble-header-container .bubble-icon {
+      color: #4f8ef7 !important;
+    }
+    .bubble-close-button {
+      background: #1e1e1e !important;
+      border: 1px solid #2a2a2a !important;
+      color: #888 !important;
+    }
+    @media (max-width: 870px) {
+      .bubble-popup-container {
+        max-width: 100% !important;
+        min-height: 80vh !important;
+        border-radius: 12px 12px 0 0 !important;
+      }
+    }

@@ -205,6 +205,10 @@ cards:
   - !include panels/network.yaml
   - !include panels/energy.yaml
   - !include panels/automations.yaml
+  # Bubble Card popups (WP5a … WP5d): hash-routed overlay cards. Each is
+  # always present in the DOM; visibility is gated by URL fragment match.
+  # Order is fixed for determinism — see DECISIONS 2026-04-27 (!include shape).
+  - !include popups/living-room.yaml
 card_mod:
   style: ":host {\n  --primary-color: #4f8ef7;\n  --paper-item-icon-color: #888;\n  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;\n}\n:host ::-webkit-scrollbar {\n  width:\
     \ 8px;\n  height: 8px;\n}\n:host ::-webkit-scrollbar-track {\n  background: #111;\n}\n:host ::-webkit-scrollbar-thumb {\n  background: #2a2a2a;\n  border-radius: 4px;\n}\n:host ::-webkit-scrollbar-thumb:hover\
