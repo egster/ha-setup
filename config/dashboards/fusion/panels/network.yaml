@@ -1,0 +1,185 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: network
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📡 NETWORK · ASUS BQ16
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-gap: 10px
+      padding: 14px
+    cards:
+    - type: custom:button-card
+      entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+      icon: mdi:web
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const s = states['binary_sensor.zenwifi_bq16_ca38_wan_status'];\n  return s && s.state === 'on' ? 'Online' : 'Offline';\n]]]\n"
+      label: WAN Status
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 14px
+        - height: 80px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - text-align: left
+        - padding-top: 4px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+      state:
+      - operator: template
+        value: '[[[ return !!states[''binary_sensor.zenwifi_bq16_ca38_wan_status''] && states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+        styles:
+          name:
+          - color: '#4caf6e'
+      - operator: template
+        value: '[[[ return !states[''binary_sensor.zenwifi_bq16_ca38_wan_status''] || states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+        styles:
+          name:
+          - color: '#e05555'
+    - type: custom:button-card
+      entity: sensor.zenwifi_bq16_ca38_uptime
+      icon: mdi:clock-outline
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const s = states['sensor.zenwifi_bq16_ca38_uptime'];\n  if (!s) return '—';\n  const secs = parseFloat(s.state);\n  if (isNaN(secs)) return '—';\n  const d = Math.floor(secs\
+        \ / 86400);\n  const h = Math.floor((secs % 86400) / 3600);\n  return d + 'd ' + h + 'h';\n]]]\n"
+      label: Uptime
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 14px
+        - height: 80px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 4px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+    - type: custom:button-card
+      icon: mdi:swap-vertical
+      show_name: true
+      show_label: true
+      show_state: false
+      triggers_update:
+      - sensor.zenwifi_bq16_ca38_download_speed
+      - sensor.zenwifi_bq16_ca38_upload_speed
+      name: "[[[\n  const dl = states['sensor.zenwifi_bq16_ca38_download_speed'];\n  const ul = states['sensor.zenwifi_bq16_ca38_upload_speed'];\n  const dlv = dl ? parseFloat(dl.state) : NaN;\n\
+        \  const ulv = ul ? parseFloat(ul.state) : NaN;\n  const dlS = isNaN(dlv) ? '—' : dlv.toFixed(1);\n  const ulS = isNaN(ulv) ? '—' : ulv.toFixed(1);\n  return '↓ ' + dlS + ' / ↑ ' + ulS;\n\
+        ]]]\n"
+      label: Throughput KiB/s
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 14px
+        - height: 80px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 4px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📊 THROUGHPUT · 12H
+  - type: custom:apexcharts-card
+    graph_span: 12h
+    header:
+      show: false
+    apex_config:
+      chart:
+        height: 200
+      grid:
+        borderColor: '#2a2a2a'
+      legend:
+        labels:
+          colors: '#888'
+      stroke:
+        width: 2
+    series:
+    - entity: sensor.zenwifi_bq16_ca38_download_speed
+      name: Download
+      color: '#4f8ef7'
+      type: area
+      opacity: 0.3
+    - entity: sensor.zenwifi_bq16_ca38_upload_speed
+      name: Upload
+      color: '#d4a843'
+      type: area
+      opacity: 0.3
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 📱 DEVICE PRESENCE
+  - type: entities
+    show_header_toggle: false
+    entities:
+    - entity: device_tracker.edphone
+      name: Edphone
+      secondary_info: last-changed
+    - entity: device_tracker.ipad
+      name: iPad
+      secondary_info: last-changed
+    - entity: person.edgar
+      name: Edgar
+      secondary_info: last-changed
+    card_mod:
+      style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 10px;\n  margin: 0 14px 14px 14px;\n}\n"

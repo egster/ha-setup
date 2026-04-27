@@ -385,22 +385,131 @@ Browser tests (`dom_assertion`, `visual_regression`, `behavioural`) require a Cl
 - status: baseline
 - notes: Renders the hero-strip Avg Temp value. If any of the 3 climate entities goes unavailable, this still resolves (filter rejects None). Catches Jinja syntax breakage.
 
+### File system + integration (TEST-100 … TEST-108) — owned by WP2
+
+These cover the file restructure + YAML-mode conversion. Pre-extraction the file_system tests fail (the new files do not exist yet); post-extraction they pass. TEST-101…103 are stricter visual_regression entries that compare a structural fingerprint at three viewports rather than relying on manual diff.
+
+## TEST-100: ha_check_config passes after YAML-mode dashboard registration
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    ssh ha "ha core check 2>&1"
+- expected: "completed successfully"
+- tolerance: regex
+- owner_wp: WP2
+- status: baseline
+- notes: |
+    Same shell as TEST-041 — runs `ha core check`. Owned by WP2 because the YAML-mode registration in configuration.yaml is the breakage source if the include tree is malformed. Pre-restructure passes redundantly; post-restructure must still pass against the new YAML-mode tree. Kept distinct so reviewers can grep "TEST-100" to confirm the YAML-mode path specifically.
+
+## TEST-101: Structural fingerprint at 1280 matches WP1 baseline
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    JSON.stringify({hui_cards:WALK_ALL(document,'hui-card').length,nav_cells:WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length,sidebar_left:(()=>{const cells=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;});return cells.length?Math.round(cells[0].getBoundingClientRect().left):null;})(),padding_left:getComputedStyle(WALK(document,'hui-view-container')).paddingLeft,panel_state:HASS().states['input_select.fusion_panel'].state})
+- expected: '{"hui_cards":59,"nav_cells":8,"sidebar_left":272,"padding_left":"100px","panel_state":"home"}'
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline
+- notes: |
+    Captures a 5-element structural fingerprint of the rendered dashboard at 1280: hui_cards=59, nav_cells=8, sidebar_left=272, padding_left=100px, panel_state=home. Pre-WP2 captures the current state; post-WP2 (verbatim relocation) must be byte-identical. Any drift means the !include tree changed structure, not just file location. If hui_cards count drifts, bisect via per-panel screenshots to find which panel's relocation introduced cards.
+
+## TEST-102: Structural fingerprint at 900 matches WP1 baseline
+- viewport: 900x900
+- type: dom_assertion
+- assertion: |
+    JSON.stringify({nav_cells:WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length,sidebar_left:(()=>{const cells=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;});return cells.length?Math.round(cells[0].getBoundingClientRect().left):null;})(),padding_left:getComputedStyle(WALK(document,'hui-view-container')).paddingLeft})
+- expected: '{"nav_cells":8,"sidebar_left":272,"padding_left":"100px"}'
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline
+- notes: hui_cards count omitted at this viewport because some lazy-rendered cards may not be in the DOM yet — sidebar position + padding are the load-bearing checks for WP2's verbatim-relocation contract.
+
+## TEST-103: Structural fingerprint at 700 matches WP1 baseline (narrow mode)
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    JSON.stringify({nav_cells:WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length,sidebar_left:(()=>{const cells=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;});return cells.length?Math.round(cells[0].getBoundingClientRect().left):null;})(),padding_left:getComputedStyle(WALK(document,'hui-view-container')).paddingLeft})
+- expected: '{"nav_cells":8,"sidebar_left":-84,"padding_left":"0px"}'
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline
+- notes: Confirms the narrow-mode breakage is preserved (NOT fixed) by WP2 — the responsive bug is WP3+WP4's job. WP2's correctness gate is "everything renders identically", including the bug.
+
+## TEST-104: All 7 panel input_select options render their respective panel
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{const opts=['home','kitchen','climate','media','network','energy','automations'];const out=[];for(const o of opts){await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:o});await new Promise(r=>setTimeout(r,400));const txt=WALK_TEXT(document.body).join(' ');out.push({option:o,observed:HASS().states['input_select.fusion_panel'].state,non_empty:txt.length>500});}await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return JSON.stringify(out.every(r=>r.option===r.observed&&r.non_empty));})()
+- expected: "true"
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline
+- notes: |
+    Cycles through all 7 panel options. For each, verifies (a) input_select state changed correctly and (b) the rendered DOM has > 500 chars of visible text (i.e. the panel rendered something, not blank). Resets to home at the end. Catches a !include path typo that silently produces an empty conditional card.
+
+## TEST-105: All 11 WP2 include files exist and are non-empty
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    bash -c 'paths=("config/dashboards/fusion/templates.yaml" "config/dashboards/fusion/statusbar.yaml" "config/dashboards/fusion/shell.yaml" "config/dashboards/fusion/panels/home.yaml" "config/dashboards/fusion/panels/kitchen.yaml" "config/dashboards/fusion/panels/climate.yaml" "config/dashboards/fusion/panels/media.yaml" "config/dashboards/fusion/panels/network.yaml" "config/dashboards/fusion/panels/energy.yaml" "config/dashboards/fusion/panels/automations.yaml" "config/dashboards/fusion/popups/.gitkeep"); missing=0; for p in "${paths[@]}"; do if [ ! -s "$p" ]; then missing=$((missing+1)); fi; done; echo $missing'
+- expected: 0
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline_known_failure
+- notes: 10 yaml include files + 1 .gitkeep in the empty popups/ directory (popups are WP5a-d's deliverable). Pre-WP2 every path is missing → returns 11; flips to 0 once extraction completes.
+
+## TEST-106: Entry-point fusion.yaml is < 100 lines
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    wc -l < config/dashboards/fusion.yaml
+- expected: "<100"
+- tolerance: regex
+- owner_wp: WP2
+- status: baseline_known_failure
+- notes: Pre-WP2 the entry-point is the 1731-line monolith → fails. Post-WP2 it should be ~30 lines (title + button_card_templates !include + kiosk_mode + view header + shell !include).
+
+## TEST-107: Every include file is independently valid YAML
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    bash -c 'fails=0; for f in config/dashboards/fusion/templates.yaml config/dashboards/fusion/statusbar.yaml config/dashboards/fusion/shell.yaml config/dashboards/fusion/panels/*.yaml; do [ -f "$f" ] || continue; python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" "$f" 2>/dev/null || fails=$((fails+1)); done; echo $fails'
+- expected: 0
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline_known_failure
+- notes: Each include file must parse on its own without dependence on the entry-point context. Tests for stranded anchors, dangling `&` references, or accidental top-level merge ops that only resolve in the assembled tree.
+
+## TEST-108: Dashboard reload via input_select cycle does not error
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{try{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,500));return 'ok';}catch(e){return 'err:'+String(e);}})()
+- expected: "ok"
+- tolerance: 0
+- owner_wp: WP2
+- status: baseline
+- notes: |
+    Smoke-test that switching panels and switching back works without throwing. WP2's `ha core reload-all` is exercised at deploy time, not in the test suite — this is the runtime-side cousin: prove the assembled dashboard responds to state changes without errors. Catches regression in the way conditional cards reference their panel option string.
+
 ---
 
-## Total: 27 tests
+## Total: 36 tests
 
 | Category | Count | Status |
 |----------|-------|--------|
-| DOM assertion | 13 | 11 baseline + 2 baseline_known_failure (TEST-007, TEST-008) |
-| Visual regression | 4 | All baseline (manual diff) |
-| Behavioural | 3 | All baseline |
-| YAML schema | 2 | All baseline |
-| Entity existence | 3 | All baseline |
-| Template eval | 2 | All baseline |
+| DOM assertion | 16 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 3 WP2 baseline (TEST-101, TEST-102, TEST-103) |
+| Visual regression | 4 | All WP1 baseline (manual diff) |
+| Behavioural | 5 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) |
+| YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline_known_failure (TEST-105, TEST-106, TEST-107) |
+| Entity existence | 3 | All WP1 baseline |
+| Template eval | 2 | All WP1 baseline |
 
-**Expected baseline result:** 25 passing + 2 known failures. With `--allow-baseline-failures`, exit code 0; without, exit 1.
+**Pre-WP2-implementation baseline:** 31 passing (25 WP1 + 6 WP2 regression tests) + 5 known-failures (2 WP1 sidebar + 3 WP2 file_system tests pending extraction). With `--allow-baseline-failures`, exit 0; without, exit 1.
 
-Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 27/27 green.
+**Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip from `baseline_known_failure` to `baseline`. Suite reports 34 passing (25 WP1 + 9 WP2) + 2 WP1 known-failures (TEST-007, TEST-008 — sidebar off-screen, fix target for WP3+WP4).
+
+Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 36/36 green.
 
 ---
 

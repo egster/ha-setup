@@ -1,0 +1,81 @@
+# HA Settings panel.
+# NOTE: input_select.fusion_panel option value is still 'automations' for
+# backwards-compat / zero-migration risk. Visible label is HA SETTINGS
+# since the panel hosts batteries + automations (added 2026-04-26).
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: automations
+card:
+  type: vertical-stack
+  cards:
+  # ── Panel title ──────────────────────────────────────
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ⚙️ HA SETTINGS
+  # ── Batteries section ────────────────────────────────
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🔋 BATTERIES
+  # When any battery is below 20%, show the list (sorted lowest first)
+  - type: conditional
+    conditions:
+    - entity: binary_sensor.low_battery_present
+      state: 'on'
+    card:
+      type: custom:auto-entities
+      card:
+        type: entities
+        show_header_toggle: false
+        state_color: false
+      filter:
+        template: |
+          {% for s in states.sensor
+             | selectattr('attributes.device_class', 'eq', 'battery') -%}
+          {%- if s.state not in ['unknown', 'unavailable', 'none']
+                and s.state | float(101) < 20 -%}
+          {{ s.entity_id }},
+          {%- endif -%}
+          {%- endfor %}
+      sort:
+        method: state
+        numeric: true
+      card_param: entities
+      unique: true
+  # When all batteries are OK, show placeholder
+  - type: conditional
+    conditions:
+    - entity: binary_sensor.low_battery_present
+      state: 'off'
+    card:
+      type: markdown
+      content: '✓ All batteries above 20%'
+      card_mod:
+        style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #4caf6e;\n  font-size: 12px;\n  padding: 8px 14px;\n}\n"
+  # ── Automations section ──────────────────────────────
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ⚙️ AUTOMATIONS
+  - type: markdown
+    content: '_Sorted by most-recently-triggered. Toggle to enable/disable._
+
+      '
+    card_mod:
+      style: "ha-card {\n  background: transparent;\n  border: none;\n  box-shadow: none;\n  color: #888;\n  font-size: 11px;\n  padding: 0 14px;\n}\n"
+  - type: custom:auto-entities
+    card:
+      type: entities
+      show_header_toggle: false
+      state_color: true
+    filter:
+      include:
+      - domain: automation
+    sort:
+      method: last_triggered
+      reverse: true
+    card_param: entities
+    unique: true
+_mod:
+yle: ":host {\n  --primary-color: #4f8ef7;\n  --paper-item-icon-color: #888;\n  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;\n}\n:host ::-webkit-scrollbar {\n  width:\
+\ 8px;\n  height: 8px;\n}\n:host ::-webkit-scrollbar-track {\n  background: #111;\n}\n:host ::-webkit-scrollbar-thumb {\n  background: #2a2a2a;\n  border-radius: 4px;\n}\n:host ::-webkit-scrollbar-thumb:hover\
+\ {\n  background: #3a3a3a;\n}\n"

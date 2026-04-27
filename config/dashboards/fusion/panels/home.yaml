@@ -1,0 +1,555 @@
+type: conditional
+conditions:
+- entity: input_select.fusion_panel
+  state: home
+card:
+  type: vertical-stack
+  cards:
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(5, 1fr)
+      grid-gap: 10px
+      padding: 14px 14px 4px 14px
+    cards:
+    - type: custom:button-card
+      icon: mdi:home-group
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const sensors = [\n    'binary_sensor.eve_motion_20eby9901_occupancy_2',\n    'binary_sensor.office_motion_sensors',\n    'binary_sensor.entrance_motion_sensors'\n  ];\n  const\
+        \ on = sensors.filter(id => states[id] && states[id].state === 'on').length;\n  return `${on}/${sensors.length}`;\n]]]\n"
+      label: Rooms Occupied
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 10px 12px
+        - height: 78px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#4caf6e'
+        - text-align: left
+        - padding-top: 2px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        - padding-top: 2px
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+    - type: custom:button-card
+      icon: mdi:lightbulb-group
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const groups = [\n    'light.living_room_lights',\n    'light.kitchen_lights',\n    'light.office_lights',\n    'light.entrance_ceiling',\n    'light.outdoor_lights',\n    'light.jona_lights',\n\
+        \    'light.upstairs_hall_lights'\n  ];\n  const singles = [\n    'light.garage',\n    'light.uplight_front',\n    'light.uplight_back_left',\n    'light.uplight_back_right'\n  ];\n  let\
+        \ total = 0;\n  for (const g of groups) {\n    const s = states[g];\n    if (s && s.state === 'on') {\n      const members = s.attributes.entity_id || [];\n      total += members.filter(id\
+        \ => states[id] && states[id].state === 'on').length;\n    }\n  }\n  for (const id of singles) {\n    if (states[id] && states[id].state === 'on') total++;\n  }\n  return total;\n]]]\n"
+      label: Lights On
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 10px 12px
+        - height: 78px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 2px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        - padding-top: 2px
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+    - type: custom:button-card
+      icon: mdi:thermometer
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const ids = ['climate.living_room_area', 'climate.kitchen_area', 'climate.office_area'];\n  const temps = ids\n    .map(id => states[id] && parseFloat(states[id].attributes.current_temperature))\n\
+        \    .filter(v => !isNaN(v));\n  if (temps.length === 0) return '—°';\n  const avg = temps.reduce((a,b) => a+b, 0) / temps.length;\n  return `${avg.toFixed(1)}°`;\n]]]\n"
+      label: Avg Temp
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 10px 12px
+        - height: 78px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 2px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        - padding-top: 2px
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+    - type: custom:button-card
+      icon: mdi:wifi
+      show_name: true
+      show_label: true
+      show_state: false
+      entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+      name: "[[[\n  return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? 'Online' : 'Offline';\n]]]\n"
+      label: Network
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 10px 12px
+        - height: 78px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - text-align: left
+        - padding-top: 2px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        - padding-top: 2px
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+      state:
+      - operator: template
+        value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+        styles:
+          name:
+          - color: '#4caf6e'
+      - operator: template
+        value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+        styles:
+          name:
+          - color: '#e05555'
+    - type: custom:button-card
+      icon: mdi:play-circle
+      show_name: true
+      show_label: true
+      show_state: false
+      name: "[[[\n  const players = [\n    'media_player.living_room',\n    'media_player.homepod',\n    'media_player.jona_speaker',\n    'media_player.kitchen_speakers',\n    'media_player.upstairs_speaker',\n\
+        \    'media_player.living_room_tv_2'\n  ];\n  return players.filter(id => states[id] && states[id].state === 'playing').length;\n]]]\n"
+      label: Playing
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 10px
+        - padding: 10px 12px
+        - height: 78px
+        - box-shadow: none
+        icon:
+        - width: 20px
+        - height: 20px
+        - color: '#888'
+        - justify-self: start
+        name:
+        - font-size: 22px
+        - font-weight: 700
+        - color: '#e8e8e8'
+        - text-align: left
+        - padding-top: 2px
+        label:
+        - font-size: 10px
+        - text-transform: uppercase
+        - letter-spacing: 0.5px
+        - color: '#888'
+        - text-align: left
+        - padding-top: 2px
+        grid:
+        - grid-template-areas: '"i" "n" "l"'
+        - grid-template-rows: auto 1fr auto
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🏠 MAIN FLOOR
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-gap: 10px
+      padding: 0 14px
+      align-items: stretch
+    cards:
+    - type: custom:mod-card
+      card_mod: &id002
+        style: "ha-card {\n  background: #161616;\n  border: 1px solid #2a2a2a;\n  border-radius: 8px;\n  overflow: hidden;\n  box-shadow: none;\n  padding: 0 10px 11px 10px;\n  height: 100%;\n  min-height: 120px;\n\
+          \  box-sizing: border-box;\n}\n"
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:sofa
+          name: Living Room
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.living_room_lights
+          icon: mdi:lightbulb-group
+        - type: custom:button-card
+          template: fusion_room_row_climate
+          entity: climate.living_room_area
+          icon: mdi:radiator
+        - type: conditional
+          conditions:
+          - condition: state
+            entity: media_player.living_room
+            state:
+            - playing
+            - paused
+          card:
+            type: custom:button-card
+            template: fusion_room_row_media
+            entity: media_player.living_room
+            icon: mdi:speaker
+    - type: custom:mod-card
+      card_mod:
+        style: |
+          ha-card {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-left: 4px solid {% if is_state('binary_sensor.eve_motion_20eby9901_occupancy_2', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: none;
+            padding: 0 10px 11px 10px;
+            height: 100%;
+            min-height: 120px;
+            box-sizing: border-box;
+          }
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:silverware-fork-knife
+          name: Kitchen
+        - type: custom:button-card
+          template: fusion_room_row_motion
+          entity: binary_sensor.eve_motion_20eby9901_occupancy_2
+          icon: mdi:motion-sensor
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.kitchen_lights
+          icon: mdi:lightbulb-group
+        - type: custom:button-card
+          template: fusion_room_row_climate
+          entity: climate.kitchen_area
+          icon: mdi:radiator
+        - type: conditional
+          conditions:
+          - condition: state
+            entity: media_player.kitchen_speakers
+            state:
+            - playing
+            - paused
+          card:
+            type: custom:button-card
+            template: fusion_room_row_media
+            entity: media_player.kitchen_speakers
+            icon: mdi:speaker
+    - type: custom:mod-card
+      card_mod:
+        style: |
+          ha-card {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-left: 4px solid {% if is_state('binary_sensor.office_motion_sensors', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: none;
+            padding: 0 10px 11px 10px;
+            height: 100%;
+            min-height: 120px;
+            box-sizing: border-box;
+          }
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:desk
+          name: Office
+        - type: custom:button-card
+          template: fusion_room_row_motion
+          entity: binary_sensor.office_motion_sensors
+          icon: mdi:motion-sensor
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.office_lights
+          icon: mdi:lightbulb-group
+        - type: custom:button-card
+          template: fusion_room_row_climate
+          entity: climate.office_area
+          icon: mdi:radiator
+        - type: conditional
+          conditions:
+          - condition: state
+            entity: media_player.homepod
+            state:
+            - playing
+            - paused
+          card:
+            type: custom:button-card
+            template: fusion_room_row_media
+            entity: media_player.homepod
+            icon: mdi:speaker
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🛏 UPPER FLOOR
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-gap: 10px
+      padding: 0 14px
+      align-items: stretch
+    cards:
+    - type: custom:mod-card
+      card_mod: *id002
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:bed
+          name: Bedroom
+        - type: custom:button-card
+          template: fusion_room_row_climate
+          entity: climate.air_conditioning_bedroom
+          icon: mdi:air-conditioner
+        - type: conditional
+          conditions:
+          - condition: state
+            entity: media_player.upstairs_speaker
+            state:
+            - playing
+            - paused
+          card:
+            type: custom:button-card
+            template: fusion_room_row_media
+            entity: media_player.upstairs_speaker
+            icon: mdi:speaker
+    - type: custom:mod-card
+      card_mod: *id002
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:teddy-bear
+          name: Jona's Room
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.jona_lights
+          icon: mdi:lightbulb-group
+        - type: conditional
+          conditions:
+          - condition: state
+            entity: media_player.jona_speaker
+            state:
+            - playing
+            - paused
+          card:
+            type: custom:button-card
+            template: fusion_room_row_media
+            entity: media_player.jona_speaker
+            icon: mdi:speaker
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ⬇️ DOWNSTAIRS
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-gap: 10px
+      padding: 0 14px
+      align-items: stretch
+    cards:
+    - type: custom:mod-card
+      card_mod:
+        style: |
+          ha-card {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-left: 4px solid {% if is_state('binary_sensor.entrance_motion_sensors', 'on') %}#4caf6e{% else %}#2a2a2a{% endif %};
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: none;
+            padding: 0 10px 11px 10px;
+            height: 100%;
+            min-height: 120px;
+            box-sizing: border-box;
+          }
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:door
+          name: Entrance
+        - type: custom:button-card
+          template: fusion_room_row_motion
+          entity: binary_sensor.entrance_motion_sensors
+          icon: mdi:motion-sensor
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.entrance_ceiling
+          icon: mdi:lightbulb-group
+    - type: custom:mod-card
+      card_mod: *id002
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:garage
+          name: Garage
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.garage
+          icon: mdi:lightbulb
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: 🌿 OUTSIDE
+  - type: custom:layout-card
+    layout_type: custom:grid-layout
+    layout:
+      grid-template-columns: repeat(3, 1fr)
+      grid-gap: 10px
+      padding: 0 14px
+      align-items: stretch
+    cards:
+    - type: custom:mod-card
+      card_mod: *id002
+      card:
+        type: vertical-stack
+        cards:
+        - type: custom:button-card
+          template: fusion_room_header
+          icon: mdi:tree
+          name: Outdoor
+        - type: custom:button-card
+          template: fusion_room_row_lights
+          entity: light.outdoor_lights
+          icon: mdi:lightbulb-group
+  - type: custom:button-card
+    template: fusion_floor_header
+    name: ✨ SCENES
+  - type: horizontal-stack
+    cards:
+    - type: custom:button-card
+      name: 🎬 Movie Night
+      show_name: true
+      show_icon: false
+      tap_action:
+        action: perform-action
+        target:
+          entity_id: script.movie_mode
+        perform_action: script.turn_on
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 20px
+        - padding: 8px 16px
+        - height: 36px
+        - margin: 0 6px 14px 14px
+        - box-shadow: none
+        - cursor: pointer
+        name:
+        - font-size: 12px
+        - color: '#e8e8e8'
+    - type: custom:button-card
+      name: 🛋 LR Relax
+      show_name: true
+      show_icon: false
+      tap_action:
+        action: perform-action
+        target:
+          entity_id: script.lr_relax
+        perform_action: script.turn_on
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 20px
+        - padding: 8px 16px
+        - height: 36px
+        - margin: 0 6px 14px 0
+        - box-shadow: none
+        - cursor: pointer
+        name:
+        - font-size: 12px
+        - color: '#e8e8e8'
+    - type: custom:button-card
+      name: ⚫ Lights Off
+      show_name: true
+      show_icon: false
+      tap_action:
+        action: perform-action
+        target:
+          entity_id: scene.lights_off
+        perform_action: scene.turn_on
+      styles:
+        card:
+        - background: '#161616'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 20px
+        - padding: 8px 16px
+        - height: 36px
+        - margin: 0 14px 14px 0
+        - box-shadow: none
+        - cursor: pointer
+        name:
+        - font-size: 12px
+        - color: '#e8e8e8'

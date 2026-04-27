@@ -7,8 +7,8 @@ Format: `- [x] WPN — merged YYYY-MM-DD — commit <sha> — <one-line note>`
 
 ## Status
 
-- [ ] WP1 — test harness + baseline (foundation) — PR open, branch `phase7/wp1-test-harness`, 27 tests (25 baseline + 2 baseline_known_failure for TEST-007/008 sidebar at `left=−84` on narrow viewports)
-- [ ] WP2 — file restructure + YAML mode (enabler)
+- [ ] WP1 — test harness + baseline (foundation) — PR #5 open, branch `phase7/wp1-test-harness`, 27 tests (25 baseline + 2 baseline_known_failure for TEST-007/008 sidebar at `left=−84` on narrow viewports). Merge pending Edgar.
+- [ ] WP2 — file restructure + YAML mode (enabler) — in progress, branch `phase7/wp2-restructure` stacked on WP1 + merged origin/main (incorporating Edgar's 2026-04-26 HA Settings panel + low-battery commits).
 - [ ] WP3 — responsive grid migration
 - [ ] WP4 — shell swap (state-switch + phone bottom tab)
 - [ ] WP5a — popup template + Living Room popup

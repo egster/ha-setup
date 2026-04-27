@@ -209,7 +209,7 @@ run_yaml_schema() {
   local id="$1" title="$2" assertion="$3" expected="$4" tolerance="$5"
   local out
   case "$id" in
-    TEST-041)
+    TEST-041|TEST-100)
       out="$(ssh -n "$HA_HOST" 'ha core check 2>&1' 2>&1 || true)"
       if echo "$out" | grep -qiE "completed successfully|configuration will not prevent home assistant from starting"; then
         echo "PASS"
@@ -227,6 +227,61 @@ run_yaml_schema() {
       local count
       count="$(yamllint -d '{rules: {line-length: disable}}' "$DASH_FILE" 2>&1 | wc -l | tr -d ' ')"
       if [ "$count" = "0" ]; then echo "PASS"; else echo "FAIL ($count lint issues)"; fi
+      ;;
+    TEST-105)
+      # Every WP2 include file must exist and be non-empty.
+      local paths=(
+        "$REPO_ROOT/config/dashboards/fusion/templates.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/statusbar.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/shell.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/home.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/kitchen.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/climate.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/media.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/network.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/energy.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/panels/automations.yaml"
+        "$REPO_ROOT/config/dashboards/fusion/popups/.gitkeep"
+      )
+      local missing=0
+      for p in "${paths[@]}"; do [ -s "$p" ] || missing=$((missing+1)); done
+      if [ "$missing" -eq 0 ]; then echo "PASS"; else echo "FAIL ($missing of ${#paths[@]} files missing or empty)"; fi
+      ;;
+    TEST-106)
+      local lines
+      lines="$(wc -l < "$DASH_FILE" 2>/dev/null | tr -d ' ')"
+      if [ -n "$lines" ] && [ "$lines" -lt 100 ]; then
+        echo "PASS"
+      else
+        echo "FAIL ($lines lines, threshold is <100)"
+      fi
+      ;;
+    TEST-107)
+      if ! command -v python3 >/dev/null 2>&1; then
+        echo "SKIP python3 not installed"
+        return
+      fi
+      local fails=0 total=0
+      for f in "$REPO_ROOT"/config/dashboards/fusion/templates.yaml \
+               "$REPO_ROOT"/config/dashboards/fusion/statusbar.yaml \
+               "$REPO_ROOT"/config/dashboards/fusion/shell.yaml \
+               "$REPO_ROOT"/config/dashboards/fusion/panels/*.yaml; do
+        [ -f "$f" ] || continue
+        total=$((total+1))
+        # Loader tolerates HA's custom YAML directives (!include, etc.) — we
+        # only care about syntactic validity here, not include resolution.
+        python3 -c "
+import yaml, sys
+class L(yaml.SafeLoader): pass
+for t in ['!include','!include_dir_list','!include_dir_named','!include_dir_merge_list','!include_dir_merge_named','!secret']:
+    L.add_constructor(t, lambda loader, node: None)
+yaml.load(open(sys.argv[1]), L)
+" "$f" 2>/dev/null || fails=$((fails+1))
+      done
+      if [ "$total" -eq 0 ]; then echo "FAIL (no include files found)"
+      elif [ "$fails" -eq 0 ]; then echo "PASS ($total files parsed)"
+      else echo "FAIL ($fails of $total files failed to parse)"
+      fi
       ;;
     *)
       echo "FAIL (unknown yaml_schema test id: $id)"

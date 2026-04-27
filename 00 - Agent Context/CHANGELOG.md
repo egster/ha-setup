@@ -5,6 +5,57 @@
 ---
 
 
+## 2026-04-27 — FUSION Phase 7 / WP2 — File restructure + YAML-mode (committed, deploy pending)
+
+### What was done
+WP2 of FUSION Phase 7 — split the 1731-line monolith `config/dashboards/fusion.yaml` into modular includes and registered it as a YAML-mode dashboard in `configuration.yaml`. Verbatim relocation only — content is moved, not reshaped (WP3 + WP4 do reshaping).
+
+**Deliverables (committed, not deployed yet):**
+- `config/dashboards/fusion.yaml` — entry-point shrunk from 1731 → 16 lines (`!include` refs only).
+- `config/dashboards/fusion/templates.yaml` — `button_card_templates` block (7 templates, 181 lines).
+- `config/dashboards/fusion/statusbar.yaml` — statusbar layout-card (180 lines).
+- `config/dashboards/fusion/shell.yaml` — outer layout-card + sidebar + content vertical-stack with `!include panels/*.yaml` (211 lines).
+- `config/dashboards/fusion/panels/{home,kitchen,climate,media,network,energy,automations}.yaml` — 7 conditional panel cards.
+- `config/dashboards/fusion/popups/.gitkeep` — empty placeholder for WP5.
+- `config/configuration.yaml` — added `lovelace.dashboards.dashboard-fusion` block at `mode: yaml`. URL path preserved (`/dashboard-fusion`) so kiosk + bookmarks keep working.
+
+**Test harness updates (TDD):**
+- 9 new tests in `fusion-tests.md` (TEST-100 … TEST-108): YAML-mode `ha core check`, structural fingerprints at 1280/900/700, all-7-panels render check, file existence (10 yamls + .gitkeep), entry-point line cap (<100), per-file YAML validity, panel-cycle smoke test.
+- Suite size: 27 → 36 tests.
+- Local validation passes: TEST-105 ✅, TEST-106 ✅ (16-line entry), TEST-107 ✅ (all 9 includes parse standalone with `!include` constructor registered).
+- TEST-041 + TEST-100 (`ha core check` via SSH) returned transient `Another job is running for job group container_homeassistant` errors — `ha_check_config` via MCP returned valid against the *current* deployed state.
+
+**End-to-end YAML verification (local):**
+A Python script (`/tmp/wp2_fullload.py`) loads `fusion.yaml` with a custom `!include` constructor, walks the assembled tree, and asserts: 1 view, 1 outer `custom:layout-card`, 3 shell children (statusbar / sidebar / content), 7 conditional panels with correct `input_select.fusion_panel` states, kiosk_mode block present with the 3 expected keys, 7 button_card_templates. PASS.
+
+**`!include` shape contract** chosen: single-file `!include` for every relocated block — explicit ordering, no `!include_dir_*` magic. Each include file's root is a single mapping (the layout-card / template-set / conditional / mod-card it represents). Documented in `00 - Agent Context/fusion-phase7/wp2-section-map.md`.
+
+### Pending (next session, with Edgar's go-ahead)
+Per Edgar's choice, WP2 is committed + pushed but **NOT yet deployed**. Remaining steps for the deploy session:
+1. `ha_backup_create("Pre_WP2_YAML_Mode_2026-04-27")`
+2. SCP `config/configuration.yaml` + `config/dashboards/` to HA Green
+3. `ha_check_config` against the new tree (expects PASS)
+4. `ha_restart(confirm=True)` — HUMAN APPROVAL GATE (Edgar to confirm at deploy time)
+5. Verify YAML-mode dashboard renders at `/dashboard-fusion`
+6. `ha_config_delete_dashboard("dashboard_fusion")` — remove storage-mode after YAML verified (per Edgar's confirmation)
+7. Save the storage-mode dashboard JSON locally to `config/dashboards/fusion.storage-backup.json` (gitignored) before delete, for rollback.
+8. Run full test suite — must pass with all WP2 tests green; visual diff < 1% at all 4 viewports.
+
+### Files touched
+- `00 - Agent Context/fusion-phase7/STATUS.md` — WP2 in progress / WP1 PR open
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` — added TEST-100..TEST-108
+- `00 - Agent Context/fusion-phase7/wp2-section-map.md` — new (line-by-line extraction plan)
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- `00 - Agent Context/DECISIONS.md` — YAML-mode + url_path preservation rationale
+- `00 - Agent Context/LAST_UPDATED` — 2026-04-27
+- `scripts/run-fusion-tests.sh` — added TEST-100/105/106/107 dispatch logic
+- `config/configuration.yaml` — added lovelace block
+- `config/dashboards/fusion.yaml` — rewritten as 16-line entry point
+- `config/dashboards/fusion/` — 11 new files (10 yaml + 1 .gitkeep)
+
+---
+
+
 ## 2026-04-26 — FUSION Phase 7 / WP1 — Test harness + visual baseline
 
 ### What was done

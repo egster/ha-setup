@@ -16,6 +16,21 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
+# Lovelace dashboards. Default and other dashboards stay storage-mode (UI-edited);
+# FUSION is YAML-mode (git source of truth) per WP2 (Phase 7 — 2026-04-27).
+# url_path 'dashboard-fusion' preserved from the prior storage-mode dashboard so
+# kiosk bookmarks and direct links keep working.
+lovelace:
+  mode: storage
+  dashboards:
+    dashboard-fusion:
+      mode: yaml
+      filename: dashboards/fusion.yaml
+      title: Fusion
+      icon: mdi:hexagon-multiple
+      show_in_sidebar: true
+      require_admin: false
+
 # Storage for Bubble Card Modules
 template:
   - trigger:
