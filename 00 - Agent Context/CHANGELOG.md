@@ -5,6 +5,42 @@
 ---
 
 
+## 2026-04-27 — FUSION Phase 7 / WP2 — DEPLOYED + verified
+
+### What was done
+Deployed the WP2 YAML-mode FUSION dashboard to HA Green. The earlier 2026-04-27 entry below covered the commit + push; this entry covers the deploy + post-restart verification.
+
+**Deploy steps (executed):**
+1. `ha_backup_create("Pre_WP2_YAML_Mode")` — backup ID `15ff9037`, 269 MB, 52s.
+2. SCP'd `config/configuration.yaml`, `config/dashboards/fusion.yaml`, and the entire `config/dashboards/fusion/` tree to HA Green. `/config/dashboards/` did not exist on the box previously — created fresh by the SCP. Confirmed file sizes and permissions.
+3. `ha_check_config` (MCP, against the new on-disk state) — `result: valid`.
+4. `ha_restart(confirm=True)` — Edgar approved at deploy-start. HA back online ~44s later; entities loaded ~15s after that (ZHA boot).
+5. Visual verification via Chrome MCP: the dashboard renders correctly. JPEG-screenshot compression made the dark `#161616` cards on `#090909` background appear as solid black at full resolution; zoom into the KPI region revealed full content (`1/3 ROOMS OCCUPIED`, `6 LIGHTS ON`, etc.) and a zoom into the room-cards region showed Living Room / Kitchen / Office cards rendering with motion-occupancy indicators (green left-border on Kitchen + Office, normal on Living Room).
+6. `ha_config_delete_dashboard("dashboard_fusion")` — **DENIED by sandbox** post-verification. Edgar pre-confirmed at deploy-start, but the sandbox treats post-restart re-confirmation as a separate gate. Storage-mode entry is shadowed by YAML-mode (HA's `ha_config_get_dashboard(list_only=True)` returns only the YAML entry at url_path `dashboard-fusion`). Cleanup deferred to Edgar's next interactive session.
+
+**Test suite — 35/36 pass:**
+- 6 SSH-side tests pass: TEST-041 (ha core check), TEST-042 (yamllint), TEST-100 (ha core check post-YAML-mode), TEST-105 (11 include files exist), TEST-106 (entry-point 15 lines, < 100 limit), TEST-107 (every include parses standalone via PyYAML + `!include` constructor).
+- 29 browser tests pass via Chrome MCP at viewports 1280 / 900 / 700 / "375" (Chrome MCP min-window cap forces actual = 606 inner-width on this box).
+- **1 fail — TEST-103 (structural fingerprint at 700)**: expected `sidebar_left: -84` (WP1 storage-mode breakage); got `sidebar_left: 172` (visible). YAML-mode narrow rendering puts the sidebar back on-screen. **TEST-007 + TEST-008 (the WP1 `baseline_known_failure` entries that WP3 + WP4 were chartered to fix) now pass.** The breakage may be smaller than expected at the iPhone-real-CSS 375 width — needs hands-on phone verification before flipping their status permanently.
+
+**Why the sidebar surprise:** WP2 was supposed to be verbatim relocation. The YAML-mode panel-view loader appears to handle HA's narrow attribute differently from the storage-mode loader — at 700px, narrow does still trigger (`hui-view-container.padding-left = 0px`), but the HA drawer's collapse threshold differs. The sidebar's effective position at 700px goes from `0 + 0 + (-84) = -84` (storage-mode formula) to `256 + 0 + (-84) = 172` (YAML-mode formula). Drawer-collapse vs panel-rendering ordering differs between the two modes. Worth a DECISIONS row once verified on a real phone.
+
+### Files touched (this entry, deploy session)
+- `00 - Agent Context/fusion-phase7/STATUS.md` — flipped WP1 + WP2 to ✅
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- `00 - Agent Context/LAST_UPDATED` — 2026-04-27 (already updated by WP2 commit)
+- `.gitignore` — added `*.storage-backup.json` for local rollback dumps
+- HA Green: `/config/configuration.yaml`, `/config/dashboards/fusion.yaml`, `/config/dashboards/fusion/{templates,statusbar,shell}.yaml`, `/config/dashboards/fusion/panels/*.yaml` (7), `/config/dashboards/fusion/popups/.gitkeep`
+
+### Open follow-ups
+- Storage-mode `dashboard_fusion` cleanup — Edgar to delete via UI (or re-authorize MCP delete).
+- Real-iPhone 375 px verification — confirm sidebar position. If it's still `-84` at real 375 (Chrome MCP can't go below 606), TEST-007 + TEST-008 stay `baseline_known_failure` for WP3 + WP4. If it's `172`, those tests flip to baseline ahead of schedule.
+- TEST-103 expected value retune — once the iPhone test settles, either update expected to current YAML-mode value (`172`) or pivot the test to assert the visible-edge content position rather than the absolute `left` of the first nav cell.
+- WP3 + WP4 scope check — if the sidebar is genuinely visible on phone too, WP3 (responsive grids for content) is still needed but WP4 (state-switch shell with bottom-tab on phone) is a UX improvement rather than a fix. Edgar to decide.
+
+---
+
+
 ## 2026-04-27 — Office Motion Light: presence-driven + ghost-entity cleanup (deployed)
 
 ### What was done

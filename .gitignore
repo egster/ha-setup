@@ -14,6 +14,9 @@ secrets.yaml
 .env
 *.token
 
+# Local rollback dumps (e.g. WP2 storage-mode dashboard backup) — local only
+*.storage-backup.json
+
 # Editor
 .vscode/
 *.swp
