@@ -5,6 +5,33 @@
 ---
 
 
+## 2026-04-27 — FUSION Phase 7 / WP2 — corrections to the deploy entry
+
+### What was corrected
+Two follow-up findings that retract claims in the earlier "WP2 — DEPLOYED + verified" entry:
+
+1. **Storage-mode `dashboard_fusion` is already gone — no manual cleanup needed.** I flagged it as "Edgar to delete via UI" because the MCP `ha_config_delete_dashboard` was denied post-verification. Re-running `ha_config_get_dashboard(list_only=True)` shows only the YAML-mode entry at url_path `dashboard-fusion`; the storage-mode entry is no longer registered. HA auto-removed it during the restart that loaded the YAML-mode lovelace block — both definitions claimed the same url_path, so HA's loader resolved the conflict in favour of the configuration.yaml one. The sandbox denial was actually correct: there was nothing to delete.
+
+2. **TEST-007 + TEST-008 still fail at real iPhone 375 px — Chrome MCP cap was a false positive.** Edgar verified hands-on: the sidebar is NOT visible on the phone. The earlier deploy entry's "sidebar surprise" (sidebar_left=172 instead of -84) was an artifact of Chrome MCP's min-window cap on this macOS host (606px inner width). At real 375 CSS px the storage-mode breakage IS preserved by the verbatim relocation, exactly as the WP2 brief intended.
+
+   **Implications:**
+   - TEST-007 + TEST-008 stay `baseline_known_failure`. They remain WP3 + WP4's fix targets.
+   - TEST-103's expected fingerprint at 700 (`sidebar_left: -84`) was correct as written for the real-phone case but misleading at the Chrome MCP cap. The reading currently fails because the harness can't reach below 606px. Either: (a) replace TEST-103 with a real-device test once a phone-emulation path exists, or (b) interpret the post-WP2 reading as Chrome-MCP-environment-specific and rewrite expected for this harness's reach. WP3 owners should pick one before relying on the test.
+   - WP4 (state-switch shell with bottom-tab on phone) **retains its full scope as a regression fix**, not a UX polish. The "WP4 becomes a UX improvement rather than a fix" note in the deploy entry is wrong and superseded by this one.
+   - The Chrome MCP minimum-window-cap drift (was 526, now 606) is an environmental finding, not a content finding. Belongs to harness limitations, not the dashboard.
+
+### Files touched
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- `00 - Agent Context/fusion-phase7/STATUS.md` — WP2 row note retracted on the sidebar/WP4 claims; WP1 status unchanged
+
+### Open follow-ups (revised)
+- (Done) Storage-mode `dashboard_fusion` cleanup — no longer applicable, HA auto-removed.
+- (Done, negative) Real-iPhone 375 px sidebar verification — confirms WP3 + WP4 fix target unchanged.
+- TEST-103 rewrite or real-device path — defer to WP3 owner's Gate 1.
+
+---
+
+
 ## 2026-04-27 — FUSION Phase 7 / WP2 — DEPLOYED + verified
 
 ### What was done
