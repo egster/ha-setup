@@ -1,0 +1,304 @@
+# FUSION popup — Office (WP5c, Phase 7).
+#
+# Hash: #popup-office
+# Wrapper structure replicates `_template.yaml` (see comments there for why
+# duplication is preferred over !include for popup wrappers).
+#
+# Entity manifest (mirror of TEST-441 in fusion-tests.md):
+#   light.office_lights                       — group (master toggle, brightness)
+#   light.office_bureau                       — Wiser Office Switch (on/off only)
+#   light.desk_lights                         — Desk Lights group (2× Hue, brightness)
+#   climate.office_area                       — Wiser thermostat (heat / off, 15–25 °C)
+#   binary_sensor.office_presence             — group: 4 motion sensors (room + desk)
+#   automation.office_motion_light            — restart-mode motion light
+#   automation.office_motion_light_evening_quick_off — evening quick-off
+#   automation.office_dimmer                  — Office Remote Mapping (Wiser dimmer)
+#
+# Why light.office_bureau has no light-brightness feature: it is a Wiser
+# wall switch (`supported_color_modes: [onoff]`). Adding the slider would
+# render a non-functional control. Toggle-only tile is the correct primitive.
+#
+# Sensors section: Office HAS dedicated motion sensors (binary_sensor.office_presence
+# aggregates 4 underlying sensors per the 2026-04-27 grouping work). No humidity
+# sensor → empty-state row per the brief's "always include the section" rule.
+# Temperature row sources `current_temperature` attribute from climate.office_area
+# (same approach as Living Room, since the Wiser zone exposes it natively).
+#
+# Scenes section: no scenes/scripts tagged to Office area as of 2026-04-28
+# (search returned 0 matches). Single empty-state row per the brief.
+
+type: custom:bubble-card
+card_type: popup
+hash: '#popup-office'
+button_type: card
+icon: mdi:desk
+name: Office
+styles: |
+  .bubble-popup-container {
+    background: #161616 !important;
+    border-top: 1px solid #2a2a2a !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 16px !important;
+    max-width: 700px !important;
+    margin: 0 auto !important;
+    color: #e8e8e8 !important;
+  }
+  .bubble-header-container .bubble-name {
+    color: #e8e8e8 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+  }
+  .bubble-header-container .bubble-icon {
+    color: #4f8ef7 !important;
+  }
+  .bubble-close-button {
+    background: #1e1e1e !important;
+    border: 1px solid #2a2a2a !important;
+    color: #888 !important;
+  }
+  @media (max-width: 870px) {
+    .bubble-popup-container {
+      max-width: 100% !important;
+      min-height: 80vh !important;
+      border-radius: 12px 12px 0 0 !important;
+    }
+  }
+cards:
+  # ── Lights section ──────────────────────────────────────────────
+  - type: custom:button-card
+    template: popup_section_header
+    name: Lights
+  - type: tile
+    entity: light.office_lights
+    name: All Lights
+    icon: mdi:lightbulb-group
+    features_position: bottom
+    features:
+      - type: light-brightness
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #d4a843;
+        }
+  - type: tile
+    entity: light.office_bureau
+    name: Office Switch
+    icon: mdi:light-switch
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #d4a843;
+        }
+  - type: tile
+    entity: light.desk_lights
+    name: Desk Lights
+    icon: mdi:desk-lamp
+    features_position: bottom
+    features:
+      - type: light-brightness
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #d4a843;
+        }
+
+  # ── Climate section ─────────────────────────────────────────────
+  - type: custom:button-card
+    template: popup_section_header
+    name: Climate
+  - type: thermostat
+    entity: climate.office_area
+    features:
+      - type: climate-hvac-modes
+        hvac_modes:
+          - heat
+          - 'off'
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          color: #e8e8e8 !important;
+        }
+  - type: custom:apexcharts-card
+    graph_span: 24h
+    header:
+      show: false
+    apex_config:
+      chart:
+        height: 120
+        background: '#1e1e1e'
+        toolbar:
+          show: false
+      grid:
+        borderColor: '#2a2a2a'
+        strokeDashArray: 2
+      xaxis:
+        labels:
+          style:
+            colors: '#888'
+      yaxis:
+        labels:
+          style:
+            colors: '#888'
+      legend:
+        labels:
+          colors: '#888'
+      stroke:
+        width: 2
+        curve: smooth
+      tooltip:
+        theme: dark
+    series:
+      - entity: climate.office_area
+        name: Current
+        attribute: current_temperature
+        color: '#4f8ef7'
+      - entity: climate.office_area
+        name: Setpoint
+        attribute: temperature
+        color: '#d4a843'
+        stroke_width: 1
+        opacity: 0.6
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+        }
+
+  # ── Sensors section ─────────────────────────────────────────────
+  - type: custom:button-card
+    template: popup_section_header
+    name: Sensors
+  - type: custom:button-card
+    template: popup_row
+    entity: climate.office_area
+    icon: mdi:thermometer
+    name: |
+      [[[
+        if (!entity || !entity.attributes) return 'Temperature offline';
+        const t = entity.attributes.current_temperature;
+        return (t !== undefined && t !== null) ? t.toFixed(1) + ' °C' : '—';
+      ]]]
+    tap_action:
+      action: more-info
+  - type: custom:button-card
+    template: popup_row
+    icon: mdi:water-percent
+    name: 'Humidity — no sensor'
+    tap_action:
+      action: none
+    styles:
+      card:
+        - background: '#1e1e1e'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 6px
+        - padding: 10px 12px
+        - margin: 0 0 6px 0
+        - box-shadow: none
+        - cursor: default
+        - height: auto
+        - opacity: 0.6
+  - type: custom:button-card
+    template: popup_row
+    entity: binary_sensor.office_presence
+    icon: mdi:motion-sensor
+    name: |
+      [[[
+        if (!entity) return 'No sensor';
+        return entity.state === 'on' ? 'Occupied' : 'Not occupied';
+      ]]]
+    tap_action:
+      action: more-info
+
+  # ── Scenes section ──────────────────────────────────────────────
+  - type: custom:button-card
+    template: popup_section_header
+    name: Scenes
+  - type: custom:button-card
+    template: popup_row
+    icon: mdi:palette-outline
+    name: 'No scenes defined for this room'
+    tap_action:
+      action: none
+    styles:
+      card:
+        - background: '#1e1e1e'
+        - border: '1px solid #2a2a2a'
+        - border-radius: 6px
+        - padding: 10px 12px
+        - margin: 0 0 6px 0
+        - box-shadow: none
+        - cursor: default
+        - height: auto
+        - opacity: 0.6
+
+  # ── Automations section ─────────────────────────────────────────
+  - type: custom:button-card
+    template: popup_section_header
+    name: Automations
+  - type: tile
+    entity: automation.office_motion_light
+    name: Office Motion Light
+    icon: mdi:motion-sensor
+    features_position: bottom
+    features:
+      - type: toggle
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #4caf6e;
+        }
+  - type: tile
+    entity: automation.office_motion_light_evening_quick_off
+    name: Office Motion — Evening Quick-Off
+    icon: mdi:weather-night
+    features_position: bottom
+    features:
+      - type: toggle
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #4caf6e;
+        }
+  - type: tile
+    entity: automation.office_dimmer
+    name: Office Remote Mapping
+    icon: mdi:remote
+    features_position: bottom
+    features:
+      - type: toggle
+    card_mod:
+      style: |
+        ha-card {
+          background: #1e1e1e !important;
+          border: 1px solid #2a2a2a !important;
+          border-radius: 6px !important;
+          margin-bottom: 6px !important;
+          --tile-color: #4caf6e;
+        }

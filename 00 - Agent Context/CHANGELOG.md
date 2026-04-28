@@ -91,6 +91,42 @@ HA's `/config/dashboards/fusion/` was desynchronised from `main`:
 ### Verification status
 Re-verification of Slot-2 (full pipeline at all viewports + browser tests + healthcheck) is the final to-do of this session — running now.
 
+---
+
+## 2026-04-28 — FUSION Phase 7 / WP5c — Office popup (deployed, PR open)
+
+### What was done
+- Wrote `config/dashboards/fusion/popups/office.yaml` — six-section Office popup (Header, Lights, Climate, Sensors, Scenes, Automations) following the WP5a recipe verbatim. Hash `#popup-office`. Wrapper structure duplicated from `_template.yaml` per the recipe's "no clean !include of sub-keys" rationale.
+- Wired `- !include popups/office.yaml` into `config/dashboards/fusion/shell.yaml` immediately after the WP5a living-room include (line 636), inside the top-level vertical-stack so the popup sits as a sibling of the state-switch (always in DOM, viewport-agnostic — same pattern WP5a used).
+
+### Entity manifest (Office popup)
+Lights: `light.office_lights` (group, brightness), `light.office_bureau` (Wiser switch, on/off only — no brightness slider), `light.desk_lights` (group of 2× Hue, brightness). Climate: `climate.office_area` (Wiser zone — heat/off, 15–25 °C, current 21°/setpoint 19° at deploy). Motion: `binary_sensor.office_presence` (group of 4 underlying sensors per the 2026-04-27 grouping work). Automations: `automation.office_motion_light`, `automation.office_motion_light_evening_quick_off`, `automation.office_dimmer`. All resolved via `ha_get_state`.
+
+### Deviations from the WP5c brief
+The brief's "do not touch shell" was explicitly overridden by Edgar in the session prompt — same pattern WP5a used (popup wiring belongs in shell.yaml's top-level vertical-stack). No other scope drift.
+
+### Why no scenes
+`ha_search_entities` for "scene office" returned 0 matches and PROFILE.md confirms no Office-tagged scenes/scripts. Single empty-state row rendered per the recipe's "always include the section" rule.
+
+### Why office_bureau has no brightness slider
+`light.office_bureau` is a Wiser wall switch — `supported_color_modes: [onoff]`. Adding `light-brightness` would render a non-functional slider. Toggle-only tile is the correct primitive. Master + desk_lights (both Hue-backed groups) keep brightness sliders.
+
+### Worktree per HARD RULE
+WP5c was authored from a dedicated worktree at `../Home-Automation-wp5c` on branch `phase7/wp5c-office` per the COORDINATION.md HARD RULE added by WP5a (lesson from the 2026-04-27 parallel-session stash collisions).
+
+### Gate 3 (live)
+- Backup triggered (`pre-wp5c-office`) — supervisor-side, asynchronous; recent backups exist (most recent `2026-04-28T03:40Z`, slug `779a03cf`).
+- `deploy.sh config/dashboards/fusion/popups/office.yaml` → ✅ ha core check valid.
+- `deploy.sh config/dashboards/fusion/shell.yaml` → ✅ ha core check valid (only pre-existing yamllint indentation warnings, no errors introduced).
+- Dashboard YAML-mode reload happens on next dashboard load — no `lovelace.reload_resources` needed for popup files.
+
+### Verification pending
+Browser hash-test of `#popup-office` to confirm popup opens, all six sections render, and 24h ApexCharts chart shows Office heating data.
+
+---
+
+## 2026-04-27 — FUSION Phase 7 / WP5a — Popup template + Living Room (committed, Gate 3 deploy pending)
+
 ### What was done
 - Wrote `config/dashboards/fusion/popups/_template.yaml` — the canonical Bubble Card popup wrapper (FUSION dark tokens, `max-width: 700px`, slide-up sheet on phone). Reference-only, not !included.
 - Wrote `config/dashboards/fusion/popups/living-room.yaml` — six-section popup (Header, Lights, Climate, Sensors, Scenes, Automations) with a 24h ApexCharts heating chart, hash `#popup-living-room`.

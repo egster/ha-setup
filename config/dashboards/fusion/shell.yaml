@@ -634,3 +634,4 @@ card:
                       - color: '#4f8ef7'
     - !include popups/living-room.yaml
     - !include popups/kitchen.yaml
+    - !include popups/office.yaml
