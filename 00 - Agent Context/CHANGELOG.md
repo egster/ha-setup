@@ -5,6 +5,37 @@
 ---
 
 
+## 2026-04-28 — `deploy.sh` hardened (job-poll guard + per-domain reload list)
+
+### What was done
+Closed the long-running BACKLOG item "Update deploy.sh to auto-reload input helper domains AND template/automation" — three documented issues fixed in one pass:
+
+1. **Supervisor-job race** (2026-04-27 false-rollback during office_motion_light deploy) — added a 90s job-poll guard before `ha core check`. Polls `ha jobs info --raw-json` and counts `"done":false` occurrences (parent + child jobs) until idle. Plus a specific lock-error detector *before* the generic error grep: if check returns "Another job is running", script exits without rolling back the file and prompts a retry.
+2. **Broken `ha core reload-all`** (silent no-op on core-2026.4+, caught 2026-04-26) — removed entirely.
+3. **Input-domain reload gap** (recurring since 2026-04-16) — replaced with a printout of the per-domain reload services the operator must call via MCP `ha_call_service`. Detects `template`, `automation`, `script`, `scene`, and the 5 `input_*` domains. Always also prints `automation.reload` for package-level alias changes.
+
+### Approach
+Picked **Option B** (DECISIONS 2026-04-28) — script validates and deploys; reloads remain MCP-owned. Rejected Option A (long-lived token + curl for full automation): adds auth state and a token-expiry failure mode for ~30s saved per deploy. Edgar's call: "keep it simple".
+
+### Process
+- Gate 1 alignment with Edgar; my initial plan referenced `ha core api` which turned out not to exist (caught via SSH probe of `ha core --help`). Pivoted to job-poll + reload-list approach.
+- Gate 2 review via `superpowers:code-reviewer` agent surfaced 2 ⚠️ findings: (a) generic error grep could still false-positive on supervisor-lock if poll times out, (b) domain regex missed `scene`. Both folded into the final version. The advisory ℹ️ findings (jq alternative for jobs JSON parsing, always-print `automation.reload` even when listed) were noted but not adopted under "keep it simple".
+- End-to-end no-op deploy of `config/packages/dashboard_sensors.yaml` exercised every step cleanly — output listed `template.reload` + `automation.reload (always)` correctly.
+
+### Files changed
+- `deploy.sh` — full rewrite (95 → ~150 lines). Header docstring updated with cross-references to BACKLOG entries (2026-04-26, 2026-04-27).
+- `00 - Agent Context/BACKLOG.md` — entry struck-through + ✅ done.
+- `00 - Agent Context/DECISIONS.md` — new row.
+
+### Lessons
+- **`ha core api` doesn't exist** despite being a plausible-sounding command name. The supervisor CLI exposes core lifecycle (check, restart, stop, start) but no generic API proxy. Confirmed via `ssh ha "ha core --help"`. Future "talk to Core API from a host script" plans need the long-lived-token + curl path (Option A) or stay with MCP-mediated calls.
+- **`ha jobs info --raw-json` returns ~100KB** of historical jobs on a normally-functioning system (most have `"done":true`). The grep-based count works because we match `"done":false` literally — historical entries won't match. If the supervisor schema changes the count breaks silently — worth a `jq`-based version if/when it ships.
+
+### Not deployed to HA
+Tooling change to a script in the repo root, not an HA package. No HA backup needed (the test deploy of `dashboard_sensors.yaml` was a no-op); no entity validation, no trace inspection. Standard Gate 3 doesn't directly apply to deploy.sh changes.
+
+---
+
 ## 2026-04-27 — FUSION Phase 7 / WP2 — corrections to the deploy entry
 
 ### What was corrected
