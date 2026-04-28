@@ -835,23 +835,201 @@ These cover the state-switch hybrid shell: sidebar on desktop/iPad (≥871px), b
 - notes: Only difference from WP2's 1280 baseline should be the dropped −84px margin (visible as a small left-edge shift of the dashboard wrapper). Anything else (KPI tile layout, room cards, scenes row) is regression. Manual review against WP2 baseline screenshot.
 
 
+
+### Popup template + Living Room (TEST-400 … TEST-416) — owned by WP5a
+
+These cover the shared popup template and the Living Room popup as the reference implementation. WP5b/c/d copy this shape (tests TEST-43X / TEST-44X / TEST-45X) for Kitchen / Office / Outdoor.
+
+## TEST-400: _template.yaml is valid YAML and exports a popup_template definition
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    python3 -c "import yaml,sys; d=yaml.safe_load(open('config/dashboards/fusion/popups/_template.yaml')); print('ok' if isinstance(d,dict) and 'popup_template' in d else 'fail')"
+- expected: "ok"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: |
+    Documentation-shape check — `_template.yaml` is reference-only and is NOT !included into the dashboard tree. The actual wire-up signal that the popup reaches the runtime is TEST-403 (popup opens on hash). This test catches drift in the canonical popup-wrapper structure that downstream popup files copy from. Pre-WP5a the file does not exist → fail. Post-WP5a flips to baseline.
+
+## TEST-401: living-room.yaml is valid YAML
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    python3 -c "import yaml,sys; yaml.safe_load(open('config/dashboards/fusion/popups/living-room.yaml')); print('ok')"
+- expected: "ok"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-402: Every entity referenced in living-room.yaml resolves to a real entity
+- viewport: any
+- type: entity_existence
+- assertion: |
+    (function(){const refs=['light.living_room_lights','light.uplight_front','light.uplight_back_left','light.uplight_back_right','light.living_room_light_woonkamer','light.living_room_dimmer_woonkamer','climate.living_room_area','media_player.living_room','media_player.homepod','media_player.living_room_tv_2','script.lr_relax','script.movie_mode','scene.lights_off','automation.living_room_remote_mapping'];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
+- expected: "[]"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: |
+    Mirrors the entity manifest in `config/dashboards/fusion/popups/living-room.yaml`'s header comment. `unavailable` entities still resolve through HA — only fully missing entities cause this test to fail. When WP5a or future maintenance changes the entity list, update this list in lockstep.
+
+## TEST-403: Navigating to /dashboard-fusion/fusion#popup-living-room opens the popup
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-living-room"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: Bubble Card adds `bubble-popup-open` class to body when a popup is active. Falls back to selector match if class semantics drift.
+
+## TEST-404: Popup contains a header with text "Living Room"
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ');location.hash='';return txt.includes('Living Room');})()
+- expected: true
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-405: Popup contains a "Lights" section with at least 1 brightness slider
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasLightsHeader=txt.includes('LIGHTS');const sliders=WALK_ALL(document,'ha-slider').length+WALK_ALL(document,'input[type=range]').length;location.hash='';return JSON.stringify({hasLightsHeader,sliders});})()
+- expected: "^\\{\"hasLightsHeader\":true,\"sliders\":[1-9][0-9]*\\}$"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-406: Popup contains a "Climate" section with current temperature + setpoint controls
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasClimateHeader=txt.includes('CLIMATE');const hasCurrentTemp=/[0-9]{1,2}\.[0-9]\s*°/.test(txt)||txt.includes('21.2');const hasSetpoint=txt.includes('SETPOINT')||/TARGET|HEAT/.test(txt);location.hash='';return JSON.stringify({hasClimateHeader,hasCurrentTemp,hasSetpoint});})()
+- expected: '{"hasClimateHeader":true,"hasCurrentTemp":true,"hasSetpoint":true}'
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-407: Popup contains a "Sensors" section
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();location.hash='';return txt.includes('SENSORS');})()
+- expected: true
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: Living Room has no dedicated humidity sensor; section renders the climate entity's `current_temperature` plus an empty-state row for humidity per the brief's "always include the section" rule.
+
+## TEST-408: Popup contains a "Scenes" section with at least 1 scene button
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasScenesHeader=txt.includes('SCENES');const hasNamedScene=txt.includes('MOVIE')||txt.includes('RELAX')||txt.includes('LIGHTS OFF');location.hash='';return JSON.stringify({hasScenesHeader,hasNamedScene});})()
+- expected: '{"hasScenesHeader":true,"hasNamedScene":true}'
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-409: Popup contains an "Automations" section listing Living Room automations
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasAutoHeader=txt.includes('AUTOMATIONS');const hasNamedAuto=txt.includes('REMOTE MAPPING');location.hash='';return JSON.stringify({hasAutoHeader,hasNamedAuto});})()
+- expected: '{"hasAutoHeader":true,"hasNamedAuto":true}'
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-410: Popup contains an ApexCharts chart for heating (24h temperature trend)
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,1500));const apex=WALK_ALL(document,'apexcharts-card').length;location.hash='';return apex;})()
+- expected: ">=1"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: 1500ms wait gives ApexCharts time to fetch its 24h history slice.
+
+## TEST-411: Tapping the X / dismiss button closes the popup
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const close=WALK(document,'.bubble-close-button')||WALK(document,'.bubble-popup-close');if(close){close.click();}else{location.hash='';}await new Promise(r=>setTimeout(r,500));return location.hash===''?'closed':location.hash;})()
+- expected: "closed"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: Bubble Card popups close by clearing the URL hash; the close button does that internally. If selector drift occurs, the test falls back to direct hash clear.
+
+## TEST-412: Tapping the backdrop closes the popup
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const backdrop=WALK(document,'.bubble-backdrop')||WALK(document,'.bubble-popup-backdrop');if(backdrop){backdrop.click();}else{location.hash='';}await new Promise(r=>setTimeout(r,500));return location.hash===''?'closed':location.hash;})()
+- expected: "closed"
+- tolerance: 0
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-413: Popup background uses FUSION token #161616
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const c=WALK(document,'.bubble-popup-container');const bg=c?getComputedStyle(c).backgroundColor:'';location.hash='';return bg;})()
+- expected: "^rgb\\(22, 22, 22\\)|^rgba\\(22, 22, 22"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-414: Popup borders use FUSION token #2a2a2a
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const c=WALK(document,'.bubble-popup-container');const bt=c?getComputedStyle(c).borderTopColor:'';location.hash='';return bt;})()
+- expected: "^rgb\\(42, 42, 42\\)|^rgba\\(42, 42, 42"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+## TEST-415: Popup at 375px viewport occupies full width and ≥80% height
+- viewport: 375x812
+- type: visual_regression
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const c=WALK(document,'.bubble-popup-container');const r=c?c.getBoundingClientRect():null;location.hash='';return r?JSON.stringify({widthPct:Math.round(r.width/window.innerWidth*100),heightPct:Math.round(r.height/window.innerHeight*100)}):'no-popup';})()
+- expected: "^\\{\"widthPct\":(9[5-9]|100),\"heightPct\":(8[0-9]|9[0-9]|100)\\}$"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+- notes: Phone-width popup covers the viewport. macOS Chrome's smallest reachable inner width is ~526; this test must run on real device or DevTools mobile emulation to assert true 375.
+
+## TEST-416: Popup at 1280px viewport is centered with max-width ~700px
+- viewport: 1280x900
+- type: visual_regression
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const c=WALK(document,'.bubble-popup-container');const r=c?c.getBoundingClientRect():null;location.hash='';return r?JSON.stringify({width:Math.round(r.width),centered:Math.abs((r.left+r.right)/2-window.innerWidth/2)<6}):'no-popup';})()
+- expected: "^\\{\"width\":(6[5-9][0-9]|7[0-2][0-9]),\"centered\":true\\}$"
+- tolerance: regex
+- owner_wp: WP5a
+- status: baseline_known_failure
+
+
 ---
 
-## Total: 65 tests
+## Total: 82 tests
 
 | Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
-| DOM assertion | 29 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 2 WP2 baseline (TEST-101, TEST-102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) |
-| Visual regression | 4 | All WP1 baseline (manual diff) |
-| Behavioural | 5 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) |
-| YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) |
-| DOM assertion | 28 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 3 WP2 baseline (TEST-101, TEST-102, TEST-103) + 12 WP4 baseline_known_failure (TEST-300..311) |
-| Visual regression | 5 | 4 WP1 baseline (manual diff) + 1 WP4 baseline_known_failure (TEST-315) |
-| Behavioural | 8 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) |
-| YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline_known_failure (TEST-105, TEST-106, TEST-107) |
----
-
-| Entity existence | 3 | All WP1 baseline |
+| DOM assertion | 50 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 2 WP2 baseline (TEST-101, TEST-102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) + 12 WP4 baseline_known_failure (TEST-300..311) + 9 WP5a baseline_known_failure (TEST-400, 402..409) |
+| Visual regression | 6 | 4 WP1 baseline + 1 WP4 baseline_known_failure (TEST-315) + 1 WP5a baseline_known_failure (TEST-416) |
+| Behavioural | 12 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) + 4 WP5a baseline_known_failure (TEST-410..413) |
+| YAML schema | 14 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) + 8 WP5a baseline (TEST-401, TEST-414, TEST-415 + 5 popup-existence/lint tests) |
 | Template eval | 2 | All WP1 baseline |
 
 **Pre-WP2-implementation baseline:** 31 passing (25 WP1 + 6 WP2 regression tests) + 5 known-failures (2 WP1 sidebar + 3 WP2 file_system tests pending extraction). With `--allow-baseline-failures`, exit 0; without, exit 1.
@@ -865,6 +1043,12 @@ These cover the state-switch hybrid shell: sidebar on desktop/iPad (≥871px), b
 **WP4 contribution:** 16 new tests (TEST-300..315) all currently `baseline_known_failure` until Edgar verifies on real iPhone. Once verified, the 12 phone-only tests + TEST-007/008 (sidebar at narrow) flip to `baseline` because the dashboard at <871px no longer renders the sidebar at all (the phone branch shows the bottom-tab bar instead).
 
 Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
+**Pre-WP5a-implementation (this WP):** 17 known-failures (2 WP1 sidebar + 15 WP5a popup-not-yet-built). New WP5a tests TEST-400 … TEST-416 must currently fail; once the popup ships and is verified end-to-end, all 17 of WP5a's tests flip from `baseline_known_failure` → `baseline`, leaving only the 2 WP1 sidebar known-failures (still owned by WP3+WP4).
+
+Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 53/53 green.
+---
+
+## Total: 82 tests
 
 ---
 

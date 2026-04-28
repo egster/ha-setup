@@ -179,6 +179,15 @@ fusion_room_row_motion:
     styles:
       icon:
       - color: '#4caf6e'
+popup_section_header:
+  # Section divider inside FUSION room popups (WP5a, Phase 7).
+  # Use as a row-only button-card template — no entity, no tap_action.
+  show_icon: false
+  show_state: false
+  show_name: true
+  show_label: false
+  tap_action:
+    action: none
 fusion_bottom_tab_icon:
   # WP4 (Phase 7) — bottom tab bar icon for the phone shell.
   # Each instance defines its own tap_action + state operator. Mirrors the
@@ -194,6 +203,54 @@ fusion_bottom_tab_icon:
     - border: none
     - border-radius: 0
     - box-shadow: none
+    - padding: 16px 0 8px 0
+    - margin: 0
+    - height: auto
+    - cursor: default
+    name:
+    - color: '#888'
+    - font-size: 11px
+    - font-weight: 600
+    - text-transform: uppercase
+    - letter-spacing: 1px
+    - text-align: left
+    - justify-self: start
+popup_row:
+  # Content row inside FUSION room popups (WP5a, Phase 7). Used for scenes,
+  # automations, and any single-entity row that doesn't already have a
+  # specialised fusion_room_row_* template.
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
+  tap_action:
+    action: more-info
+  styles:
+    card:
+    - background: '#1e1e1e'
+    - border: '1px solid #2a2a2a'
+    - border-radius: 6px
+    - padding: 10px 12px
+    - margin: 0 0 6px 0
+    - box-shadow: none
+    - cursor: pointer
+    - height: auto
+    icon:
+    - width: 20px
+    - height: 20px
+    - color: '#888'
+    - justify-self: start
+    - grid-area: i
+    name:
+    - font-size: 15px
+    - color: '#e8e8e8'
+    - text-align: left
+    - justify-self: start
+    - padding-left: 10px
+    - grid-area: n
+    grid:
+    - grid-template-areas: '"i n"'
+    - grid-template-columns: 28px 1fr
     - cursor: pointer
     - height: 56px
     - min-height: 44px

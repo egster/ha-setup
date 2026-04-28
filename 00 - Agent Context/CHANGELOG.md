@@ -5,6 +5,40 @@
 ---
 
 
+## 2026-04-27 — FUSION Phase 7 / WP5a — Popup template + Living Room (committed, Gate 3 deploy pending)
+
+### What was done
+- Wrote `config/dashboards/fusion/popups/_template.yaml` — the canonical Bubble Card popup wrapper (FUSION dark tokens, `max-width: 700px`, slide-up sheet on phone). Reference-only, not !included.
+- Wrote `config/dashboards/fusion/popups/living-room.yaml` — six-section popup (Header, Lights, Climate, Sensors, Scenes, Automations) with a 24h ApexCharts heating chart, hash `#popup-living-room`.
+- Appended `popup_section_header` + `popup_row` button-card templates to `config/dashboards/fusion/templates.yaml`.
+- Wired `- !include popups/living-room.yaml` into `config/dashboards/fusion/shell.yaml`'s content vertical-stack.
+- Added 17 WP5a tests (TEST-400 … TEST-416) to `fusion-tests.md`, all `baseline_known_failure` until deploy + browser verification.
+- Added TEST-400 + TEST-401 dispatch handlers to `scripts/run-fusion-tests.sh`.
+- Wrote `00 - Agent Context/fusion-phase7/wp5-popup-pattern.md` — recipe for WP5b/c/d to follow.
+
+### Entity manifest (Living Room popup)
+Lights: `light.living_room_lights` (group), `light.uplight_front`, `light.uplight_back_left`, `light.uplight_back_right`, `light.living_room_light_woonkamer`, `light.living_room_dimmer_woonkamer`. Climate: `climate.living_room_area`. Media (referenced via the dashboard, not the popup itself): `media_player.living_room`, `media_player.homepod`, `media_player.living_room_tv_2`. Scenes: `script.lr_relax`, `script.movie_mode`, `scene.lights_off`. Automations: `automation.living_room_remote_mapping`. All resolved via `ha_get_state` — `unavailable` entities (Hue uplights wall-switched off) still resolve through HA.
+
+### Gate 2 review
+`ha-code-reviewer` ran against the WP5a artefact. Verdict was **BLOCKED** on two findings, both fixed in this commit:
+1. `shell.yaml` was missing the `- !include popups/living-room.yaml` line — added at line 211 (parallel session interference: a concurrent WP3/WP4 session stashed my work mid-review; recovered).
+2. Automations section header in `living-room.yaml` was inlining its style instead of using `template: popup_section_header` — now uses the template like every other section.
+Polishes addressed: TEST-400 `notes:` block clarifies it is a documentation-shape check (not a render-path check); the Motion empty-state row simplified to `'Motion — no sensor'` to match the Humidity row pattern.
+
+### Test status (post-commit, pre-deploy)
+- `yaml_schema` (8/8 pass): TEST-041, TEST-042, TEST-100, TEST-105, TEST-106, TEST-107, TEST-400, TEST-401 — all pass against current state.
+- Browser tests (TEST-403 … TEST-416, 14 tests) cannot run pre-deploy. They will run post-Gate-3.
+- Entity-existence test (TEST-402) cannot run pre-deploy (browser-deferred).
+- All 17 WP5a tests stay `baseline_known_failure` until end-to-end verification flips them.
+
+### Deploy pending
+Gate 3 has not yet run on this branch. Per Rule W3 this entry is "committed, deploy pending" — when deploy + verify completes, a follow-up entry will mark it "deployed". Live session will run the standard Gate 3 pipeline (backup, config check, scp via deploy.sh, restart, browser verification at 1280 + 375).
+
+### Branch
+- `phase7/wp5a-template-livingroom`. Parallel sessions interfered twice during this work (WP3 and WP4 sessions stashed/swapped branches on shared working tree). Recovered by re-applying my own stash + resetting shell.yaml + fusion-tests.md to `main` to drop WP4 contamination, then re-applying WP5a-only edits before commit.
+
+---
+
 ## 2026-04-27 — FUSION Phase 7 / WP4 — Shell Swap (state-switch + phone bottom tab) — deployed, awaiting iPhone verification
 
 ### What was done

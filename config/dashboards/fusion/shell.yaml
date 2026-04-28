@@ -41,452 +41,513 @@ card_mod:
       background: #3a3a3a;
     }
 card:
-  type: custom:state-switch
-  entity: mediaquery
-  states:
-    '(min-width: 871px)':
-      type: custom:layout-card
-      layout_type: custom:grid-layout
-      layout:
-        grid-template-columns: 72px 1fr
-        grid-template-rows: 42px 1fr
-        grid-template-areas: |
-          "statusbar statusbar"
-          "sidebar content"
-        grid-gap: 0
-        margin: 0 16px
-        padding: 0
-        min-height: 100vh
-        background: '#090909'
-        color: '#e8e8e8'
-      cards:
-      - !include statusbar.yaml
-      - type: custom:mod-card
-        view_layout:
-          grid-area: sidebar
-        card_mod:
-          style: |
-            ha-card {
-              background: transparent;
-              border: none;
-              box-shadow: none;
-              padding-top: 130px;
-            }
-        card:
-          type: vertical-stack
+  type: vertical-stack
+  cards:
+    - type: custom:state-switch
+      entity: mediaquery
+      states:
+        '(min-width: 871px)':
+          type: custom:layout-card
+          layout_type: custom:grid-layout
+          layout:
+            grid-template-columns: 72px 1fr
+            grid-template-rows: 42px 1fr
+            grid-template-areas: |
+              "statusbar statusbar"
+              "sidebar content"
+            grid-gap: 0
+            margin: 0 16px
+            padding: 0
+            min-height: 100vh
+            background: '#090909'
+            color: '#e8e8e8'
           cards:
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:home-variant
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: home
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:silverware-fork-knife
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: kitchen
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:thermometer
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: climate
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:music
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: media
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:wifi
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: network
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:lightning-bolt
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: energy
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            template: fusion_nav_icon
-            icon: mdi:cog-outline
-            tap_action:
-              action: perform-action
-              target:
-                entity_id: input_select.fusion_panel
-              data:
-                option: automations
-              perform_action: input_select.select_option
-            state:
-            - operator: template
-              value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
-              styles:
-                card:
-                - background: '#161616'
-                - border: '1px solid #2a2a2a'
-                icon:
-                - color: '#e8e8e8'
-          - type: custom:button-card
-            entity: input_boolean.fusion_kiosk
-            show_icon: true
-            show_state: false
-            show_name: false
-            show_label: false
-            icon: mdi:fullscreen
-            tap_action:
-              action: perform-action
-              perform_action: input_boolean.toggle
-              target:
-                entity_id: input_boolean.fusion_kiosk
-            styles:
-              card:
-              - background: transparent
-              - border: 1px solid transparent
-              - border-radius: 10px
-              - width: 42px
-              - height: 42px
-              - margin: 16px 8px 0 8px
-              - padding: 0
-              - box-shadow: none
-              - cursor: pointer
-              icon:
-              - width: 20px
-              - height: 20px
-              - color: '#888'
-            state:
-            - value: 'on'
-              icon: mdi:fullscreen-exit
-              styles:
-                icon:
-                - color: '#4f8ef7'
-      - type: vertical-stack
-        view_layout:
-          grid-area: content
-        cards:
-        - !include panels/home.yaml
-        - !include panels/kitchen.yaml
-        - !include panels/climate.yaml
-        - !include panels/media.yaml
-        - !include panels/network.yaml
-        - !include panels/energy.yaml
-        - !include panels/automations.yaml
-    '(max-width: 870.99px)':
-      type: custom:layout-card
-      layout_type: custom:grid-layout
-      layout:
-        grid-template-columns: 1fr
-        grid-template-rows: 36px 1fr 56px
-        grid-template-areas: |
-          "statusbar"
-          "content"
-          "bottomtab"
-        grid-gap: 0
-        margin: 0
-        padding: 0
-        min-height: 100vh
-        background: '#090909'
-        color: '#e8e8e8'
-      cards:
-      - type: custom:layout-card
-        view_layout:
-          grid-area: statusbar
-        layout_type: custom:grid-layout
-        layout:
-          grid-template-columns: 1fr max-content max-content max-content
-          grid-template-areas: '"person temp wan dl"'
-          grid-gap: 10px
-          align-items: center
-          padding: 0 12px
-          height: 36px
-          background: '#000'
-          border-bottom: '1px solid #222'
-          box-sizing: border-box
-        cards:
-        - type: custom:button-card
-          view_layout:
-            grid-area: person
-          entity: person.edgar
-          show_icon: false
-          show_state: false
-          show_name: false
-          show_label: true
-          label: |
-            [[[
-              const s = states['person.edgar'].state;
-              const dot = s === 'home' ? '●' : '○';
-              return `${dot} ${s === 'home' ? 'Home' : 'Away'}`;
-            ]]]
-          styles:
+          - !include statusbar.yaml
+          - type: custom:mod-card
+            view_layout:
+              grid-area: sidebar
+            card_mod:
+              style: |
+                ha-card {
+                  background: transparent;
+                  border: none;
+                  box-shadow: none;
+                  padding-top: 130px;
+                }
             card:
-            - background: transparent
-            - border: none
-            - padding: 0
-            - box-shadow: none
-            - height: 36px
-            - width: max-content
-            label:
-            - font-size: 11px
-            - color: '#e8e8e8'
-            - white-space: nowrap
-          state:
-          - operator: template
-            value: '[[[ return states[''person.edgar''].state === ''home''; ]]]'
-            styles:
-              label:
-              - color: '#4caf6e'
-        - type: custom:button-card
-          view_layout:
-            grid-area: temp
-          entity: input_number.monitoring_outdoor_temperature
-          show_icon: false
-          show_state: false
-          show_name: false
-          show_label: true
-          label: |
-            [[[
-              const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);
-              return isNaN(v) ? '—°' : `${v.toFixed(1)}°`;
-            ]]]
-          styles:
-            card:
-            - background: transparent
-            - border: none
-            - padding: 0
-            - box-shadow: none
-            - height: 36px
-            - width: max-content
-            label:
-            - font-size: 11px
-            - color: '#e8e8e8'
-            - white-space: nowrap
-        - type: custom:button-card
-          view_layout:
-            grid-area: wan
-          entity: binary_sensor.zenwifi_bq16_ca38_wan_status
-          show_icon: false
-          show_state: false
-          show_name: false
-          show_label: true
-          label: |
-            [[[
-              return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';
-            ]]]
-          styles:
-            card:
-            - background: transparent
-            - border: none
-            - padding: 0
-            - box-shadow: none
-            - height: 36px
-            - width: max-content
-            label:
-            - font-size: 13px
-            - line-height: 1
-          state:
-          - operator: template
-            value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
-            styles:
-              label:
-              - color: '#4caf6e'
-          - operator: template
-            value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
-            styles:
-              label:
-              - color: '#e05555'
-        - type: custom:button-card
-          view_layout:
-            grid-area: dl
-          entity: sensor.zenwifi_bq16_ca38_download_speed
-          show_icon: false
-          show_state: false
-          show_name: false
-          show_label: true
-          label: |
-            [[[
-              const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);
-              return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)}`;
-            ]]]
-          styles:
-            card:
-            - background: transparent
-            - border: none
-            - padding: 0
-            - box-shadow: none
-            - height: 36px
-            - width: max-content
-            label:
-            - font-size: 11px
-            - color: '#888'
-            - white-space: nowrap
-      - type: vertical-stack
-        view_layout:
-          grid-area: content
-        cards:
-        - !include panels/home.yaml
-        - !include panels/kitchen.yaml
-        - !include panels/climate.yaml
-        - !include panels/media.yaml
-        - !include panels/network.yaml
-        - !include panels/energy.yaml
-        - !include panels/automations.yaml
-      - type: custom:mod-card
-        view_layout:
-          grid-area: bottomtab
-        card_mod:
-          style: |
-            /* state-switch v1.9.6 keeps both branches in DOM and uses grid
-               positioning to "hide" the inactive one. position:fixed inside a
-               hidden branch escapes the grid and stays viewport-pinned, so we
-               CSS-gate the bottom bar to phone widths only: display:none by
-               default, override to fixed-position card on <871px. */
-            ha-card {
-              display: none !important;
-            }
-            @media (max-width: 870.99px) {
-              ha-card {
-                display: block !important;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 56px;
-                padding-bottom: env(safe-area-inset-bottom);
-                background: #161616;
-                border-top: 1px solid #2a2a2a;
-                box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
-                z-index: 100;
-              }
-            }
-        card:
-          type: vertical-stack
+              type: vertical-stack
+              cards:
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:home-variant
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: home
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:silverware-fork-knife
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: kitchen
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:thermometer
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: climate
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:music
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: media
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:wifi
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: network
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:lightning-bolt
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: energy
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                template: fusion_nav_icon
+                icon: mdi:cog-outline
+                tap_action:
+                  action: perform-action
+                  target:
+                    entity_id: input_select.fusion_panel
+                  data:
+                    option: automations
+                  perform_action: input_select.select_option
+                state:
+                - operator: template
+                  value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
+                  styles:
+                    card:
+                    - background: '#161616'
+                    - border: '1px solid #2a2a2a'
+                    icon:
+                    - color: '#e8e8e8'
+              - type: custom:button-card
+                entity: input_boolean.fusion_kiosk
+                show_icon: true
+                show_state: false
+                show_name: false
+                show_label: false
+                icon: mdi:fullscreen
+                tap_action:
+                  action: perform-action
+                  perform_action: input_boolean.toggle
+                  target:
+                    entity_id: input_boolean.fusion_kiosk
+                styles:
+                  card:
+                  - background: transparent
+                  - border: 1px solid transparent
+                  - border-radius: 10px
+                  - width: 42px
+                  - height: 42px
+                  - margin: 16px 8px 0 8px
+                  - padding: 0
+                  - box-shadow: none
+                  - cursor: pointer
+                  icon:
+                  - width: 20px
+                  - height: 20px
+                  - color: '#888'
+                state:
+                - value: 'on'
+                  icon: mdi:fullscreen-exit
+                  styles:
+                    icon:
+                    - color: '#4f8ef7'
+          - type: vertical-stack
+            view_layout:
+              grid-area: content
+            cards:
+            - !include panels/home.yaml
+            - !include panels/kitchen.yaml
+            - !include panels/climate.yaml
+            - !include panels/media.yaml
+            - !include panels/network.yaml
+            - !include panels/energy.yaml
+            - !include panels/automations.yaml
+        '(max-width: 870.99px)':
+          type: custom:layout-card
+          layout_type: custom:grid-layout
+          layout:
+            grid-template-columns: 1fr
+            grid-template-rows: 36px 1fr 56px
+            grid-template-areas: |
+              "statusbar"
+              "content"
+              "bottomtab"
+            grid-gap: 0
+            margin: 0
+            padding: 0
+            min-height: 100vh
+            background: '#090909'
+            color: '#e8e8e8'
           cards:
-          - type: conditional
-            conditions:
-            - entity: input_boolean.fusion_more_overlay
-              state: 'on'
-            card:
-              type: custom:mod-card
-              card_mod:
-                style: |
-                  /* Same CSS gate as the bottom tab bar — display:none by
-                     default, overridden to fixed-position card on <871px. */
+          - type: custom:layout-card
+            view_layout:
+              grid-area: statusbar
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: 1fr max-content max-content max-content
+              grid-template-areas: '"person temp wan dl"'
+              grid-gap: 10px
+              align-items: center
+              padding: 0 12px
+              height: 36px
+              background: '#000'
+              border-bottom: '1px solid #222'
+              box-sizing: border-box
+            cards:
+            - type: custom:button-card
+              view_layout:
+                grid-area: person
+              entity: person.edgar
+              show_icon: false
+              show_state: false
+              show_name: false
+              show_label: true
+              label: |
+                [[[
+                  const s = states['person.edgar'].state;
+                  const dot = s === 'home' ? '●' : '○';
+                  return `${dot} ${s === 'home' ? 'Home' : 'Away'}`;
+                ]]]
+              styles:
+                card:
+                - background: transparent
+                - border: none
+                - padding: 0
+                - box-shadow: none
+                - height: 36px
+                - width: max-content
+                label:
+                - font-size: 11px
+                - color: '#e8e8e8'
+                - white-space: nowrap
+              state:
+              - operator: template
+                value: '[[[ return states[''person.edgar''].state === ''home''; ]]]'
+                styles:
+                  label:
+                  - color: '#4caf6e'
+            - type: custom:button-card
+              view_layout:
+                grid-area: temp
+              entity: input_number.monitoring_outdoor_temperature
+              show_icon: false
+              show_state: false
+              show_name: false
+              show_label: true
+              label: |
+                [[[
+                  const v = parseFloat(states['input_number.monitoring_outdoor_temperature'].state);
+                  return isNaN(v) ? '—°' : `${v.toFixed(1)}°`;
+                ]]]
+              styles:
+                card:
+                - background: transparent
+                - border: none
+                - padding: 0
+                - box-shadow: none
+                - height: 36px
+                - width: max-content
+                label:
+                - font-size: 11px
+                - color: '#e8e8e8'
+                - white-space: nowrap
+            - type: custom:button-card
+              view_layout:
+                grid-area: wan
+              entity: binary_sensor.zenwifi_bq16_ca38_wan_status
+              show_icon: false
+              show_state: false
+              show_name: false
+              show_label: true
+              label: |
+                [[[
+                  return states['binary_sensor.zenwifi_bq16_ca38_wan_status'].state === 'on' ? '●' : '○';
+                ]]]
+              styles:
+                card:
+                - background: transparent
+                - border: none
+                - padding: 0
+                - box-shadow: none
+                - height: 36px
+                - width: max-content
+                label:
+                - font-size: 13px
+                - line-height: 1
+              state:
+              - operator: template
+                value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state === ''on''; ]]]'
+                styles:
+                  label:
+                  - color: '#4caf6e'
+              - operator: template
+                value: '[[[ return states[''binary_sensor.zenwifi_bq16_ca38_wan_status''].state !== ''on''; ]]]'
+                styles:
+                  label:
+                  - color: '#e05555'
+            - type: custom:button-card
+              view_layout:
+                grid-area: dl
+              entity: sensor.zenwifi_bq16_ca38_download_speed
+              show_icon: false
+              show_state: false
+              show_name: false
+              show_label: true
+              label: |
+                [[[
+                  const v = parseFloat(states['sensor.zenwifi_bq16_ca38_download_speed'].state);
+                  return isNaN(v) ? '↓ —' : `↓ ${v.toFixed(1)}`;
+                ]]]
+              styles:
+                card:
+                - background: transparent
+                - border: none
+                - padding: 0
+                - box-shadow: none
+                - height: 36px
+                - width: max-content
+                label:
+                - font-size: 11px
+                - color: '#888'
+                - white-space: nowrap
+          - type: vertical-stack
+            view_layout:
+              grid-area: content
+            cards:
+            - !include panels/home.yaml
+            - !include panels/kitchen.yaml
+            - !include panels/climate.yaml
+            - !include panels/media.yaml
+            - !include panels/network.yaml
+            - !include panels/energy.yaml
+            - !include panels/automations.yaml
+          - type: custom:mod-card
+            view_layout:
+              grid-area: bottomtab
+            card_mod:
+              style: |
+                /* state-switch v1.9.6 keeps both branches in DOM and uses grid
+                   positioning to "hide" the inactive one. position:fixed inside a
+                   hidden branch escapes the grid and stays viewport-pinned, so we
+                   CSS-gate the bottom bar to phone widths only: display:none by
+                   default, override to fixed-position card on <871px. */
+                ha-card {
+                  display: none !important;
+                }
+                @media (max-width: 870.99px) {
                   ha-card {
-                    display: none !important;
+                    display: block !important;
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 56px;
+                    padding-bottom: env(safe-area-inset-bottom);
+                    background: #161616;
+                    border-top: 1px solid #2a2a2a;
+                    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+                    z-index: 100;
                   }
-                  @media (max-width: 870.99px) {
-                    ha-card {
-                      display: block !important;
-                      position: fixed;
-                      bottom: 56px;
-                      left: 0;
-                      right: 0;
-                      height: 64px;
-                      padding-bottom: 0;
-                      background: #1e1e1e;
-                      border-top: 1px solid #2a2a2a;
-                      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
-                      z-index: 99;
-                    }
-                  }
-              card:
-                type: horizontal-stack
+                }
+            card:
+              type: vertical-stack
+              cards:
+              - type: conditional
+                conditions:
+                - entity: input_boolean.fusion_more_overlay
+                  state: 'on'
+                card:
+                  type: custom:mod-card
+                  card_mod:
+                    style: |
+                      /* Same CSS gate as the bottom tab bar — display:none by
+                         default, overridden to fixed-position card on <871px. */
+                      ha-card {
+                        display: none !important;
+                      }
+                      @media (max-width: 870.99px) {
+                        ha-card {
+                          display: block !important;
+                          position: fixed;
+                          bottom: 56px;
+                          left: 0;
+                          right: 0;
+                          height: 64px;
+                          padding-bottom: 0;
+                          background: #1e1e1e;
+                          border-top: 1px solid #2a2a2a;
+                          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+                          z-index: 99;
+                        }
+                      }
+                  card:
+                    type: horizontal-stack
+                    cards:
+                    - type: custom:button-card
+                      template: fusion_bottom_tab_icon
+                      icon: mdi:silverware-fork-knife
+                      name: Kitchen
+                      tap_action:
+                        action: perform-action
+                        perform_action: input_select.select_option
+                        target:
+                          entity_id: input_select.fusion_panel
+                        data:
+                          option: kitchen
+                      state:
+                      - operator: template
+                        value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
+                        styles:
+                          icon:
+                          - color: '#4f8ef7'
+                          name:
+                          - color: '#4f8ef7'
+                    - type: custom:button-card
+                      template: fusion_bottom_tab_icon
+                      icon: mdi:lightning-bolt
+                      name: Energy
+                      tap_action:
+                        action: perform-action
+                        perform_action: input_select.select_option
+                        target:
+                          entity_id: input_select.fusion_panel
+                        data:
+                          option: energy
+                      state:
+                      - operator: template
+                        value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
+                        styles:
+                          icon:
+                          - color: '#4f8ef7'
+                          name:
+                          - color: '#4f8ef7'
+                    - type: custom:button-card
+                      template: fusion_bottom_tab_icon
+                      icon: mdi:cog-outline
+                      name: Automations
+                      tap_action:
+                        action: perform-action
+                        perform_action: input_select.select_option
+                        target:
+                          entity_id: input_select.fusion_panel
+                        data:
+                          option: automations
+                      state:
+                      - operator: template
+                        value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
+                        styles:
+                          icon:
+                          - color: '#4f8ef7'
+                          name:
+                          - color: '#4f8ef7'
+              - type: horizontal-stack
                 cards:
                 - type: custom:button-card
                   template: fusion_bottom_tab_icon
-                  icon: mdi:silverware-fork-knife
-                  name: Kitchen
+                  icon: mdi:home-variant
+                  name: Home
                   tap_action:
                     action: perform-action
                     perform_action: input_select.select_option
                     target:
                       entity_id: input_select.fusion_panel
                     data:
-                      option: kitchen
+                      option: home
                   state:
                   - operator: template
-                    value: '[[[ return states[''input_select.fusion_panel''].state === ''kitchen''; ]]]'
+                    value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
                     styles:
                       icon:
                       - color: '#4f8ef7'
@@ -494,18 +555,18 @@ card:
                       - color: '#4f8ef7'
                 - type: custom:button-card
                   template: fusion_bottom_tab_icon
-                  icon: mdi:lightning-bolt
-                  name: Energy
+                  icon: mdi:thermometer
+                  name: Climate
                   tap_action:
                     action: perform-action
                     perform_action: input_select.select_option
                     target:
                       entity_id: input_select.fusion_panel
                     data:
-                      option: energy
+                      option: climate
                   state:
                   - operator: template
-                    value: '[[[ return states[''input_select.fusion_panel''].state === ''energy''; ]]]'
+                    value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
                     styles:
                       icon:
                       - color: '#4f8ef7'
@@ -513,120 +574,62 @@ card:
                       - color: '#4f8ef7'
                 - type: custom:button-card
                   template: fusion_bottom_tab_icon
-                  icon: mdi:cog-outline
-                  name: Automations
+                  icon: mdi:music
+                  name: Media
                   tap_action:
                     action: perform-action
                     perform_action: input_select.select_option
                     target:
                       entity_id: input_select.fusion_panel
                     data:
-                      option: automations
+                      option: media
                   state:
                   - operator: template
-                    value: '[[[ return states[''input_select.fusion_panel''].state === ''automations''; ]]]'
+                    value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
                     styles:
                       icon:
                       - color: '#4f8ef7'
                       name:
                       - color: '#4f8ef7'
-          - type: horizontal-stack
-            cards:
-            - type: custom:button-card
-              template: fusion_bottom_tab_icon
-              icon: mdi:home-variant
-              name: Home
-              tap_action:
-                action: perform-action
-                perform_action: input_select.select_option
-                target:
-                  entity_id: input_select.fusion_panel
-                data:
-                  option: home
-              state:
-              - operator: template
-                value: '[[[ return states[''input_select.fusion_panel''].state === ''home''; ]]]'
-                styles:
-                  icon:
-                  - color: '#4f8ef7'
-                  name:
-                  - color: '#4f8ef7'
-            - type: custom:button-card
-              template: fusion_bottom_tab_icon
-              icon: mdi:thermometer
-              name: Climate
-              tap_action:
-                action: perform-action
-                perform_action: input_select.select_option
-                target:
-                  entity_id: input_select.fusion_panel
-                data:
-                  option: climate
-              state:
-              - operator: template
-                value: '[[[ return states[''input_select.fusion_panel''].state === ''climate''; ]]]'
-                styles:
-                  icon:
-                  - color: '#4f8ef7'
-                  name:
-                  - color: '#4f8ef7'
-            - type: custom:button-card
-              template: fusion_bottom_tab_icon
-              icon: mdi:music
-              name: Media
-              tap_action:
-                action: perform-action
-                perform_action: input_select.select_option
-                target:
-                  entity_id: input_select.fusion_panel
-                data:
-                  option: media
-              state:
-              - operator: template
-                value: '[[[ return states[''input_select.fusion_panel''].state === ''media''; ]]]'
-                styles:
-                  icon:
-                  - color: '#4f8ef7'
-                  name:
-                  - color: '#4f8ef7'
-            - type: custom:button-card
-              template: fusion_bottom_tab_icon
-              icon: mdi:wifi
-              name: Network
-              tap_action:
-                action: perform-action
-                perform_action: input_select.select_option
-                target:
-                  entity_id: input_select.fusion_panel
-                data:
-                  option: network
-              state:
-              - operator: template
-                value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
-                styles:
-                  icon:
-                  - color: '#4f8ef7'
-                  name:
-                  - color: '#4f8ef7'
-            - type: custom:button-card
-              template: fusion_bottom_tab_icon
-              icon: mdi:dots-horizontal
-              name: More
-              tap_action:
-                action: perform-action
-                perform_action: input_boolean.toggle
-                target:
-                  entity_id: input_boolean.fusion_more_overlay
-              state:
-              - operator: template
-                value: |
-                  [[[
-                    const p = states['input_select.fusion_panel'].state;
-                    const o = states['input_boolean.fusion_more_overlay'].state;
-                    return ['kitchen','energy','automations'].includes(p) || o === 'on';
-                  ]]]
-                styles:
-                  icon:
-                  - color: '#4f8ef7'
-                  name:
-                  - color: '#4f8ef7'
+                - type: custom:button-card
+                  template: fusion_bottom_tab_icon
+                  icon: mdi:wifi
+                  name: Network
+                  tap_action:
+                    action: perform-action
+                    perform_action: input_select.select_option
+                    target:
+                      entity_id: input_select.fusion_panel
+                    data:
+                      option: network
+                  state:
+                  - operator: template
+                    value: '[[[ return states[''input_select.fusion_panel''].state === ''network''; ]]]'
+                    styles:
+                      icon:
+                      - color: '#4f8ef7'
+                      name:
+                      - color: '#4f8ef7'
+                - type: custom:button-card
+                  template: fusion_bottom_tab_icon
+                  icon: mdi:dots-horizontal
+                  name: More
+                  tap_action:
+                    action: perform-action
+                    perform_action: input_boolean.toggle
+                    target:
+                      entity_id: input_boolean.fusion_more_overlay
+                  state:
+                  - operator: template
+                    value: |
+                      [[[
+                        const p = states['input_select.fusion_panel'].state;
+                        const o = states['input_boolean.fusion_more_overlay'].state;
+                        return ['kitchen','energy','automations'].includes(p) || o === 'on';
+                      ]]]
+                    styles:
+                      icon:
+                      - color: '#4f8ef7'
+                      name:
+                      - color: '#4f8ef7'
+    - !include popups/living-room.yaml

@@ -87,6 +87,63 @@ lovelace:
 
 ---
 
+## 🚨 Parallel-session isolation (HARD RULE)
+
+**Every parallel WP runs in its own `git worktree`. Branch isolation alone is NOT enough.**
+
+### Why this matters (lesson from WP5a, 2026-04-27)
+
+WP3, WP4, and WP5a were started as three Claude Code sessions sharing the **same working tree**, each on its own branch. The result:
+
+- Session A makes uncommitted edits on its branch.
+- Session B runs `git checkout <its-own-branch>` — git's working-tree-is-global semantics evicts A's unstaged changes (often into an auto-stash titled "wp5a-WIP-from-other-session" etc.).
+- A's next tool call lands on B's branch with a clean tree, A's work apparently gone.
+- A recovers via `git stash apply`, but B then switches back, and the cycle repeats.
+- Net effect during WP5a: my work was stashed twice by other sessions; the popup `!include` line was reset back to main state mid-Gate-2-review, causing the reviewer to read a stale shell.yaml and BLOCK on a finding that was actually already fixed.
+- Stash pile-ups from the contention also ended up cross-contaminated (WP4's `fusion_bottom_tab_icon` template appeared in WP5a's diff against main; had to be surgically reset).
+
+`git stash` rescues the work, but the failure mode is silent and the recovery cost is high. Branch isolation is necessary; it is not sufficient.
+
+### The rule
+
+For any calendar slot with ≥2 parallel sessions (Slot 2, Slot 3 below):
+
+```bash
+# Slot 2 — one worktree per WP, all from main
+cd "/Users/edgar/Documents/Projects/Home Automation"
+git worktree add ../Home-Automation-wp3   -b phase7/wp3-grids                main
+git worktree add ../Home-Automation-wp4   -b phase7/wp4-shell                main
+git worktree add ../Home-Automation-wp5a  -b phase7/wp5a-template-livingroom main
+
+# Each Claude Code session opens at its own path:
+#   ../Home-Automation-wp3   → WP3 session
+#   ../Home-Automation-wp4   → WP4 session
+#   ../Home-Automation-wp5a  → WP5a session
+```
+
+After the WP merges:
+
+```bash
+git worktree remove ../Home-Automation-wp5a
+git branch -d phase7/wp5a-template-livingroom
+```
+
+### What is NOT OK
+
+- **Three Claude Code sessions in the same project directory**, each on a different branch. This is the failure mode WP5a hit. Don't do it.
+- **`git stash`-juggling between sessions.** If you hit a stash from another session, that session is using the wrong working tree — escalate to Edgar to spawn a worktree, do not try to interleave manually.
+
+### What IS OK
+
+- A single sequential session on the shared tree (Slot 1, Slot 4 in the calendar below).
+- Multiple sessions if each has its own worktree path.
+
+### One more guardrail
+
+Each WP brief's writable file scope still applies inside the worktree. Worktrees prevent **filesystem** clobbering; they do not prevent **logical** scope creep. If WP4's session wants to edit `popups/`, that's still a violation regardless of which directory it's working from.
+
+---
+
 ## Dependency graph & merge order
 
 ```
