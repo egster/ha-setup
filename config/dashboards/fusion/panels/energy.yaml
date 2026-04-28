@@ -18,7 +18,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(2, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(280px, 1fr))'
       grid-gap: 10px
       padding: 14px
     cards:

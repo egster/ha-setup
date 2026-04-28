@@ -188,6 +188,15 @@ popup_section_header:
   show_label: false
   tap_action:
     action: none
+fusion_bottom_tab_icon:
+  # WP4 (Phase 7) — bottom tab bar icon for the phone shell.
+  # Each instance defines its own tap_action + state operator. Mirrors the
+  # fusion_nav_icon pattern (template = shared style, instance = behaviour).
+  # Touch target: 44px minimum (WCAG 2.1 AA).
+  show_icon: true
+  show_name: true
+  show_state: false
+  show_label: false
   styles:
     card:
     - background: transparent
@@ -242,3 +251,30 @@ popup_row:
     grid:
     - grid-template-areas: '"i n"'
     - grid-template-columns: 28px 1fr
+    - cursor: pointer
+    - height: 56px
+    - min-height: 44px
+    - min-width: 44px
+    - padding: 6px 4px
+    - margin: 0
+    - transition: color 120ms ease
+    icon:
+    - width: 22px
+    - height: 22px
+    - color: '#888'
+    - justify-self: center
+    - grid-area: i
+    name:
+    - font-size: 10px
+    - font-weight: 500
+    - color: '#888'
+    - margin-top: 2px
+    - text-align: center
+    - text-transform: uppercase
+    - letter-spacing: 0.5px
+    - grid-area: n
+    grid:
+    - grid-template-areas: '"i" "n"'
+    - grid-template-rows: 22px auto
+    - justify-items: center
+    - align-content: center

@@ -8,7 +8,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(5, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(140px, 1fr))'
       grid-gap: 10px
       padding: 14px 14px 4px 14px
     cards:
@@ -215,7 +215,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(3, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(240px, 1fr))'
       grid-gap: 10px
       padding: 0 14px
       align-items: stretch
@@ -349,7 +349,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(3, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(240px, 1fr))'
       grid-gap: 10px
       padding: 0 14px
       align-items: stretch
@@ -410,7 +410,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(3, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(240px, 1fr))'
       grid-gap: 10px
       padding: 0 14px
       align-items: stretch
@@ -464,7 +464,7 @@ card:
   - type: custom:layout-card
     layout_type: custom:grid-layout
     layout:
-      grid-template-columns: repeat(3, 1fr)
+      grid-template-columns: 'repeat(auto-fit, minmax(240px, 1fr))'
       grid-gap: 10px
       padding: 0 14px
       align-items: stretch

@@ -39,6 +39,128 @@ Gate 3 has not yet run on this branch. Per Rule W3 this entry is "committed, dep
 
 ---
 
+## 2026-04-27 — FUSION Phase 7 / WP4 — Shell Swap (state-switch + phone bottom tab) — deployed, awaiting iPhone verification
+
+### What was done
+WP4 of FUSION Phase 7 — replaced the single-shell FUSION layout with a viewport-conditional hybrid using `thomasloven/lovelace-state-switch`. Edgar's hands-on iPhone test confirmed the WP1 sidebar IS off-screen at real 375 px (Chrome MCP harness caps at ~600 px so the harness misses the regression at narrow widths) — WP4 is a genuine regression fix.
+
+**Architecture:**
+- `custom:mod-card` outer wrapper (preserves `:host` global CSS for FUSION accent colour / Inter font / scrollbars).
+- `custom:state-switch entity:mediaquery` with two states (no `default:` — explicit both queries):
+  - `'(min-width: 871px)'` → desktop branch: 72 px sidebar (8 nav cells, unchanged from WP2 form), `margin: 0 16px` (NO `−84px` — the WP1 root cause), 7 panel `!include`s.
+  - `'(max-width: 870.99px)'` → phone branch: 4-cell compressed statusbar (person + temp + wan + dl), 7 panel `!include`s, fixed-position bottom-tab bar with 5 buttons (Home / Climate / Media / Network / More). "More" toggles `input_boolean.fusion_more_overlay` → conditional 3-button row above the main bar (Kitchen / Energy / Automations).
+- `0.99 px` widening on the phone breakpoint covers fractional CSS-pixel viewports (e.g. 870.5 on retina/zoom).
+- **CSS @media gates as belt-and-suspenders for `position:fixed` elements**: state-switch v1.9.6 keeps both branches in DOM and uses CSS-grid positioning to "hide" the inactive one — but `position: fixed` escapes the grid. Bottom bar + more-overlay both use `display: none !important` by default, overridden to `display: block; position: fixed; ...` only inside `@media (max-width: 870.99px)`. Verified live at desktop viewport 1849: 0 fixed-position bars visible, 8 sidebar cells visible.
+
+**New helper:**
+- `input_boolean.fusion_more_overlay` (icon `mdi:dots-horizontal-circle-outline`, initial off). Toggled by the More tab; ~few writes/day (well within DECISIONS 2026-04-22's writes/day-not-count rule).
+
+**New HACS dependency:**
+- `thomasloven/lovelace-state-switch` v1.9.6 (auto-registered as `/hacsfiles/lovelace-state-switch/state-switch.js`).
+
+**Files committed (`phase7/wp4-shell` branch):**
+- `config/dashboards/fusion/shell.yaml` — full rewrite (211 → 626 lines).
+- `config/dashboards/fusion/templates.yaml` — appended `fusion_bottom_tab_icon` template (+49 lines).
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` — added TEST-300..315 (16 tests: 12 dom_assertion + 3 behavioural + 1 visual_regression). Also updated TEST-052 entity-list lockstep to include `input_boolean.fusion_more_overlay` (Gate 2 reviewer caught this).
+- `00 - Agent Context/fusion-phase7/STATUS.md` — flipped WP4 to ~ (deployed, awaiting iPhone verification).
+- `00 - Agent Context/fusion-phase7/screenshots/wp4/README.md` — what was verifiable on the macOS host + the manual phone-test checklist Edgar runs.
+
+### Deploy steps executed
+1. `git checkout -b phase7/wp4-shell` from `main`.
+2. `ha_hacs_download(thomasloven/lovelace-state-switch)` — installed.
+3. `ha_config_set_helper(input_boolean, "Fusion More Overlay", icon=mdi:dots-horizontal-circle-outline, initial=false)` — created.
+4. Wrote tests + template + shell.yaml; PyYAML parse + tree-assembly + yamllint all clean.
+5. `ha_backup_create("Pre_WP4_Shell_Swap_2026-04-27")` — backup ID `1b9afd3f`, 273 MB, 52 s. (A retry timed out; first backup is the rollback target.)
+6. SCP'd `shell.yaml` + `templates.yaml` to HA Green.
+7. `ha_check_config` → valid.
+8. WS `lovelace/config { force: true }` → re-read from disk; verified state-switch wrapper now in dashboard config.
+9. Browser hard-refresh: dashboard renders at desktop viewport — 8 sidebar cells, 0 fixed-position bottom bars, 7 statusbar button-cards, climate-tab + More-overlay behavioural tests pass via Chrome MCP.
+10. Gate 2 review (round 1): BLOCKED on TEST-052 entity-list lockstep miss + 2 ⚠️ (sub-pixel breakpoint gap, TEST-313 vacuous). Round 2 after fixes: APPROVED.
+
+### Process notes
+- **WALK_ALL bug self-mis-diagnosis**: my initial recursive walker missed cards (returning 0 even when the dashboard was rendering 117 ha-cards). Direct getElementsByTagName-style traversal corrected this. Cost: ~1 panic cycle where I restored shell.yaml to WP2 form thinking the new YAML was broken. Lesson: when a "0 elements" result contradicts a visible screenshot, suspect the walker before suspecting the deploy.
+- **state-switch v1.9.6 keeps both branches in DOM**: not documented in the repo's README clearly — discovered by inspecting the shadow root (`<div style="display: grid">` with both children at grid areas 1/1 and 2/1). The `position: fixed` escape is the load-bearing reason for the @media-gate belt-and-suspenders.
+- **HA's lovelace YAML mode dashboard config IS cached in memory** — `homeassistant.reload_all` doesn't reload it. WS `lovelace/config { force: true }` re-reads from disk without a full HA restart. Documented for future dashboard edits.
+- **macOS Chrome harness clamps at ~1849 px wide** — `resize_window(1280, 900)` succeeds at the API but the window stays at the ambient size. Phone-viewport screenshots and TEST-305..311 verification deferred to Edgar's iPhone hands-on. The CSS @media gate is symmetric, so phone behavior follows from the rule, but visual confirmation is the load-bearing check before flipping TEST-007/008 to `baseline`.
+- **More button does not auto-dismiss** when a secondary tab is tapped — the user has to tap More again. Brief didn't specify; logged as a WP6 cosmetic follow-up.
+- **Branch context drift mid-session**: the working tree got switched between `phase7/wp4-shell`, `phase7/wp5a-template-livingroom`, and `phase7/wp3-grids` during the session (likely via parallel-session activity). Stashes preserve each session's WIP at `stash@{0..3}`. Lesson for parallel WP workflow: agents in different sessions modifying the same files (shell.yaml, templates.yaml, fusion-tests.md) need a clearer way to share or hand off without losing each other's WIP. Worth noting in the Phase 7 retro.
+
+### Pending — Edgar's iPhone verification (canonical)
+Per the wp4 screenshots README:
+1. Open `http://homeassistant.local:8123/dashboard-fusion/fusion` on iPhone.
+2. Confirm: no sidebar column, no `−84 px` left margin, 4-cell compressed statusbar, 5-button bottom-tab bar at viewport bottom (Home / Climate / Media / Network / More), "More" reveals 3-button overlay (Kitchen / Energy / Automations) above bar.
+3. If clean: open PR for `phase7/wp4-shell` → `main`, merge, then flip TEST-007/008/305..315 from `baseline_known_failure` → `baseline` in fusion-tests.md.
+4. If broken: roll back via backup `1b9afd3f`, surface the failure mode, and revisit the @media gate or state-switch's grid-positioning behavior.
+
+### Entities affected
+- `input_boolean.fusion_more_overlay` (new, state=off)
+
+### Files
+- `config/dashboards/fusion/shell.yaml` (rewritten, +415 lines)
+- `config/dashboards/fusion/templates.yaml` (+49 lines)
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` (+209 lines: TEST-300..315 + TEST-052 lockstep entry + totals/categories table)
+- `00 - Agent Context/fusion-phase7/STATUS.md` (WP4 → in-progress with deploy note)
+- `00 - Agent Context/fusion-phase7/screenshots/wp4/README.md` (new)
+
+---
+
+## 2026-04-28 — `deploy.sh` hardened (job-poll guard + per-domain reload list)
+
+### What was done
+Closed the long-running BACKLOG item "Update deploy.sh to auto-reload input helper domains AND template/automation" — three documented issues fixed in one pass:
+
+1. **Supervisor-job race** (2026-04-27 false-rollback during office_motion_light deploy) — added a 90s job-poll guard before `ha core check`. Polls `ha jobs info --raw-json` and counts `"done":false` occurrences (parent + child jobs) until idle. Plus a specific lock-error detector *before* the generic error grep: if check returns "Another job is running", script exits without rolling back the file and prompts a retry.
+2. **Broken `ha core reload-all`** (silent no-op on core-2026.4+, caught 2026-04-26) — removed entirely.
+3. **Input-domain reload gap** (recurring since 2026-04-16) — replaced with a printout of the per-domain reload services the operator must call via MCP `ha_call_service`. Detects `template`, `automation`, `script`, `scene`, and the 5 `input_*` domains. Always also prints `automation.reload` for package-level alias changes.
+
+### Approach
+Picked **Option B** (DECISIONS 2026-04-28) — script validates and deploys; reloads remain MCP-owned. Rejected Option A (long-lived token + curl for full automation): adds auth state and a token-expiry failure mode for ~30s saved per deploy. Edgar's call: "keep it simple".
+
+### Process
+- Gate 1 alignment with Edgar; my initial plan referenced `ha core api` which turned out not to exist (caught via SSH probe of `ha core --help`). Pivoted to job-poll + reload-list approach.
+- Gate 2 review via `superpowers:code-reviewer` agent surfaced 2 ⚠️ findings: (a) generic error grep could still false-positive on supervisor-lock if poll times out, (b) domain regex missed `scene`. Both folded into the final version. The advisory ℹ️ findings (jq alternative for jobs JSON parsing, always-print `automation.reload` even when listed) were noted but not adopted under "keep it simple".
+- End-to-end no-op deploy of `config/packages/dashboard_sensors.yaml` exercised every step cleanly — output listed `template.reload` + `automation.reload (always)` correctly.
+
+### Files changed
+- `deploy.sh` — full rewrite (95 → ~150 lines). Header docstring updated with cross-references to BACKLOG entries (2026-04-26, 2026-04-27).
+- `00 - Agent Context/BACKLOG.md` — entry struck-through + ✅ done.
+- `00 - Agent Context/DECISIONS.md` — new row.
+
+### Lessons
+- **`ha core api` doesn't exist** despite being a plausible-sounding command name. The supervisor CLI exposes core lifecycle (check, restart, stop, start) but no generic API proxy. Confirmed via `ssh ha "ha core --help"`. Future "talk to Core API from a host script" plans need the long-lived-token + curl path (Option A) or stay with MCP-mediated calls.
+- **`ha jobs info --raw-json` returns ~100KB** of historical jobs on a normally-functioning system (most have `"done":true`). The grep-based count works because we match `"done":false` literally — historical entries won't match. If the supervisor schema changes the count breaks silently — worth a `jq`-based version if/when it ships.
+
+### Not deployed to HA
+Tooling change to a script in the repo root, not an HA package. No HA backup needed (the test deploy of `dashboard_sensors.yaml` was a no-op); no entity validation, no trace inspection. Standard Gate 3 doesn't directly apply to deploy.sh changes.
+
+---
+
+## 2026-04-27 — FUSION Phase 7 / WP2 — corrections to the deploy entry
+
+### What was corrected
+Two follow-up findings that retract claims in the earlier "WP2 — DEPLOYED + verified" entry:
+
+1. **Storage-mode `dashboard_fusion` is already gone — no manual cleanup needed.** I flagged it as "Edgar to delete via UI" because the MCP `ha_config_delete_dashboard` was denied post-verification. Re-running `ha_config_get_dashboard(list_only=True)` shows only the YAML-mode entry at url_path `dashboard-fusion`; the storage-mode entry is no longer registered. HA auto-removed it during the restart that loaded the YAML-mode lovelace block — both definitions claimed the same url_path, so HA's loader resolved the conflict in favour of the configuration.yaml one. The sandbox denial was actually correct: there was nothing to delete.
+
+2. **TEST-007 + TEST-008 still fail at real iPhone 375 px — Chrome MCP cap was a false positive.** Edgar verified hands-on: the sidebar is NOT visible on the phone. The earlier deploy entry's "sidebar surprise" (sidebar_left=172 instead of -84) was an artifact of Chrome MCP's min-window cap on this macOS host (606px inner width). At real 375 CSS px the storage-mode breakage IS preserved by the verbatim relocation, exactly as the WP2 brief intended.
+
+   **Implications:**
+   - TEST-007 + TEST-008 stay `baseline_known_failure`. They remain WP3 + WP4's fix targets.
+   - TEST-103's expected fingerprint at 700 (`sidebar_left: -84`) was correct as written for the real-phone case but misleading at the Chrome MCP cap. The reading currently fails because the harness can't reach below 606px. Either: (a) replace TEST-103 with a real-device test once a phone-emulation path exists, or (b) interpret the post-WP2 reading as Chrome-MCP-environment-specific and rewrite expected for this harness's reach. WP3 owners should pick one before relying on the test.
+   - WP4 (state-switch shell with bottom-tab on phone) **retains its full scope as a regression fix**, not a UX polish. The "WP4 becomes a UX improvement rather than a fix" note in the deploy entry is wrong and superseded by this one.
+   - The Chrome MCP minimum-window-cap drift (was 526, now 606) is an environmental finding, not a content finding. Belongs to harness limitations, not the dashboard.
+
+### Files touched
+- `00 - Agent Context/CHANGELOG.md` — this entry
+- `00 - Agent Context/fusion-phase7/STATUS.md` — WP2 row note retracted on the sidebar/WP4 claims; WP1 status unchanged
+
+### Open follow-ups (revised)
+- (Done) Storage-mode `dashboard_fusion` cleanup — no longer applicable, HA auto-removed.
+- (Done, negative) Real-iPhone 375 px sidebar verification — confirms WP3 + WP4 fix target unchanged.
+- TEST-103 rewrite or real-device path — defer to WP3 owner's Gate 1.
+
+---
+
 
 ## 2026-04-27 — FUSION Phase 7 / WP2 — DEPLOYED + verified
 

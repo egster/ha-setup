@@ -339,7 +339,7 @@ Browser tests (`dom_assertion`, `visual_regression`, `behavioural`) require a Cl
 - viewport: any
 - type: entity_existence
 - assertion: |
-    (function(){const refs=["binary_sensor.entrance_motion_sensors","binary_sensor.eve_motion_20eby9901_occupancy_2","binary_sensor.office_motion_sensors","binary_sensor.zenwifi_bq16_ca38_wan_status","climate.air_conditioning_bedroom","climate.kitchen_area","climate.living_room_area","climate.office_area","device_tracker.edphone","device_tracker.ipad","input_boolean.fusion_kiosk","input_number.monitoring_outdoor_temperature","input_select.fusion_panel","light.entrance_ceiling","light.garage","light.jona_lights","light.kitchen_lights","light.living_room_lights","light.office_lights","light.outdoor_lights","light.uplight_back_left","light.uplight_back_right","light.uplight_front","light.upstairs_hall_lights","media_player.homepod","media_player.jona_speaker","media_player.kitchen_speakers","media_player.living_room","media_player.living_room_tv_2","media_player.upstairs_speaker","person.edgar","scene.lights_off","script.lr_relax","script.movie_mode","sensor.eve_energy_20ebo8301_energy","sensor.eve_energy_20ebo8301_energy_2","sensor.eve_energy_20ebo8301_power","sensor.eve_energy_20ebo8301_power_2","sensor.zenwifi_bq16_ca38_download_speed","sensor.zenwifi_bq16_ca38_upload_speed","sensor.zenwifi_bq16_ca38_uptime","timer.kitchen_timer_1","timer.kitchen_timer_2","todo.shopping_list"];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
+    (function(){const refs=["binary_sensor.entrance_motion_sensors","binary_sensor.eve_motion_20eby9901_occupancy_2","binary_sensor.office_motion_sensors","binary_sensor.zenwifi_bq16_ca38_wan_status","climate.air_conditioning_bedroom","climate.kitchen_area","climate.living_room_area","climate.office_area","device_tracker.edphone","device_tracker.ipad","input_boolean.fusion_kiosk","input_boolean.fusion_more_overlay","input_number.monitoring_outdoor_temperature","input_select.fusion_panel","light.entrance_ceiling","light.garage","light.jona_lights","light.kitchen_lights","light.living_room_lights","light.office_lights","light.outdoor_lights","light.uplight_back_left","light.uplight_back_right","light.uplight_front","light.upstairs_hall_lights","media_player.homepod","media_player.jona_speaker","media_player.kitchen_speakers","media_player.living_room","media_player.living_room_tv_2","media_player.upstairs_speaker","person.edgar","scene.lights_off","script.lr_relax","script.movie_mode","sensor.eve_energy_20ebo8301_energy","sensor.eve_energy_20ebo8301_energy_2","sensor.eve_energy_20ebo8301_power","sensor.eve_energy_20ebo8301_power_2","sensor.zenwifi_bq16_ca38_download_speed","sensor.zenwifi_bq16_ca38_upload_speed","sensor.zenwifi_bq16_ca38_uptime","timer.kitchen_timer_1","timer.kitchen_timer_2","todo.shopping_list"];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
 - expected: "[]"
 - tolerance: 0
 - owner_wp: WP1
@@ -492,6 +492,349 @@ These cover the file restructure + YAML-mode conversion. Pre-extraction the file
 - status: baseline
 - notes: |
     Smoke-test that switching panels and switching back works without throwing. WP2's `ha core reload-all` is exercised at deploy time, not in the test suite — this is the runtime-side cousin: prove the assembled dashboard responds to state changes without errors. Catches regression in the way conditional cards reference their panel option string.
+
+### Responsive grid migration (TEST-200 … TEST-212) — owned by WP3
+
+Cover the WP3 swap of fixed `repeat(N, 1fr)` panel grids for `repeat(auto-fit, minmax(MIN, 1fr))`. Pre-WP3, every panel grid is locked to a fixed column count at every viewport. Post-WP3, the grids collapse 3-col → 2-col → 1-col as the viewport narrows.
+
+**Per-panel minmax floors (verify against impl):**
+
+| Grid | minmax floor |
+|------|--------------|
+| home hero (5 KPIs) | 140 px |
+| home rooms (3 cards each floor grid) | 240 px |
+| climate (4 zones) | 240 px |
+| network (3 stat tiles) | 280 px |
+| media (6 player cards) | 280 px |
+| energy (2 power tiles) | 280 px |
+
+**Harness limit:** the macOS Chrome MCP harness clips at ~606 px inner width. Tests targeting `viewport: 375x812` execute at the harness floor, not at 375. They stay `baseline_known_failure` permanently — same convention as TEST-007/008. Manual phone verification fills the gap.
+
+## TEST-200: MAIN FLOOR rooms render in 3 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(3, 1fr)`. Post-WP3 passes via auto-fit clamped to 3 cards. Regression guard for the desktop view.
+
+## TEST-201: MAIN FLOOR rooms render in 3 columns at 900px
+- viewport: 900x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed grid. Post-WP3 needs minmax floor ≤ ~256 px against the 900-viewport content area (~768 px after sidebar + padding) for 3-col to hold.
+
+## TEST-202: MAIN FLOOR rooms collapse to 2 columns at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 2
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 (returns 3 from fixed grid). Flips to baseline once auto-fit lands — at 700 the content area (~668 px) divided by 240-px floor → 2 cols.
+
+## TEST-203: MAIN FLOOR rooms collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness 606-px floor blocks reaching real 375; at the harness's reach (~606), 2 cols fit (575 / 240 = 2.39 → 2), so this fails on the harness even post-WP3. Stays baseline_known_failure permanently — same convention as TEST-007/008. Manual real-device verification on Edgar's iPhone after WP4 merges.
+
+## TEST-204: Climate zones render in ≥4 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: ">=4"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(4, 1fr)`. Post-WP3 passes via auto-fit clamped to 4 cards.
+
+## TEST-205: Climate zones collapse to 2 columns at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 2
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 (returns 4). Flips post-WP3 once 240-px floor takes effect.
+
+## TEST-206: Climate zones collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit. Same convention as TEST-203.
+
+## TEST-207: Network cards render in 3 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'network'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('WAN Status');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(3, 1fr)`. Post-WP3 passes via auto-fit clamped to 3 cards. Anchor `WAN Status` is unique to the network panel.
+
+## TEST-208: Network cards collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'network'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('WAN Status');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit.
+
+## TEST-209: Media players render in ≥2 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'media'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('VisionMaster');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: ">=2"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(2, 1fr)`. Post-WP3 with 280-px floor at 1280 content (~1148 px) → 4 cols. Anchor `VisionMaster` is unique to the media panel.
+
+## TEST-210: Media players collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'media'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('VisionMaster');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit.
+
+## TEST-211: No horizontal page overflow on home panel at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=2"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Regression guard for the desktop view — verifies the responsive-grid swap doesn't introduce horizontal scroll. Multi-viewport overflow at narrower viewports is owned by WP4's shell-swap (the −84 px outer margin causes overflow at <871 px until the bottom-tab variant lands).
+
+## TEST-212: MAIN FLOOR room cards each ≥ 240px wide at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const targets=['Living Room','Kitchen','Office'];const widths=[];for(const t of targets){const all=WALK_ALL(document,'*');const candidates=all.filter(e=>{if(!e.tagName)return false;return (e.textContent||'').trim()===t;});if(candidates.length===0)continue;let parent=candidates[0];while(parent&&parent.getBoundingClientRect().width<100){parent=parent.parentElement;}if(parent)widths.push(Math.round(parent.getBoundingClientRect().width));}return widths.length===3?Math.min(...widths):-1;})()
+- expected: ">=240"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 — at 700 with `repeat(3, 1fr)`, each card is ~668/3 ≈ 222 px (below the 240-floor target). Flips post-WP3 once minmax(240px, 1fr) takes over and 700-px content collapses to 2-col, putting each card at ~334 px.
+
+
+### Shell swap (TEST-300 … TEST-315) — owned by WP4
+
+These cover the state-switch hybrid shell: sidebar on desktop/iPad (≥871px), bottom-tab nav on phone (<871px). Pre-implementation: every TEST-300..315 fails (no state-switch in shell, sidebar still rendered everywhere). Post-WP4: all 16 pass + WP1 TEST-007/008 (sidebar off-screen at <871px) flip to baseline because the dashboard at narrow viewports no longer renders the sidebar at all. State-switch syntax used: BOTH media queries listed under `states:` explicitly (no `default:` field — `default` expects a state-name string, not a card definition).
+
+## TEST-300: Desktop sidebar visible at 1280 (≥7 nav cells, width 72)
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length
+- expected: ">=7"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: At desktop viewport the state-switch active branch is the sidebar layout — same 8-cell sidebar as pre-WP4. ≥7 keeps the assertion robust if the kiosk-toggle cell shifts (TEST-009 already pins it at exactly 8).
+
+## TEST-301: Bottom tab bar NOT in DOM at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'ha-card').filter(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px'&&c.getBoundingClientRect().width>200;}).length
+- expected: 0
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: state-switch only renders the active branch — at desktop viewport the phone branch (which contains the fixed-position bottom bar) must not be in DOM at all.
+
+## TEST-302: Statusbar has 7 button-cards visible at top at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'button-card').filter(b=>{const r=b.getBoundingClientRect();const cs=getComputedStyle(b);return r.top<50&&r.height>=20&&r.height<=50&&cs.display!=='none'&&r.width>10;}).length
+- expected: 7
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Desktop statusbar holds 7 cards (person, edphone, ipad, temp, wan, dl, ul). Brief said "8 cells" referring to grid template areas (1 spacer cell). Filter targets visible button-cards in the top 50px band — robust to the grid-area wrapper structure used by the desktop statusbar layout-card.
+
+## TEST-303: No horizontal overflow at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=10"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Pre-WP4 the −84px outer margin produces no overflow at 1280 (HA padding compensates), but the dropped-margin variant must not introduce one either. ≤10px tolerates sub-pixel rounding on retina hosts and small box-shadow bleed (measured 4px on 1849 host).
+
+## TEST-304: Sidebar still visible at 900 (above 871 breakpoint)
+- viewport: 900x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length
+- expected: ">=7"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: 900 > 871 → desktop branch still active. iPad portrait (~768) crosses to phone; iPad landscape (~1024) stays desktop. 900 brackets the breakpoint from above.
+
+## TEST-305: Sidebar NOT in DOM at 700, bottom tab bar IS in DOM
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const navs=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;const fixed=WALK_ALL(document,'ha-card').filter(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';}).length;return JSON.stringify({sidebar_cells:navs,fixed_bars:fixed});})()
+- expected: '{"sidebar_cells":0,"fixed_bars":1}'
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Below 871 the phone branch is active — the desktop sidebar's 72px nav cells must not be rendered, and exactly one fixed-position bottom bar must exist.
+
+## TEST-306: Bottom tab bar has 5 visible buttons at 700
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});if(!bar)return 0;return WALK_ALL(bar,'button-card').filter(b=>b.getBoundingClientRect().width>30).length;})()
+- expected: 5
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Five primary tabs — Home, Climate, Media, Network, More. The "More" tab opens an inline 3-button overlay (Kitchen, Energy, Automations) above the bar.
+
+## TEST-307: Statusbar has 4 cards at 700 (compressed phone variant)
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const sb=WALK_ALL(document,'hui-card').find(c=>{const r=c.getBoundingClientRect();return r.height>=30&&r.height<=46&&r.top<10&&r.width>200;});if(!sb)return 0;return WALK_ALL(sb,'button-card').length;})()
+- expected: 4
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Phone statusbar drops edphone, ipad, ul — keeps person, temp, wan, dl. Padding tightens to fit narrow viewports.
+
+## TEST-308: No horizontal overflow at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=2"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Hard goal — phone must not scroll horizontally. Real iPhone 375 CSS px is the canonical target; macOS Chrome harness caps at ~526 inner so this test runs at the harness floor. Visual verification on real device is the load-bearing check (Edgar confirmed 2026-04-27 the WP1 sidebar IS off-screen at real 375).
+
+## TEST-309: Bottom tab bar position is fixed at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return bar?getComputedStyle(bar).position:'not-found';})()
+- expected: "fixed"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+
+## TEST-310: Bottom tab bar bottom edge is 0px at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return bar?getComputedStyle(bar).bottom:'not-found';})()
+- expected: "0px"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+
+## TEST-311: Phone-branch outer layout has no negative left margin at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const lc=WALK(document,'hui-view-container');if(!lc)return 999;const child=lc.querySelector('hui-card');if(!child)return 999;const m=parseFloat(getComputedStyle(child).marginLeft||'0');return m;})()
+- expected: ">=0"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: The −84px margin is the WP1 root-cause bug. Phone branch must drop it entirely (`margin: 0`). The query targets the layout-card child of hui-view-container — that's the outer dashboard wrapper.
+
+## TEST-312: Tap "Climate" tab on phone → fusion_panel becomes 'climate'
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,300));await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,300));const after=HASS().states['input_select.fusion_panel'].state;await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return after;})()
+- expected: "climate"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Calls the service the bottom-tab Climate button's tap_action would dispatch — same one-step fidelity trade-off as TEST-031.
+
+## TEST-313: Tap "More" → overlay shows Kitchen/Energy/Automations
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_boolean','turn_off',{entity_id:'input_boolean.fusion_more_overlay'});await new Promise(r=>setTimeout(r,300));const findOverlayBar=()=>WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='56px'&&cs.display!=='none';});const beforeBar=findOverlayBar();await HASS().callService('input_boolean','turn_on',{entity_id:'input_boolean.fusion_more_overlay'});await new Promise(r=>setTimeout(r,500));const afterBar=findOverlayBar();const overlayText=afterBar?WALK_TEXT(afterBar).join('|'):'';const allLabelsInOverlay=afterBar?['Kitchen','Energy','Automations'].every(n=>overlayText.includes(n)):false;await HASS().callService('input_boolean','turn_off',{entity_id:'input_boolean.fusion_more_overlay'});return JSON.stringify({overlay_was_hidden:!beforeBar,overlay_appeared:!!afterBar,labels_in_overlay:allLabelsInOverlay});})()
+- expected: '{"overlay_was_hidden":true,"overlay_appeared":true,"labels_in_overlay":true}'
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: |
+    The overlay is a conditional card gated on input_boolean.fusion_more_overlay. The test (1) toggles the boolean OFF and asserts no fixed-position card at bottom:56px exists, (2) toggles ON and asserts a fixed-position card at bottom:56px appears containing all 3 labels, (3) toggles OFF again. Scoping the label search to the overlay's own ha-card avoids the panel-content false positive (Kitchen/Energy/Automations strings exist in panels/*.yaml content too).
+
+## TEST-314: Resize 1280 → 700 swaps shell live (no reload)
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{const before=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;if(typeof mcp_resize!=='function')return 'shim-missing';await mcp_resize(700,900);await new Promise(r=>setTimeout(r,800));const after=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;await mcp_resize(1280,900);await new Promise(r=>setTimeout(r,800));return JSON.stringify({before,after,fell_to_zero:after===0});})()
+- expected: "fell_to_zero\":true"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: |
+    state-switch + entity:mediaquery should re-evaluate the active branch on viewport resize, swapping shells without page reload. Uses runner-provided `mcp_resize(w,h)` shim — falls back to 'shim-missing' if absent. Manual check: open dashboard at 1280, drag window to 700 — sidebar disappears, bottom tab bar appears, no page reload.
+
+## TEST-315: Visual diff at 1280 vs WP2 baseline
+- viewport: 1280x900
+- type: visual_regression
+- assertion: |
+    capture_screenshot('wp4_1280px.png')
+- expected: "match-or-capture"
+- tolerance: manual
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Only difference from WP2's 1280 baseline should be the dropped −84px margin (visible as a small left-edge shift of the dashboard wrapper). Anything else (KPI tile layout, room cards, scenes row) is regression. Manual review against WP2 baseline screenshot.
+
+
 
 ### Popup template + Living Room (TEST-400 … TEST-416) — owned by WP5a
 
@@ -676,26 +1019,36 @@ These cover the shared popup template and the Living Room popup as the reference
 - owner_wp: WP5a
 - status: baseline_known_failure
 
+
 ---
 
-## Total: 53 tests
+## Total: 82 tests
 
-| Category | Count | Status |
+| Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
-| DOM assertion | 25 | 11 WP1 baseline + 2 WP1 baseline_known_failure + 3 WP2 baseline + 9 WP5a baseline_known_failure |
-| Visual regression | 6 | 4 WP1 baseline + 2 WP5a baseline_known_failure |
-| Behavioural | 8 | 3 WP1 baseline + 2 WP2 baseline + 3 WP5a baseline_known_failure |
-| YAML schema | 8 | 2 WP1 baseline + 1 WP2 baseline + 3 WP2 baseline_known_failure + 2 WP5a baseline_known_failure |
-| Entity existence | 4 | 3 WP1 baseline + 1 WP5a baseline_known_failure |
+| DOM assertion | 50 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 2 WP2 baseline (TEST-101, TEST-102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) + 12 WP4 baseline_known_failure (TEST-300..311) + 9 WP5a baseline_known_failure (TEST-400, 402..409) |
+| Visual regression | 6 | 4 WP1 baseline + 1 WP4 baseline_known_failure (TEST-315) + 1 WP5a baseline_known_failure (TEST-416) |
+| Behavioural | 12 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) + 4 WP5a baseline_known_failure (TEST-410..413) |
+| YAML schema | 14 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) + 8 WP5a baseline (TEST-401, TEST-414, TEST-415 + 5 popup-existence/lint tests) |
 | Template eval | 2 | All WP1 baseline |
 
 **Pre-WP2-implementation baseline:** 31 passing (25 WP1 + 6 WP2 regression tests) + 5 known-failures (2 WP1 sidebar + 3 WP2 file_system tests pending extraction). With `--allow-baseline-failures`, exit 0; without, exit 1.
 
-**Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip from `baseline_known_failure` to `baseline`. Suite reports 34 passing (25 WP1 + 9 WP2) + 2 WP1 known-failures (TEST-007, TEST-008 — sidebar off-screen, fix target for WP3+WP4).
+**Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip to `baseline`; TEST-103 flips to `baseline_known_failure` per the WP2 deploy correction (harness can't reach 700-narrow trigger).
 
+**Pre-WP3-implementation (current state on `main`):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
+
+**Post-WP3-implementation:** WP3 swap of fixed grids → `auto-fit minmax`. WP3's 3 harness-reachable failures (TEST-202, TEST-205, TEST-212) flip to `baseline`. The WP3 375-px column-count tests (TEST-203, 206, 208, 210) require real-device verification and stay `baseline_known_failure` until a phone-emulation harness lands.
+
+**WP4 contribution:** 16 new tests (TEST-300..315) all currently `baseline_known_failure` until Edgar verifies on real iPhone. Once verified, the 12 phone-only tests + TEST-007/008 (sidebar at narrow) flip to `baseline` because the dashboard at <871px no longer renders the sidebar at all (the phone branch shows the bottom-tab bar instead).
+
+Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
 **Pre-WP5a-implementation (this WP):** 17 known-failures (2 WP1 sidebar + 15 WP5a popup-not-yet-built). New WP5a tests TEST-400 … TEST-416 must currently fail; once the popup ships and is verified end-to-end, all 17 of WP5a's tests flip from `baseline_known_failure` → `baseline`, leaving only the 2 WP1 sidebar known-failures (still owned by WP3+WP4).
 
 Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 53/53 green.
+---
+
+## Total: 82 tests
 
 ---
 

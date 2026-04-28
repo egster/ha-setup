@@ -324,26 +324,16 @@ baseline-flagged?). Scope creep risk.
 **Provenance**: Identified during 2026-04-22 ha-health-check improvement session
 as sweep fix #3.
 
-#### Update `deploy.sh` to auto-reload input helper domains AND template/automation
-**Added**: 2026-04-16, expanded 2026-04-26
-**Why**: Today's Zocci+Beamer and Vacation Mode deploys both hit the same snag — `ha core reload-all` (what `deploy.sh` calls) does **not** reload `input_number`, `input_text`, `input_boolean`, `input_datetime` domains. Had to call `input_number.reload` / `input_text.reload` / `automation.reload` manually via MCP after each deploy.
+#### ~~Update `deploy.sh` to auto-reload input helper domains AND template/automation~~ ✅ done 2026-04-28
+**Added**: 2026-04-16 — **Completed**: 2026-04-28
+**Outcome**: Picked **Option B** (DECISIONS 2026-04-28): script validates and deploys; reloads remain owned by the MCP layer. Three concrete changes:
+1. **Job-poll guard** before `ha core check` — polls `ha jobs info --raw-json` for up to 90s until no `"done":false` jobs (parent or child), eliminating the 2026-04-27 supervisor-race false-rollback.
+2. **Lock-error detection** before the generic error grep — if `ha core check` returns "Another job is running", script exits *without* rollback and prompts a retry. Belt-and-suspenders for the timeout-edge case.
+3. **Per-domain reload printout** replacing the silent-no-op `ha core reload-all`. Detects `template`, `automation`, `script`, `scene`, `input_number`, `input_text`, `input_boolean`, `input_datetime`, `input_select` at top level. Always also prints `automation.reload` for package-level alias changes.
 
-**2026-04-26 update**: deploying `low_battery_alerts.yaml` revealed that `ha core reload-all` is **not even a valid `ha` CLI subcommand on HA core-2026.4.2** — it silently prints the `ha core` help dump. So the script's reload step has been a no-op the whole time, and every package deploy has needed manual `template.reload` / `automation.reload` follow-ups. Bumping priority and expanding scope.
+Rejected: long-lived token + curl for full automation (Option A). Adds auth state and a token-expiry failure mode in exchange for ~30s saved per deploy. MCP-layer reloads are already what every Gate 3 does.
 
-**2026-04-27 update**: deploying `office_motion_light.yaml` hit a **supervisor-job race**: two consecutive `deploy.sh` runs failed with `Error: Another job is running for job group container_homeassistant` because the supervisor returned the error transiently while the previous `ha core check` was still in flight. The check actually completed successfully ~70 seconds later (per supervisor logs), but `deploy.sh` had already rolled back the file. Add a pre-check guard to `deploy.sh`: poll `ha jobs info` until no `done: false` jobs are present before issuing `ha core check`. Cost: another ~30 sec on the deploy step but eliminates spurious rollbacks.
-
-**Fix**: Have `deploy.sh` parse the deployed YAML file and, if it contains a relevant top-level key, issue the corresponding `reload` service call over the HA API:
-- `template:` → `template.reload`
-- `input_number:` / `input_text:` / `input_boolean:` / `input_datetime:` / `input_select:` → `<domain>.reload`
-- `script:` → `script.reload`
-- `automation:` → `automation.reload`
-- Unconditionally also call `automation.reload` (catches package-level alias changes).
-
-Replace the broken `ha core reload-all` invocation with a real `ha core check` (already done) plus the reload chain above via the HA REST API (token-authed).
-
-**Caveat**: For a **first-time** load of an input domain (no existing entities), `<domain>.reload` works only after the YAML itself is valid — so validation in Step 3 is essential.
-
-**Effort**: ~30 min (was ~20; +10 for replacing `ha core reload-all` with API calls).
+**Verified** end-to-end with no-op deploy of `dashboard_sensors.yaml` — all 5 steps clean, reload list correctly listed `template.reload + automation.reload`.
 
 #### ~~Track pre-commit hook in the repo~~ ✅ done 2026-04-19
 **Added**: 2026-04-16 — **Completed**: 2026-04-19
