@@ -432,8 +432,9 @@ These cover the file restructure + YAML-mode conversion. Pre-extraction the file
 - expected: '{"nav_cells":8,"sidebar_left":-84,"padding_left":"0px"}'
 - tolerance: 0
 - owner_wp: WP2
-- status: baseline
-- notes: Confirms the narrow-mode breakage is preserved (NOT fixed) by WP2 — the responsive bug is WP3+WP4's job. WP2's correctness gate is "everything renders identically", including the bug.
+- status: baseline_known_failure
+- notes: |
+    Original WP2 intent — confirm the narrow-mode breakage is preserved by verbatim relocation. Status flipped to baseline_known_failure by WP3 (2026-04-27) after the WP2 deploy revealed a harness limit: the macOS Chrome MCP harness can only reach ~606 px inner width, which doesn't trigger the narrow-mode breakage on this host. At real iPhone 375 px the storage-mode breakage IS preserved exactly as the WP1 baseline documented (Edgar verified hands-on, see CHANGELOG 2026-04-27 corrections). The structural-fingerprint regression check is now load-bearing only at 1280 (TEST-101) and 900 (TEST-102); TEST-103's role is documentation of the semantic intent. Same convention as TEST-007/008 — manual real-device verification fills the gap. Once WP4 ships, this test becomes obsolete (the bottom-tab shell variant removes the negative-margin source of the breakage entirely).
 
 ## TEST-104: All 7 panel input_select options render their respective panel
 - viewport: 1280x900
@@ -491,6 +492,167 @@ These cover the file restructure + YAML-mode conversion. Pre-extraction the file
 - status: baseline
 - notes: |
     Smoke-test that switching panels and switching back works without throwing. WP2's `ha core reload-all` is exercised at deploy time, not in the test suite — this is the runtime-side cousin: prove the assembled dashboard responds to state changes without errors. Catches regression in the way conditional cards reference their panel option string.
+
+### Responsive grid migration (TEST-200 … TEST-212) — owned by WP3
+
+Cover the WP3 swap of fixed `repeat(N, 1fr)` panel grids for `repeat(auto-fit, minmax(MIN, 1fr))`. Pre-WP3, every panel grid is locked to a fixed column count at every viewport. Post-WP3, the grids collapse 3-col → 2-col → 1-col as the viewport narrows.
+
+**Per-panel minmax floors (verify against impl):**
+
+| Grid | minmax floor |
+|------|--------------|
+| home hero (5 KPIs) | 140 px |
+| home rooms (3 cards each floor grid) | 240 px |
+| climate (4 zones) | 240 px |
+| network (3 stat tiles) | 280 px |
+| media (6 player cards) | 280 px |
+| energy (2 power tiles) | 280 px |
+
+**Harness limit:** the macOS Chrome MCP harness clips at ~606 px inner width. Tests targeting `viewport: 375x812` execute at the harness floor, not at 375. They stay `baseline_known_failure` permanently — same convention as TEST-007/008. Manual phone verification fills the gap.
+
+## TEST-200: MAIN FLOOR rooms render in 3 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(3, 1fr)`. Post-WP3 passes via auto-fit clamped to 3 cards. Regression guard for the desktop view.
+
+## TEST-201: MAIN FLOOR rooms render in 3 columns at 900px
+- viewport: 900x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed grid. Post-WP3 needs minmax floor ≤ ~256 px against the 900-viewport content area (~768 px after sidebar + padding) for 3-col to hold.
+
+## TEST-202: MAIN FLOOR rooms collapse to 2 columns at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 2
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 (returns 3 from fixed grid). Flips to baseline once auto-fit lands — at 700 the content area (~668 px) divided by 240-px floor → 2 cols.
+
+## TEST-203: MAIN FLOOR rooms collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Kitchen')&&txt.includes('Office');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness 606-px floor blocks reaching real 375; at the harness's reach (~606), 2 cols fit (575 / 240 = 2.39 → 2), so this fails on the harness even post-WP3. Stays baseline_known_failure permanently — same convention as TEST-007/008. Manual real-device verification on Edgar's iPhone after WP4 merges.
+
+## TEST-204: Climate zones render in ≥4 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: ">=4"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(4, 1fr)`. Post-WP3 passes via auto-fit clamped to 4 cards.
+
+## TEST-205: Climate zones collapse to 2 columns at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 2
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 (returns 4). Flips post-WP3 once 240-px floor takes effect.
+
+## TEST-206: Climate zones collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;const txt=el.textContent||'';return txt.includes('Living Room')&&txt.includes('Bedroom');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit. Same convention as TEST-203.
+
+## TEST-207: Network cards render in 3 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'network'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('WAN Status');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 3
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(3, 1fr)`. Post-WP3 passes via auto-fit clamped to 3 cards. Anchor `WAN Status` is unique to the network panel.
+
+## TEST-208: Network cards collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'network'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('WAN Status');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit.
+
+## TEST-209: Media players render in ≥2 columns at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'media'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('VisionMaster');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: ">=2"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Pre-WP3 passes via fixed `repeat(2, 1fr)`. Post-WP3 with 280-px floor at 1280 content (~1148 px) → 4 cols. Anchor `VisionMaster` is unique to the media panel.
+
+## TEST-210: Media players collapse to 1 column at 375px
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'media'});await new Promise(r=>setTimeout(r,500));const result=(function(){const grids=WALK_ALL(document,'*').filter(el=>{if(!el.tagName)return false;let cs;try{cs=getComputedStyle(el);}catch(e){return false;}if(cs.display!=='grid')return false;return (el.textContent||'').includes('VisionMaster');});if(grids.length===0)return -1;const smallest=grids.reduce((a,b)=>{const ar=a.getBoundingClientRect();const br=b.getBoundingClientRect();return (ar.width*ar.height<br.width*br.height)?a:b;});return getComputedStyle(smallest).gridTemplateColumns.split(/\s+/).filter(s=>/[\d.]+px/.test(s)).length;})();await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return result;})()
+- expected: 1
+- tolerance: 0
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Harness limit.
+
+## TEST-211: No horizontal page overflow on home panel at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=2"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline
+- notes: Regression guard for the desktop view — verifies the responsive-grid swap doesn't introduce horizontal scroll. Multi-viewport overflow at narrower viewports is owned by WP4's shell-swap (the −84 px outer margin causes overflow at <871 px until the bottom-tab variant lands).
+
+## TEST-212: MAIN FLOOR room cards each ≥ 240px wide at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const targets=['Living Room','Kitchen','Office'];const widths=[];for(const t of targets){const all=WALK_ALL(document,'*');const candidates=all.filter(e=>{if(!e.tagName)return false;return (e.textContent||'').trim()===t;});if(candidates.length===0)continue;let parent=candidates[0];while(parent&&parent.getBoundingClientRect().width<100){parent=parent.parentElement;}if(parent)widths.push(Math.round(parent.getBoundingClientRect().width));}return widths.length===3?Math.min(...widths):-1;})()
+- expected: ">=240"
+- tolerance: regex
+- owner_wp: WP3
+- status: baseline_known_failure
+- notes: Fails pre-WP3 — at 700 with `repeat(3, 1fr)`, each card is ~668/3 ≈ 222 px (below the 240-floor target). Flips post-WP3 once minmax(240px, 1fr) takes over and 700-px content collapses to 2-col, putting each card at ~334 px.
+
 
 ### Shell swap (TEST-300 … TEST-315) — owned by WP4
 
@@ -672,26 +834,37 @@ These cover the state-switch hybrid shell: sidebar on desktop/iPad (≥871px), b
 - status: baseline_known_failure
 - notes: Only difference from WP2's 1280 baseline should be the dropped −84px margin (visible as a small left-edge shift of the dashboard wrapper). Anything else (KPI tile layout, room cards, scenes row) is regression. Manual review against WP2 baseline screenshot.
 
+
 ---
 
-## Total: 52 tests
+## Total: 65 tests
 
-| Category | Count | Status |
+| Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
+| DOM assertion | 29 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 2 WP2 baseline (TEST-101, TEST-102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) |
+| Visual regression | 4 | All WP1 baseline (manual diff) |
+| Behavioural | 5 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) |
+| YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) |
 | DOM assertion | 28 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 3 WP2 baseline (TEST-101, TEST-102, TEST-103) + 12 WP4 baseline_known_failure (TEST-300..311) |
 | Visual regression | 5 | 4 WP1 baseline (manual diff) + 1 WP4 baseline_known_failure (TEST-315) |
 | Behavioural | 8 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) |
 | YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline_known_failure (TEST-105, TEST-106, TEST-107) |
+---
+
 | Entity existence | 3 | All WP1 baseline |
 | Template eval | 2 | All WP1 baseline |
 
 **Pre-WP2-implementation baseline:** 31 passing (25 WP1 + 6 WP2 regression tests) + 5 known-failures (2 WP1 sidebar + 3 WP2 file_system tests pending extraction). With `--allow-baseline-failures`, exit 0; without, exit 1.
 
-**Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip from `baseline_known_failure` to `baseline`. Suite reports 34 passing (25 WP1 + 9 WP2) + 2 WP1 known-failures (TEST-007, TEST-008 — sidebar off-screen, fix target for WP3+WP4).
+**Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip to `baseline`; TEST-103 flips to `baseline_known_failure` per the WP2 deploy correction (harness can't reach 700-narrow trigger).
 
-**Pre-WP4-implementation baseline (this WP):** 16 new WP4 tests (TEST-300..315) all `baseline_known_failure`; together with the 2 WP1 sidebar known-failures the suite has 18 known-failures total. Once WP4 ships, all 16 WP4 tests flip to `baseline` AND TEST-007/TEST-008 flip to `baseline` (the sidebar simply doesn't render at <871px on the phone branch, so "sidebar visible at left ≥ 0" is vacuously satisfied — no DOM cell exists to be off-screen).
+**Pre-WP3-implementation (current state on `main`):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
 
-Phase 7 closes when WP3+WP4 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 52/52 green.
+**Post-WP3-implementation:** WP3 swap of fixed grids → `auto-fit minmax`. WP3's 3 harness-reachable failures (TEST-202, TEST-205, TEST-212) flip to `baseline`. The WP3 375-px column-count tests (TEST-203, 206, 208, 210) require real-device verification and stay `baseline_known_failure` until a phone-emulation harness lands.
+
+**WP4 contribution:** 16 new tests (TEST-300..315) all currently `baseline_known_failure` until Edgar verifies on real iPhone. Once verified, the 12 phone-only tests + TEST-007/008 (sidebar at narrow) flip to `baseline` because the dashboard at <871px no longer renders the sidebar at all (the phone branch shows the bottom-tab bar instead).
+
+Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
 
 ---
 
