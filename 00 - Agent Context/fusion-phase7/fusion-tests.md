@@ -339,7 +339,7 @@ Browser tests (`dom_assertion`, `visual_regression`, `behavioural`) require a Cl
 - viewport: any
 - type: entity_existence
 - assertion: |
-    (function(){const refs=["binary_sensor.entrance_motion_sensors","binary_sensor.eve_motion_20eby9901_occupancy_2","binary_sensor.office_motion_sensors","binary_sensor.zenwifi_bq16_ca38_wan_status","climate.air_conditioning_bedroom","climate.kitchen_area","climate.living_room_area","climate.office_area","device_tracker.edphone","device_tracker.ipad","input_boolean.fusion_kiosk","input_number.monitoring_outdoor_temperature","input_select.fusion_panel","light.entrance_ceiling","light.garage","light.jona_lights","light.kitchen_lights","light.living_room_lights","light.office_lights","light.outdoor_lights","light.uplight_back_left","light.uplight_back_right","light.uplight_front","light.upstairs_hall_lights","media_player.homepod","media_player.jona_speaker","media_player.kitchen_speakers","media_player.living_room","media_player.living_room_tv_2","media_player.upstairs_speaker","person.edgar","scene.lights_off","script.lr_relax","script.movie_mode","sensor.eve_energy_20ebo8301_energy","sensor.eve_energy_20ebo8301_energy_2","sensor.eve_energy_20ebo8301_power","sensor.eve_energy_20ebo8301_power_2","sensor.zenwifi_bq16_ca38_download_speed","sensor.zenwifi_bq16_ca38_upload_speed","sensor.zenwifi_bq16_ca38_uptime","timer.kitchen_timer_1","timer.kitchen_timer_2","todo.shopping_list"];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
+    (function(){const refs=["binary_sensor.entrance_motion_sensors","binary_sensor.eve_motion_20eby9901_occupancy_2","binary_sensor.office_motion_sensors","binary_sensor.zenwifi_bq16_ca38_wan_status","climate.air_conditioning_bedroom","climate.kitchen_area","climate.living_room_area","climate.office_area","device_tracker.edphone","device_tracker.ipad","input_boolean.fusion_kiosk","input_boolean.fusion_more_overlay","input_number.monitoring_outdoor_temperature","input_select.fusion_panel","light.entrance_ceiling","light.garage","light.jona_lights","light.kitchen_lights","light.living_room_lights","light.office_lights","light.outdoor_lights","light.uplight_back_left","light.uplight_back_right","light.uplight_front","light.upstairs_hall_lights","media_player.homepod","media_player.jona_speaker","media_player.kitchen_speakers","media_player.living_room","media_player.living_room_tv_2","media_player.upstairs_speaker","person.edgar","scene.lights_off","script.lr_relax","script.movie_mode","sensor.eve_energy_20ebo8301_energy","sensor.eve_energy_20ebo8301_energy_2","sensor.eve_energy_20ebo8301_power","sensor.eve_energy_20ebo8301_power_2","sensor.zenwifi_bq16_ca38_download_speed","sensor.zenwifi_bq16_ca38_upload_speed","sensor.zenwifi_bq16_ca38_uptime","timer.kitchen_timer_1","timer.kitchen_timer_2","todo.shopping_list"];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
 - expected: "[]"
 - tolerance: 0
 - owner_wp: WP1
@@ -653,9 +653,191 @@ Cover the WP3 swap of fixed `repeat(N, 1fr)` panel grids for `repeat(auto-fit, m
 - status: baseline_known_failure
 - notes: Fails pre-WP3 — at 700 with `repeat(3, 1fr)`, each card is ~668/3 ≈ 222 px (below the 240-floor target). Flips post-WP3 once minmax(240px, 1fr) takes over and 700-px content collapses to 2-col, putting each card at ~334 px.
 
+
+### Shell swap (TEST-300 … TEST-315) — owned by WP4
+
+These cover the state-switch hybrid shell: sidebar on desktop/iPad (≥871px), bottom-tab nav on phone (<871px). Pre-implementation: every TEST-300..315 fails (no state-switch in shell, sidebar still rendered everywhere). Post-WP4: all 16 pass + WP1 TEST-007/008 (sidebar off-screen at <871px) flip to baseline because the dashboard at narrow viewports no longer renders the sidebar at all. State-switch syntax used: BOTH media queries listed under `states:` explicitly (no `default:` field — `default` expects a state-name string, not a card definition).
+
+## TEST-300: Desktop sidebar visible at 1280 (≥7 nav cells, width 72)
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length
+- expected: ">=7"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: At desktop viewport the state-switch active branch is the sidebar layout — same 8-cell sidebar as pre-WP4. ≥7 keeps the assertion robust if the kiosk-toggle cell shifts (TEST-009 already pins it at exactly 8).
+
+## TEST-301: Bottom tab bar NOT in DOM at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'ha-card').filter(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px'&&c.getBoundingClientRect().width>200;}).length
+- expected: 0
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: state-switch only renders the active branch — at desktop viewport the phone branch (which contains the fixed-position bottom bar) must not be in DOM at all.
+
+## TEST-302: Statusbar has 7 button-cards visible at top at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'button-card').filter(b=>{const r=b.getBoundingClientRect();const cs=getComputedStyle(b);return r.top<50&&r.height>=20&&r.height<=50&&cs.display!=='none'&&r.width>10;}).length
+- expected: 7
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Desktop statusbar holds 7 cards (person, edphone, ipad, temp, wan, dl, ul). Brief said "8 cells" referring to grid template areas (1 spacer cell). Filter targets visible button-cards in the top 50px band — robust to the grid-area wrapper structure used by the desktop statusbar layout-card.
+
+## TEST-303: No horizontal overflow at 1280
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=10"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Pre-WP4 the −84px outer margin produces no overflow at 1280 (HA padding compensates), but the dropped-margin variant must not introduce one either. ≤10px tolerates sub-pixel rounding on retina hosts and small box-shadow bleed (measured 4px on 1849 host).
+
+## TEST-304: Sidebar still visible at 900 (above 871 breakpoint)
+- viewport: 900x900
+- type: dom_assertion
+- assertion: |
+    WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length
+- expected: ">=7"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: 900 > 871 → desktop branch still active. iPad portrait (~768) crosses to phone; iPad landscape (~1024) stays desktop. 900 brackets the breakpoint from above.
+
+## TEST-305: Sidebar NOT in DOM at 700, bottom tab bar IS in DOM
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const navs=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;const fixed=WALK_ALL(document,'ha-card').filter(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';}).length;return JSON.stringify({sidebar_cells:navs,fixed_bars:fixed});})()
+- expected: '{"sidebar_cells":0,"fixed_bars":1}'
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Below 871 the phone branch is active — the desktop sidebar's 72px nav cells must not be rendered, and exactly one fixed-position bottom bar must exist.
+
+## TEST-306: Bottom tab bar has 5 visible buttons at 700
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});if(!bar)return 0;return WALK_ALL(bar,'button-card').filter(b=>b.getBoundingClientRect().width>30).length;})()
+- expected: 5
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Five primary tabs — Home, Climate, Media, Network, More. The "More" tab opens an inline 3-button overlay (Kitchen, Energy, Automations) above the bar.
+
+## TEST-307: Statusbar has 4 cards at 700 (compressed phone variant)
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (function(){const sb=WALK_ALL(document,'hui-card').find(c=>{const r=c.getBoundingClientRect();return r.height>=30&&r.height<=46&&r.top<10&&r.width>200;});if(!sb)return 0;return WALK_ALL(sb,'button-card').length;})()
+- expected: 4
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Phone statusbar drops edphone, ipad, ul — keeps person, temp, wan, dl. Padding tightens to fit narrow viewports.
+
+## TEST-308: No horizontal overflow at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    document.documentElement.scrollWidth - document.documentElement.clientWidth
+- expected: "<=2"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Hard goal — phone must not scroll horizontally. Real iPhone 375 CSS px is the canonical target; macOS Chrome harness caps at ~526 inner so this test runs at the harness floor. Visual verification on real device is the load-bearing check (Edgar confirmed 2026-04-27 the WP1 sidebar IS off-screen at real 375).
+
+## TEST-309: Bottom tab bar position is fixed at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return bar?getComputedStyle(bar).position:'not-found';})()
+- expected: "fixed"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+
+## TEST-310: Bottom tab bar bottom edge is 0px at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return bar?getComputedStyle(bar).bottom:'not-found';})()
+- expected: "0px"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+
+## TEST-311: Phone-branch outer layout has no negative left margin at 375
+- viewport: 375x812
+- type: dom_assertion
+- assertion: |
+    (function(){const lc=WALK(document,'hui-view-container');if(!lc)return 999;const child=lc.querySelector('hui-card');if(!child)return 999;const m=parseFloat(getComputedStyle(child).marginLeft||'0');return m;})()
+- expected: ">=0"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: The −84px margin is the WP1 root-cause bug. Phone branch must drop it entirely (`margin: 0`). The query targets the layout-card child of hui-view-container — that's the outer dashboard wrapper.
+
+## TEST-312: Tap "Climate" tab on phone → fusion_panel becomes 'climate'
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,300));await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'climate'});await new Promise(r=>setTimeout(r,300));const after=HASS().states['input_select.fusion_panel'].state;await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});return after;})()
+- expected: "climate"
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Calls the service the bottom-tab Climate button's tap_action would dispatch — same one-step fidelity trade-off as TEST-031.
+
+## TEST-313: Tap "More" → overlay shows Kitchen/Energy/Automations
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_boolean','turn_off',{entity_id:'input_boolean.fusion_more_overlay'});await new Promise(r=>setTimeout(r,300));const findOverlayBar=()=>WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='56px'&&cs.display!=='none';});const beforeBar=findOverlayBar();await HASS().callService('input_boolean','turn_on',{entity_id:'input_boolean.fusion_more_overlay'});await new Promise(r=>setTimeout(r,500));const afterBar=findOverlayBar();const overlayText=afterBar?WALK_TEXT(afterBar).join('|'):'';const allLabelsInOverlay=afterBar?['Kitchen','Energy','Automations'].every(n=>overlayText.includes(n)):false;await HASS().callService('input_boolean','turn_off',{entity_id:'input_boolean.fusion_more_overlay'});return JSON.stringify({overlay_was_hidden:!beforeBar,overlay_appeared:!!afterBar,labels_in_overlay:allLabelsInOverlay});})()
+- expected: '{"overlay_was_hidden":true,"overlay_appeared":true,"labels_in_overlay":true}'
+- tolerance: 0
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: |
+    The overlay is a conditional card gated on input_boolean.fusion_more_overlay. The test (1) toggles the boolean OFF and asserts no fixed-position card at bottom:56px exists, (2) toggles ON and asserts a fixed-position card at bottom:56px appears containing all 3 labels, (3) toggles OFF again. Scoping the label search to the overlay's own ha-card avoids the panel-content false positive (Kitchen/Energy/Automations strings exist in panels/*.yaml content too).
+
+## TEST-314: Resize 1280 → 700 swaps shell live (no reload)
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{const before=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;if(typeof mcp_resize!=='function')return 'shim-missing';await mcp_resize(700,900);await new Promise(r=>setTimeout(r,800));const after=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();const k=c.firstElementChild;return k&&k.tagName==='BUTTON-CARD'&&Math.abs(r.width-72)<2&&r.height>40&&r.height<70;}).length;await mcp_resize(1280,900);await new Promise(r=>setTimeout(r,800));return JSON.stringify({before,after,fell_to_zero:after===0});})()
+- expected: "fell_to_zero\":true"
+- tolerance: regex
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: |
+    state-switch + entity:mediaquery should re-evaluate the active branch on viewport resize, swapping shells without page reload. Uses runner-provided `mcp_resize(w,h)` shim — falls back to 'shim-missing' if absent. Manual check: open dashboard at 1280, drag window to 700 — sidebar disappears, bottom tab bar appears, no page reload.
+
+## TEST-315: Visual diff at 1280 vs WP2 baseline
+- viewport: 1280x900
+- type: visual_regression
+- assertion: |
+    capture_screenshot('wp4_1280px.png')
+- expected: "match-or-capture"
+- tolerance: manual
+- owner_wp: WP4
+- status: baseline_known_failure
+- notes: Only difference from WP2's 1280 baseline should be the dropped −84px margin (visible as a small left-edge shift of the dashboard wrapper). Anything else (KPI tile layout, room cards, scenes row) is regression. Manual review against WP2 baseline screenshot.
+
+
 ---
 
-## Total: 49 tests
+## Total: 65 tests
 
 | Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
@@ -663,6 +845,12 @@ Cover the WP3 swap of fixed `repeat(N, 1fr)` panel grids for `repeat(auto-fit, m
 | Visual regression | 4 | All WP1 baseline (manual diff) |
 | Behavioural | 5 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) |
 | YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) |
+| DOM assertion | 28 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 3 WP2 baseline (TEST-101, TEST-102, TEST-103) + 12 WP4 baseline_known_failure (TEST-300..311) |
+| Visual regression | 5 | 4 WP1 baseline (manual diff) + 1 WP4 baseline_known_failure (TEST-315) |
+| Behavioural | 8 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) |
+| YAML schema | 6 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline_known_failure (TEST-105, TEST-106, TEST-107) |
+---
+
 | Entity existence | 3 | All WP1 baseline |
 | Template eval | 2 | All WP1 baseline |
 
@@ -670,11 +858,13 @@ Cover the WP3 swap of fixed `repeat(N, 1fr)` panel grids for `repeat(auto-fit, m
 
 **Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip to `baseline`; TEST-103 flips to `baseline_known_failure` per the WP2 deploy correction (harness can't reach 700-narrow trigger).
 
-**Pre-WP3-implementation (current):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
+**Pre-WP3-implementation (current state on `main`):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
 
-**Post-WP3-implementation:** WP3's 3 reachable failures (TEST-202, TEST-205, TEST-212) flip to `baseline`. Suite reports 42 passing + 7 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 4 WP3 harness-limited 375-px tests). All harness-limited entries pending real-device verification path.
+**Post-WP3-implementation:** WP3 swap of fixed grids → `auto-fit minmax`. WP3's 3 harness-reachable failures (TEST-202, TEST-205, TEST-212) flip to `baseline`. The WP3 375-px column-count tests (TEST-203, 206, 208, 210) require real-device verification and stay `baseline_known_failure` until a phone-emulation harness lands.
 
-Phase 7 closes when WP3 + WP4 + WP5 ship and the harness-limited tests are validated on real devices. WP4's bottom-tab shell removes the negative-margin source of TEST-007/008/103 — those flip on WP4 merge. The WP3 375-px column-count tests (203, 206, 208, 210) require real-device verification; they remain `baseline_known_failure` until a phone-emulation harness lands.
+**WP4 contribution:** 16 new tests (TEST-300..315) all currently `baseline_known_failure` until Edgar verifies on real iPhone. Once verified, the 12 phone-only tests + TEST-007/008 (sidebar at narrow) flip to `baseline` because the dashboard at <871px no longer renders the sidebar at all (the phone branch shows the bottom-tab bar instead).
+
+Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
 
 ---
 
