@@ -232,7 +232,7 @@ On every session start, after reading context files, do a quick scan:
 
 ### Pre-commit responsibility
 Before every `git commit`, scan the diff for the PII patterns above. If found, **block the commit and alert Edgar** with the specific file and line.
-4. **Git commit** — commit all modified `00 - Agent Context/` files with message `docs: session end YYYY-MM-DD — <one-line summary>`.
-5. **Git push** — `git push` to sync the commit to GitHub (`origin/main`).
+4. **Git commit** — commit modified files (context + any code changes) with a conventional-commits prefix (`docs:`, `feat:`, `fix:`, `chore:`). For docs-only session-end commits, use `docs: session end YYYY-MM-DD — <one-line summary>`.
+5. **Branch + PR (no direct push to main)** — direct push to `origin/main` is blocked by tooling. If the work is currently on `main`, the agent moves it to a feature branch (`git switch -c <type>/<short-slug>`), pushes the branch, and opens a PR via `gh pr create` for Edgar to review and merge. If the work is already on a feature branch, push it and open the PR. **Never push to `main` directly.** (Rule W5, 2026-04-28 — added after the previous "agent pushes to main" instruction collided with GitHub branch protection at the deploy.sh session end.)
 
-This is the agent's responsibility, not Edgar's.
+The agent's responsibility ends at opening the PR. Edgar reviews and merges.
