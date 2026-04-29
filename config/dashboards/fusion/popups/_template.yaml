@@ -16,7 +16,10 @@
 # popup WPs (WP5a … WP5d). Any divergence is a bug.
 #
 # Bubble Card v3.1.6 popup contract:
-#   - `card_type: popup` makes the card a hash-routed slide-up sheet
+#   - `card_type: pop-up` (note: HYPHENATED — Bubble Card v3.1.6 source registry
+#     uses "pop-up" only; "popup" loads silently but never builds the popup
+#     wrapper. Verified against bubble-card.js v3.1.6 source 2026-04-29.)
+#     Makes the card a hash-routed slide-up sheet.
 #   - `hash: '#popup-<slug>'` matches the URL fragment to open the popup
 #   - `button_type: card` controls the appearance of the (offscreen) trigger
 #   - `cards:` array holds the popup's content
@@ -32,7 +35,7 @@
 
 popup_template:
   type: custom:bubble-card
-  card_type: popup
+  card_type: pop-up
   hash: '#popup-PLACEHOLDER'
   button_type: card
   styles: |

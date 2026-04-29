@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-04-29 — FUSION Phase 7 / WP6 hotfix — `card_type: popup` → `pop-up` (popups now actually open)
+
+### What happened
+After WP6 merged, Edgar tested the popups on his real device and reported "the popups don't open". Diagnostic via Chrome MCP found that the 4 popup `bubble-card` elements were rendering as empty `<ha-card><div class="card-content"></div></ha-card>` shells — Bubble Card's popup-build logic (`updateBubbleCard()`) was a no-op because of a one-character bug propagated from the WP5a brief.
+
+### Root cause
+**Bubble Card v3.1.6 source registers `card_type: "pop-up"` (with hyphen), not `"popup"`.** Verified by decompressing `bubble-card.js.gz` and grepping `Zt["pop-up"]=…` (the registry) and `card_type:"pop-up"` (43 references). The `"popup"` form does not exist anywhere in v3.1.6. When `setConfig` ran, `Zt["popup"]` was undefined, so the popup-wrapper builder was never called. The bubble-card's outer shell rendered fine (which is why `lovelace/config` looked correct), but the popup's hash-router + slide-up wrapper structure never instantiated.
+
+The bug originated in the WP5a brief and propagated through `_template.yaml`, `living-room.yaml`, `kitchen.yaml`, `office.yaml`, `outdoor.yaml` because every popup file used `card_type: popup` verbatim per the brief. Since browser-side popup tests have been deferred to Edgar's real-device pass since WP5a (Chrome MCP `hui-panel-view` chunk-load harness blocker), the bug was latent for the full WP5a→WP6 span.
+
+### Fix
+- `config/dashboards/fusion/popups/_template.yaml` — `card_type: popup` → `card_type: pop-up`. Updated reference comment to call out the hyphenated form (with verification source).
+- `config/dashboards/fusion/popups/living-room.yaml` — same one-line change.
+- `config/dashboards/fusion/popups/kitchen.yaml` — same.
+- `config/dashboards/fusion/popups/office.yaml` — same.
+- `config/dashboards/fusion/popups/outdoor.yaml` — same.
+
+Five files, one character each. Deployed via SCP, md5 verified local↔HA Green, `ha_check_config` valid, `lovelace/config { force: true }` returned `card_type: "pop-up"` for all 4 popups (pre-fix it was `"popup"`).
+
+### Verification
+- ✅ Server-side: WS lovelace/config returns `card_type: "pop-up"` for `#popup-living-room`, `#popup-kitchen`, `#popup-office`, `#popup-outdoor`
+- ✅ `ha_check_config`: valid
+- ✅ md5 match local↔HA Green (5 popup files)
+- ⏳ **Browser-side popup-open hash test deferred to Edgar's real-device pass** — same Chrome MCP `hui-panel-view` harness blocker that affected WP5b/c/d/6. The harness now hangs on a black screen for FUSION even more aggressively than during the WP6 deploy session; HA core itself is healthy (the default `/lovelace` overview renders cleanly). This is the canonical signal that real-device verification is the load-bearing test.
+
+### Lessons
+1. **Verify ecosystem assumptions against source, not briefs.** The WP5a brief said `card_type: popup`. The bundled `bubble-card.js.gz` would have said `pop-up` if anyone had grepped it. WP6's nav-hide work was the first time a session decompressed the JS to verify a Bubble Card claim — and immediately found two stale assumptions (the body-class name `bubble-popup-open` vs `bubble-body-scroll-locked`, and now `popup` vs `pop-up`). Add to the project's research-advisor / Gate 1 muscle memory: "When a brief makes a claim about a HACS card's API, verify against its bundled source before deploying."
+
+2. **Browser-side deferral has compounded latent bugs.** The harness's `hui-panel-view` chunk-load issue forced WP5a/b/c/d/6 to defer popup-open verification. That deferral hid this bug for ~3 days. The real-device sweep is now load-bearing for catching three classes of bug at once: hash-router (this fix), nav-hide (WP6's `:host-context()`), and tap_action wiring (WP6's home.yaml). Edgar's iPhone + desktop browser test should run before any further popup-related work.
+
+3. **Updated DECISIONS 2026-04-29** entry on Bubble Card class-name verification — added the `card_type` field check to the same row, since both stem from the same "trust source not docs" lesson.
+
+### Related follow-ups (BACKLOG)
+- WP5a/b/d test fixtures TEST-403, TEST-432, TEST-452 reference `bubble-popup-open` (the old wrong body class) — flagged in Phase 7 retro for follow-up doc PR. Now also: any test asserting `card_type` should match the file should accept `"pop-up"`, not `"popup"`.
+
+---
+
 ## 2026-04-29 — FUSION Phase 7 / WP6 — Wiring + Bottom-Nav-Hide + Cosmetic Gaps (deployed, hash-test pending) **— PHASE 7 CLOSED**
 
 ### What was done

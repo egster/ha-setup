@@ -31,7 +31,7 @@
 # empty-state row per the brief's "always include the section" rule.
 
 type: custom:bubble-card
-card_type: popup
+card_type: pop-up
 hash: '#popup-living-room'
 button_type: card
 icon: mdi:sofa
