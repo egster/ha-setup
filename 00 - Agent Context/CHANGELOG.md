@@ -5,6 +5,57 @@
 ---
 
 
+## 2026-04-29 — FUSION Phase 7 / WP5d — Outdoor popup (deployed, hash-test pending)
+
+### What was done
+WP5d of FUSION Phase 7 — Outdoor "room" popup, mirroring the WP5b/c pattern but with the Climate section replaced by a Weather section. Six sections (Header / Lights / Weather / Sensors / Scenes / Automations), 8-entity manifest, 24h ApexCharts trend on outdoor temperature.
+
+**Files committed (`phase7/wp5d-outdoor` branch):**
+- `config/dashboards/fusion/popups/outdoor.yaml` — new, ~370 lines including a manifest header, Gate 1 decisions, and per-section reasoning. Lights: `light.outdoor_lights` group + 3 individual Hue tiles (Entrance, Garden, Stairs) + Party Lights smart-plug tile (`switch.eve_energy_20ebo8301_2`). Weather (replaces Climate): tile for `input_number.monitoring_outdoor_temperature`; popup_rows for humidity / UV / wind from `weather.forecast_home` attributes; sunrise/sunset popup_rows from `sun.sun.next_rising` / `next_setting` with a state operator highlighting whichever is next; 24h ApexCharts trend on `input_number.monitoring_outdoor_temperature`. Sensors: 2 empty-state rows (motion, leak/soil — Outdoor area has no environmental sensors today; the Eve power-monitoring sensors for Party Lights are excluded by design as electrical-metering, not environmental). Scenes: 1 empty-state row. Automations: 1 empty-state row (no outdoor-tagged automations today; sunset trigger / garden lighting flagged as future BACKLOG).
+- `config/dashboards/fusion/shell.yaml` — `+1 line`: `- !include popups/outdoor.yaml` after the existing 3 popup includes. State-switch + 4 popup files are now siblings in the outer mod-card's vertical-stack.
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` — added 11 WP5d tests (TEST-450 … TEST-460): yaml_schema, entity_existence (8 manifest entities), behavioural popup-open, DOM section presence (Header / Lights / Weather-not-Climate / outdoor-temperature / sunrise+sunset / ApexCharts / Sensors / Scenes+Automations). All `baseline_known_failure` until end-to-end verification flips them. Total bumped 92 → 103.
+- `00 - Agent Context/fusion-phase7/STATUS.md` — WP5d flipped to merged + deploy note.
+
+**Out-of-scope deploy correction (necessary for safety):**
+HA Green was discovered to be missing `popups/office.yaml` despite WP5c being merged on main (lingering effect of the WP5c-deploy-stomp incident). Since my shell.yaml change wires office + outdoor as siblings, deploying shell.yaml without office.yaml on disk would have broken the dashboard. I redeployed office.yaml via `./deploy.sh` alongside outdoor.yaml + shell.yaml. No source changes — just bringing HA Green in sync with main.
+
+### Gate 1 decisions (Edgar)
+- **Outdoor temperature source** (current display + 24h ApexCharts series): `input_number.monitoring_outdoor_temperature` — canonical poll target per PROFILE.md. Survives the intermittent `weather.forecast_home` outages and the persistent `sensor.air_conditioning_bedroom_outside_temperature` unavailable-state.
+- **Party Lights placement**: in the Lights section as a tile alongside the Hue lights. The Eve plug is a separate hardware primitive (toggle, not dimmable), but semantically it's outdoor lighting.
+- **Sunrise / sunset display**: two popup_rows always rendered; the next event (`next_rising < next_setting` for Sunrise; `next_setting < next_rising` for Sunset) is highlighted in the FUSION accent token `#d4a843` via a state operator.
+- **Excluded weather entity**: `weather.home` (in Outdoor area but with fewer attributes); canonical attribute source is `weather.forecast_home`.
+
+### Gate 2
+`ha-code-reviewer` (subagent_type=ha-code-reviewer): **APPROVED**. One ⚠️ flagged: sun.sun next-event boundary correctness is fine in the steady state, but at the exact event-fire moment HA may briefly report a stale future timestamp before recomputing — worst case, the wrong row glows for a few seconds. Non-blocking. Four informational notes (test-count phrasing drift on the WP5a snippet, wind_speed_unit hardcoded fallback, Party Lights tile relies on default tap behaviour, TEST-456 regex doesn't match >100° / <-10° edge cases) — all benign for the current setup.
+
+### Gate 3 (deploy + verify)
+1. **Local YAML validation**: `yamllint` clean on all three files (some pre-existing indentation warnings in shell.yaml from WP4 — not my add).
+2. **HA-side backup**: `/config/dashboards/fusion/shell.yaml.pre-wp5d.bak` (`ha_backup_create` MCP tool was timing out — fell back to in-place ssh cp). Source-of-truth is git on the WP5d branch.
+3. **deploy.sh sequence**: office.yaml first (sync HA with main), then outdoor.yaml, then shell.yaml. Each pass: yamllint ✅, scp ✅, supervisor jobs settled ✅, `ha core check` ✅.
+4. **Live config verification** via WS `lovelace/config { force: true, url_path: 'dashboard-fusion' }`: outer mod-card → vertical-stack → 5 children = `[state-switch, bubble-card×4]`. Hashes returned: `#popup-living-room`, `#popup-kitchen`, `#popup-office`, `#popup-outdoor`. Names: `[Living Room, Kitchen, Office, Outdoor]`. ✅
+5. **Browser hash test** (`#popup-outdoor` opens slide-up popup): **deferred to Edgar's real-device verification.** Chrome MCP harness on this macOS host can't load the `hui-panel-view` chunk for any FUSION dashboard URL — same blocker WP5b and WP5c hit on Gate 3. Body never gets the `bubble-popup-open` class because the panel never mounts. Not a defect in the popup; a harness limitation. Edgar's iPhone / desktop browser will resolve TEST-452 on the next live pass.
+
+### Decisions / Notes
+- The `popup_row` button-card template in `templates.yaml` (lines 218–280) has duplicate `icon`/`name`/`grid` keys under `styles:` — YAML last-wins gives bottom-tab styling for any active popup_row. WP5b/c shipped with this; my outdoor.yaml uses `popup_row` consistently with them. **Out of WP5d's scope to fix; flag for WP6.** When fixed, the empty-state rows (which override card-level styles inline) keep working; the active rows (humidity / UV / wind / sunrise / sunset) will visually shift from "small centered chip" to "horizontal `i n` row" — the test text content survives the change.
+- Test counter phrasing in fusion-tests.md still references stale closure totals from WP5a's snippet (e.g. "53/53 green") — informational, not a blocker. WP6 close-out should refresh.
+
+### Open follow-ups (BACKLOG candidates)
+- WP6 should fix the `templates.yaml` `popup_row` duplicate-keys bug — restores intended row visual across all 4 popups.
+- Outdoor automations could be added later: sunset porch-on, sunrise garden-off, party-lights schedule. Currently zero in the area; popup renders an empty-state row that gracefully fits the section.
+- `weather.home` (currently in Outdoor area but unused) could be moved/cleaned up — secondary weather entity is confusing and doesn't add value over `weather.forecast_home`.
+
+### Verification
+- `ha_check_config`: ✅ valid
+- WS lovelace config (force-reload): ✅ 4 popup hashes present including `#popup-outdoor`
+- Files on HA: `_template.yaml`, `kitchen.yaml`, `living-room.yaml`, `office.yaml`, `outdoor.yaml` — all 5 present (was 3 before this session)
+- Browser hash test: deferred (harness limit)
+
+### Risk
+**Low.** Read-only consumer of existing entities; no helpers / automations created. The Climate-section swap for Weather is purely presentational. The shell.yaml change is a one-line additive `!include` matching established WP5a/b/c pattern. Office.yaml redeploy was a sync, not a content change.
+
+---
+
+
 ## 2026-04-29 — FUSION Phase 7 / WP5b — Kitchen popup (deployed, hash-test pending)
 
 ### What was done

@@ -635,3 +635,4 @@ card:
     - !include popups/living-room.yaml
     - !include popups/kitchen.yaml
     - !include popups/office.yaml
+    - !include popups/outdoor.yaml

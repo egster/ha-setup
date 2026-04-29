@@ -1131,10 +1131,133 @@ These cover the Kitchen popup. They share the popup wrapper from WP5a's `_templa
 - status: baseline_known_failure
 - notes: Wiser Kitchen zone present, so the chart is part of the popup. 1500ms wait for ApexCharts to fetch its 24h history slice (mirrors TEST-410 timing).
 
+# WP5d — Outdoor popup
+
+These cover the Outdoor popup. They share the popup wrapper from WP5a's `_template.yaml`; assertions on wrapper styles are not duplicated here (TEST-413 / TEST-414 already cover them via the LR popup, and the wrapper is verbatim across popup files per the WP5a contract).
+
+## TEST-450: outdoor.yaml is valid YAML
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    python3 -c "import yaml; yaml.safe_load(open('config/dashboards/fusion/popups/outdoor.yaml')); print('ok')"
+- expected: "ok"
+- tolerance: 0
+- owner_wp: WP5d
+- status: baseline_known_failure
+
+## TEST-451: Every entity referenced in outdoor.yaml resolves to a real entity
+- viewport: any
+- type: entity_existence
+- assertion: |
+    (function(){const refs=['light.outdoor_lights','light.philips_1744530p7','light.philips_1744530p7_2','light.philips_1744530p7_3','switch.eve_energy_20ebo8301_2','input_number.monitoring_outdoor_temperature','weather.forecast_home','sun.sun'];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
+- expected: "[]"
+- tolerance: 0
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: |
+    Mirrors the entity manifest in `config/dashboards/fusion/popups/outdoor.yaml`'s header comment. `unavailable` entities still resolve through HA — only fully missing entities cause this test to fail. `weather.home` is also in the Outdoor area but is not referenced by the popup; canonical attribute source is `weather.forecast_home` per Gate 1.
+
+## TEST-452: Navigating to /dashboard-fusion/fusion#popup-outdoor opens the popup
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-outdoor"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP5d
+- status: baseline_known_failure
+
+## TEST-453: Popup contains a header with text "Outdoor"
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ');location.hash='';return txt.includes('Outdoor');})()
+- expected: true
+- tolerance: 0
+- owner_wp: WP5d
+- status: baseline_known_failure
+
+## TEST-454: Popup contains a "Lights" section with at least 1 brightness slider
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasLightsHeader=txt.includes('LIGHTS');const sliders=WALK_ALL(document,'ha-slider').length+WALK_ALL(document,'input[type=range]').length;location.hash='';return JSON.stringify({hasLightsHeader,sliders});})()
+- expected: "^\\{\"hasLightsHeader\":true,\"sliders\":[1-9][0-9]*\\}$"
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Outdoor area has 4 dimmable Hue lights (group + entrance + garden + stairs) plus the Party Lights smart plug (toggle only — no slider).
+
+## TEST-455: Popup contains a "Weather" section (NOT Climate) for outdoor
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasWeatherHeader=txt.includes('WEATHER');const hasClimateHeader=txt.includes('CLIMATE');location.hash='';return JSON.stringify({hasWeatherHeader,hasClimateHeader});})()
+- expected: '{"hasWeatherHeader":true,"hasClimateHeader":false}'
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Outdoor has no thermostat; the Weather section replaces Climate per the WP5 popup pattern.
+
+## TEST-456: Popup displays the current outdoor temperature
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ');const hasOutdoorTempLabel=/Outdoor Temperature/i.test(txt);const hasTempValue=/-?\d{1,2}(\.\d)?\s*°/.test(txt);location.hash='';return JSON.stringify({hasOutdoorTempLabel,hasTempValue});})()
+- expected: '{"hasOutdoorTempLabel":true,"hasTempValue":true}'
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Source is `input_number.monitoring_outdoor_temperature` (canonical poll target per PROFILE.md).
+
+## TEST-457: Popup shows sunrise + sunset times
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ');const hasSunrise=/Sunrise\s+\d{2}:\d{2}/.test(txt);const hasSunset=/Sunset\s+\d{2}:\d{2}/.test(txt);location.hash='';return JSON.stringify({hasSunrise,hasSunset});})()
+- expected: '{"hasSunrise":true,"hasSunset":true}'
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Both rows always render; the next event uses accent color via a state operator on `sun.sun.next_rising` vs `next_setting`.
+
+## TEST-458: Popup contains an ApexCharts 24h outdoor temperature trend
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,1500));const apex=WALK_ALL(document,'apexcharts-card').length;location.hash='';return apex;})()
+- expected: ">=1"
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: 1500ms wait gives ApexCharts time to fetch the 24h history slice from `input_number.monitoring_outdoor_temperature`.
+
+## TEST-459: Popup contains a "Sensors" section (renders empty-state for outdoor)
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();location.hash='';return txt.includes('SENSORS');})()
+- expected: true
+- tolerance: 0
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Outdoor area has no motion / leak / soil sensors; section renders empty-state rows per the brief's "always include the section" rule.
+
+## TEST-460: Popup contains both "Scenes" and "Automations" sections
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasScenes=txt.includes('SCENES');const hasAutomations=txt.includes('AUTOMATIONS');location.hash='';return JSON.stringify({hasScenes,hasAutomations});})()
+- expected: '{"hasScenes":true,"hasAutomations":true}'
+- tolerance: regex
+- owner_wp: WP5d
+- status: baseline_known_failure
+- notes: Both sections render empty-state rows — outdoor has no tagged scenes or automations today.
+
 
 ---
 
-## Total: 92 tests
+## Total: 103 tests
 
 | Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
@@ -1156,6 +1279,8 @@ These cover the Kitchen popup. They share the popup wrapper from WP5a's `_templa
 
 Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
 **Pre-WP5a-implementation (this WP):** 17 known-failures (2 WP1 sidebar + 15 WP5a popup-not-yet-built). New WP5a tests TEST-400 … TEST-416 must currently fail; once the popup ships and is verified end-to-end, all 17 of WP5a's tests flip from `baseline_known_failure` → `baseline`, leaving only the 2 WP1 sidebar known-failures (still owned by WP3+WP4).
+
+**WP5d contribution:** 11 new tests (TEST-450 … TEST-460) all currently `baseline_known_failure`. Once outdoor.yaml is wired into shell.yaml and deployed, every TEST-45x flips to `baseline`. Brief contract: TEST-455 explicitly asserts `hasClimateHeader:false` because Outdoor swaps the Climate section for a Weather section.
 
 Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 53/53 green.
 
