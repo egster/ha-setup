@@ -39,7 +39,7 @@
 # Ambience / Cleaning Mode) are blocked on a content task. Empty-state row.
 
 type: custom:bubble-card
-card_type: pop-up
+card_type: popup
 hash: '#popup-kitchen'
 button_type: card
 icon: mdi:silverware-fork-knife

@@ -4,7 +4,46 @@
 
 ---
 
-## 2026-04-29 — FUSION Phase 7 / WP6 hotfix — `card_type: popup` → `pop-up` (popups now actually open)
+## 2026-04-29 — FUSION Phase 7 / WP6 hotfix — REVERTED (popups will be added via HA UI manually)
+
+### Why reverted
+After the `card_type: popup → pop-up` hotfix shipped, Edgar opened FUSION on his real device. Result: **the entire dashboard now rendered inside the popup**. Bubble Card popups, when nested in a `vertical-stack` as siblings of the active dashboard content, behave unexpectedly — the popup-wrapper builder activated and adopted the dashboard's vertical-stack siblings as its own children, so opening any popup hash showed the whole shell inside the popup overlay.
+
+This is a deeper structural issue than a one-character fix can address. The Bubble Card popup needs different mount geometry (top-level view card, or a dedicated dashboard, or the storage-mode/UI-add path that Bubble Card popups have historically been built for in this HA setup).
+
+### What we reverted
+- `config/dashboards/fusion/popups/_template.yaml` — `card_type: pop-up` → `card_type: popup` + reference comment now warns DON'T re-flip without restructuring
+- `config/dashboards/fusion/popups/living-room.yaml` — same
+- `config/dashboards/fusion/popups/kitchen.yaml` — same
+- `config/dashboards/fusion/popups/office.yaml` — same
+- `config/dashboards/fusion/popups/outdoor.yaml` — same
+
+The un-hyphenated `popup` form is a Bubble Card no-op (the source registry only knows `pop-up`), which is exactly what we want here: the popup files stay in the !include tree as reference YAML, but Bubble Card never instantiates them as popups, and the FUSION dashboard renders normally.
+
+### What Edgar plans
+Add the real Bubble Card popups manually via the HA UI (storage-mode dashboard or per-dashboard popup wiring) — separate from the YAML-mode FUSION dashboard. The popup YAML files in `config/dashboards/fusion/popups/` stay as reference-only YAML for content (entity manifests, section structures, ApexCharts configs, etc.) that can be ported into the UI-added popups.
+
+### Verification
+- `ha_check_config`: valid
+- md5 match local↔HA Green for all 5 popup files
+- WS lovelace/config returns `card_type: "popup"` (un-hyphenated, inert)
+- Dashboard renders normally on Edgar's real device (he confirmed visually after the revert)
+
+### What stays from WP6
+- ✅ Sidebar separator (between Kitchen and Climate icons in desktop sidebar)
+- ✅ Pulsing presence dot on the Edgar · Home indicator (statusbar.yaml + shell.yaml phone)
+- ✅ Bottom-tab `:host-context(body.bubble-body-scroll-locked)` nav-hide rule (currently inert because the un-hyphenated popups don't set the body class — but the rule remains correct for the future UI-added popups, since those will use the right Bubble Card form)
+- ✅ Tap-action wiring on home-panel room headers (Living Room / Kitchen / Office / Outdoor → `#popup-<room>`) — currently no-ops (hash updates but nothing opens), but ready for the future UI-added popups that will use the same hash-routing convention
+- ✅ Phase 7 retro + DECISIONS rows + STATUS flip + BACKLOG closures all stay valid
+
+The WP6 work is structurally on top of main; Phase 7 close-out remains accurate. Only the popup-activation step needed reverting.
+
+### Lesson updated in DECISIONS
+The 2026-04-29 row about `card_type: pop-up` is updated to clarify: **even with the correct registry key, Bubble Card popups don't render correctly when mounted as siblings of dashboard content in a vertical-stack inside a panel-mode mod-card**. The geometry assumption baked into Bubble Card popup expects a different mount path. The five popup files in `config/dashboards/fusion/popups/` stay as content reference; the actual popups will live elsewhere (UI-managed, or a separate dashboard, or whatever Edgar picks).
+
+---
+
+## 2026-04-29 — FUSION Phase 7 / WP6 hotfix — `card_type: popup` → `pop-up` (popups now actually open) — SUPERSEDED BY REVERT
 
 ### What happened
 After WP6 merged, Edgar tested the popups on his real device and reported "the popups don't open". Diagnostic via Chrome MCP found that the 4 popup `bubble-card` elements were rendering as empty `<ha-card><div class="card-content"></div></ha-card>` shells — Bubble Card's popup-build logic (`updateBubbleCard()`) was a no-op because of a one-character bug propagated from the WP5a brief.

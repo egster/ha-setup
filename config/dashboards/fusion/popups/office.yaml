@@ -28,7 +28,7 @@
 # (search returned 0 matches). Single empty-state row per the brief.
 
 type: custom:bubble-card
-card_type: pop-up
+card_type: popup
 hash: '#popup-office'
 button_type: card
 icon: mdi:desk

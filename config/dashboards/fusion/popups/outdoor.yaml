@@ -42,7 +42,7 @@
 # rest of the popup.
 
 type: custom:bubble-card
-card_type: pop-up
+card_type: popup
 hash: '#popup-outdoor'
 button_type: card
 icon: mdi:tree
