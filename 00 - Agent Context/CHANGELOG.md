@@ -5,7 +5,91 @@
 ---
 
 
-## 2026-04-27 — FUSION Phase 7 / WP5a — Popup template + Living Room (committed, Gate 3 deploy pending)
+## 2026-04-29 — FUSION Phase 7 / WP5b — Kitchen popup (deployed, hash-test pending)
+
+### What was done
+WP5b of FUSION Phase 7 — Kitchen room popup, mirroring the WP5a Living Room pattern. Six sections (Header / Lights / Climate / Sensors / Scenes / Automations), 13-entity manifest, ApexCharts 24h heating chart, real motion-sensor row + humidity empty-state + scenes empty-state.
+
+**Files committed (`phase7/wp5b-kitchen` branch):**
+- `config/dashboards/fusion/popups/kitchen.yaml` — new, 312 lines including a 27-line manifest header. Lights: `light.kitchen_lights` group + 4 individual tiles (Counter Sunricher, Kitchen Dimmer, Pantry Counter, Pantry Switch). Climate: `climate.kitchen_area` thermostat (heat / off) + ApexCharts 24h current+setpoint chart. Sensors: temperature row from `climate.kitchen_area.current_temperature`, humidity empty-state row, motion row driven by `binary_sensor.eve_motion_20eby9901_occupancy_2` (renders 'Clear' / 'Motion detected'). Scenes: single empty-state row "No scenes defined yet — see BACKLOG" (Kitchen scenes blocked on content task per BACKLOG). Automations: 4 toggle tiles — Kitchen Motion Light, Kitchen Night Motion Light, Kitchen Remote Mapping, Pantry Motion Light.
+- `config/dashboards/fusion/shell.yaml` — `+1 line` only: `- !include popups/kitchen.yaml` after the existing `- !include popups/living-room.yaml`. State-switch + LR popup + Kitchen popup are now siblings in the outer mod-card's vertical-stack.
+- `00 - Agent Context/fusion-phase7/fusion-tests.md` — added 10 WP5b tests (TEST-430 … TEST-439): yaml_schema, entity_existence (13 manifest entities), behavioural popup-open, DOM section presence (Header / Lights / Climate / Sensors+motion-state / Scenes+empty-state / Automations), DOM ApexCharts presence. All `baseline_known_failure` until end-to-end verification flips them. Total bumped 82 → 92.
+- `00 - Agent Context/fusion-phase7/STATUS.md` — WP5b deploy note.
+
+**Excluded entities (documented in kitchen.yaml header):**
+- `light.kitchen_keuken_werk` — orphaned/unnamed (no friendly_name, state=unknown, not a member of `light.kitchen_lights` group).
+- `media_player.kitchen_speakers` — duplicate, currently unavailable.
+- Miele Oven + Warming Drawer + Zocci entities — appliance UX deferred; not part of WP5b's section contract.
+- `media_player.kitchen` and `sensor.eve_motion_20eby9901_illuminance_2` — in-scope per the manifest but not yet rendered (Media section deferred to WP6+, illuminance display deferred). Listed in TEST-431 to mirror WP5a's TEST-402 precedent of manifest-level guards.
+
+### Gate 1
+The user's instruction was explicit: write `popups/kitchen.yaml`, wire the include into shell.yaml, deploy, verify. The brief's "Do not touch shell" was superseded by the user's explicit "wire the !include into shell.yaml" — the WP5a pattern doc anyway requires per-WP wiring.
+
+### Gate 2
+`ha-code-reviewer` hit org monthly usage limit on first invocation. Fell back to `superpowers:code-reviewer` with a context-rich prompt (request, file paths, WP5a pattern doc + LR reference, DECISIONS, INSTRUCTIONS). Verdict: **APPROVED** with 4 non-blocking concerns:
+- L1: Pre-existing fusion-tests.md per-category breakdown table is stale (totals to 84, actual 92). Doc-only follow-up; doesn't block deploy.
+- L2: Watch `git add` selection — `.obsidian/`, `weather_heating_status_report.md`, `reference/` are unrelated untracked. Used `git add` per-file to avoid pulling them in.
+- L3: Sensors row order in Kitchen ends with a real motion entity (vs LR's empty-state); flagged for project-wide ordering consistency if a future room has dedicated humidity. Informational.
+- L4: Header-comment claim about media_player matches TEST-431 — confirmed.
+
+### Gate 3
+1. **Backup**: `ha_backup_create` → ID `d5deafb0`, 280 MB, 52 s.
+2. **Entity validation**: `ha_get_state` for all 13 manifest entities → all return real state (no `unavailable`/`unknown`/missing). Notable live state at deploy time: `climate.kitchen_area = heat`, `current_temperature = 22.1 °C`, `target = 20 °C`, `hvac_action = idle`.
+3. **Templates**: no Jinja templates in kitchen.yaml. JS templates inside `popup_row` (motion state, temp formatting) run client-side and don't go through HA's template engine — `ha_eval_template` not applicable.
+4. **Local validation**: `python3 yaml.safe_load` on kitchen.yaml — OK. Full `fusion.yaml` tree with proper !include resolution → 3 cards in the outer vertical-stack (state-switch + LR popup + Kitchen popup with `#popup-kitchen` hash). `yamllint` clean.
+5. **Deploy**: SCP'd `popups/living-room.yaml` (closing WP5a's deploy gap that had been re-introduced by the slot-2 fix's snapshot timing) + `popups/kitchen.yaml` to HA Green's `/config/dashboards/fusion/popups/`. Surgical `sed -i` on HA Green's `/config/dashboards/fusion/shell.yaml` to insert `    - !include popups/kitchen.yaml` after the `popups/living-room.yaml` line — chosen over SCP'ing the local shell.yaml to avoid stomping on any in-flight WP5c work (parallel-session protection per Edgar's Gate 1 directive).
+6. **Validate post-deploy**: `ha_check_config` → valid. WS `lovelace/config { url_path: 'dashboard-fusion', force: true }` → returns config with `viewsCount: 1, outerCardsCount: 1, shellCardCount: 3, shellCardTypes: ['custom:state-switch', 'custom:bubble-card #popup-living-room', 'custom:bubble-card #popup-kitchen']`. Server-side wiring confirmed.
+7. **Browser verification: deferred.** The Chrome MCP harness on this host hits an `hui-panel-view` chunk-load issue (`hui-panel-view` element never registers; affects FUSION + BubbleDash + the new HA Home panel). `hui-view-container` shows only `hui-view-background` with no panel view child. Verified via `customElements.get('hui-panel-view')` = `false` after multiple full reloads + force-reload + 15 s wait. The earlier same-day slot-2 session in the CHANGELOG entry above ("Hard-reload of dashboard now renders 116 hui-card") confirms the FUSION dashboard renders correctly on a real browser, so this is harness-specific. Hands-on hash test (`#popup-kitchen` opens the popup, header reads "Kitchen", all five sections render) defers to Edgar's real-device verification — same precedent as WP4 (PR #11 merged before iPhone hands-on).
+
+### Coordination state observed (preserved for retro)
+- Started on `phase7/wp5d-outdoor` due to a parallel WP5d session leaving a draft in the same working tree. Stashed WP5d's WIP under `WP5d-outdoor-WIP-preserved-by-WP5b-session-2026-04-28` so the parallel session can `git stash pop` it cleanly (visible at `stash@{0}`), then switched to `phase7/wp5b-kitchen`.
+- HA Green's deploy state during this session passed through three forms: (a) post-WP5c-stomp (`shell.yaml` referencing `living-room.yaml` + `office.yaml`, with `office.yaml` only on disk and `living-room.yaml` missing); (b) post-slot-2 fix (back to `main` state — `_template.yaml` + `living-room.yaml` deployed at 07:49 with shell.yaml at 635 lines); (c) post-WP5b deploy (kitchen.yaml added + shell.yaml at 636 lines). My SCPs at 07:51 overlapped with the slot-2 fix at 07:49 — the surgical sed-edit on HA Green's already-correct shell.yaml was the load-bearing avoidance of stomping the slot-2 work.
+
+### Test status (post-deploy, pre-real-device-verification)
+- `yaml_schema` (TEST-430): runner doesn't have a hardcoded handler for TEST-430 yet (TEST-401 has a hardcoded living-room.yaml handler; same pattern would need TEST-430). Not a defect of WP5b — same gap will hit WP5c (TEST-440) and WP5d (TEST-450). Manual verification: `python3 -c "import yaml; yaml.safe_load(open('config/dashboards/fusion/popups/kitchen.yaml'))"` → ok. **WP6 candidate**: refactor `run-fusion-tests.sh` to evaluate `assertion:` directly when ID is unknown rather than per-test handlers.
+- `entity_existence` (TEST-431): browser-deferred. Manual via `ha_get_state` of all 13 entities → all resolve.
+- All TEST-432 … TEST-439: browser-deferred, will run during real-device verification.
+
+### Pending — Edgar's hands-on verification
+1. Open `http://homeassistant.local:8123/dashboard-fusion/fusion#popup-kitchen` in a real browser (laptop or iPhone).
+2. Confirm: popup slides up, header reads "Kitchen", Lights section shows 5 tiles with brightness sliders, Climate section shows thermostat + 24h chart, Sensors section shows temperature + humidity-empty + motion row (current state), Scenes section shows the empty-state row, Automations section shows 4 toggle tiles.
+3. If clean: open PR for `phase7/wp5b-kitchen` → merge, then flip TEST-430 … TEST-439 from `baseline_known_failure` → `baseline` in fusion-tests.md.
+4. If broken: roll back via backup `d5deafb0`, surface the failure mode.
+
+### Entities affected
+- No state changes. New popup wiring only — no automations triggered, no helpers created, no integrations modified.
+
+---
+
+
+## 2026-04-29 — FUSION Phase 7 / Slot-2 verification + WP5c-deploy-stomp recovery
+
+### What happened
+Slot-2 verification session (WP3 + WP4 + WP5a, all merged to `main` 2026-04-28). Static checks + live HA state passed cleanly, but the deployed dashboard rendered an **empty body** at `/dashboard-fusion/fusion`: top statusbar painted, panel content area blank, 0 `hui-card` / 0 `hui-view` / 0 `state-switch` instances. Hard reload did not help; same condition with kiosk on/off.
+
+### Root cause
+HA's `/config/dashboards/fusion/` was desynchronised from `main`:
+- `shell.yaml` referenced **two** popup includes — `living-room.yaml` (correct, from WP5a) AND `office.yaml` (rogue: from `phase7/wp5c-office`, never merged to `main`).
+- `living-room.yaml` was **missing** from HA's `popups/` (WP5a's deploy never ran end-to-end).
+- `office.yaml` was on HA but exists only on the unmerged `phase7/wp5c-office` branch.
+- Result: runtime `!include popups/living-room.yaml` silently failed → state-switch never instantiated → empty body. `ha core check` passed because Lovelace `!include` resolution is lazy (request-time, not config-load-time).
+
+### Fix
+1. Snapshotted HA's broken state to `/config/dashboards/fusion.bak-20260429T054913Z` + `/config/dashboards/fusion.yaml.bak-20260429T054913Z`.
+2. Extracted `main`'s dashboard tree via `git archive main config/dashboards/fusion.yaml config/dashboards/fusion/`.
+3. Per-file md5 diff vs HA — found 7 panel/shell/templates files differed (WP3 grids never deployed) + 2 popup files missing (`_template.yaml`, `living-room.yaml`) + 1 orphan to remove (`office.yaml`).
+4. `scp`'d the 9 changed/missing files to HA, `rm`'d `office.yaml`.
+5. Post-sync md5s all match `main`. `ha_check_config` valid. Hard-reload of dashboard now renders 116 `hui-card`, 96 `button-card`, 8-cell sidebar, KPI strip, MAIN/UPPER/DOWNSTAIRS rows.
+
+### Anomalies surfaced for retro
+- **deploy.sh only handles `config/packages/*.yaml`** — there's no scripted deploy for `config/dashboards/`. Manual `scp` made cross-session stomping easy. BACKLOG candidate: extend `deploy.sh` (or add `deploy-dashboard.sh`) to refuse partial syncs / orphan files.
+- **`phase7/wp5c-office` branch is unmerged** but its work was deployed to HA out-of-band. Branch is preserved at commit `dc400d4` — keep it as the basis for the actual WP5c session, or merge cleanly when Slot 3 starts.
+- **WP4 PR #11 merged before Edgar's iPhone hands-on verification.** STATUS.md WP4 line carries the outstanding hands-on check forward — does not block downstream WPs but TEST-007/008/305..311 stay `baseline_known_failure` until confirmed.
+- **STATUS.md was stale** (WP3/WP5a still `[ ]`, WP4 still `[~]`) — flipped to `[x]` with merge shas in this session.
+- **Working tree on `phase7/wp5b-kitchen`** during this session (Edgar's parallel WP5b WIP). All HA sync work was driven from `git archive main …` so the working tree was untouched.
+
+### Verification status
+Re-verification of Slot-2 (full pipeline at all viewports + browser tests + healthcheck) is the final to-do of this session — running now.
 
 ### What was done
 - Wrote `config/dashboards/fusion/popups/_template.yaml` — the canonical Bubble Card popup wrapper (FUSION dark tokens, `max-width: 700px`, slide-up sheet on phone). Reference-only, not !included.

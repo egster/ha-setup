@@ -1019,10 +1019,122 @@ These cover the shared popup template and the Living Room popup as the reference
 - owner_wp: WP5a
 - status: baseline_known_failure
 
+# WP5b — Kitchen popup
+
+These cover the Kitchen popup. They share the popup wrapper from WP5a's `_template.yaml`; assertions on wrapper styles are not duplicated here (TEST-413 / TEST-414 already cover them via the LR popup, and the wrapper is verbatim across popup files per the WP5a contract).
+
+## TEST-430: kitchen.yaml is valid YAML
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    python3 -c "import yaml; yaml.safe_load(open('config/dashboards/fusion/popups/kitchen.yaml')); print('ok')"
+- expected: "ok"
+- tolerance: 0
+- owner_wp: WP5b
+- status: baseline_known_failure
+
+## TEST-431: Every entity referenced in kitchen.yaml resolves to a real entity
+- viewport: any
+- type: entity_existence
+- assertion: |
+    (function(){const refs=['light.kitchen_lights','light.sunricher_hk_zd_rgbcct_a','light.kitchen_dimmer_keuken','light.kitchen_bijkeuken_kast','light.kitchen_bijkeuken','climate.kitchen_area','binary_sensor.eve_motion_20eby9901_occupancy_2','sensor.eve_motion_20eby9901_illuminance_2','media_player.kitchen','automation.kitchen_motion_light_2','automation.kitchen_night_motion_light','automation.kitchen_remote_mapping','automation.bijkeuken_sensor_light'];const states=HASS().states;return JSON.stringify(refs.filter(e=>!states[e]));})()
+- expected: "[]"
+- tolerance: 0
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: |
+    Mirrors the entity manifest in `config/dashboards/fusion/popups/kitchen.yaml`'s header comment. `unavailable`/`unknown` entities still resolve through HA — only fully missing entities cause this test to fail. When WP5b or future maintenance changes the entity list, update this list in lockstep. `media_player.kitchen` and `sensor.eve_motion_20eby9901_illuminance_2` are in scope per the manifest but not yet rendered (deferred to WP6+); they are listed here because TEST-431 is a manifest-level guard, mirroring the WP5a precedent for media_players in TEST-402.
+
+## TEST-432: Navigating to /dashboard-fusion/fusion#popup-kitchen opens the popup
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-kitchen"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Mirrors TEST-403 for the kitchen hash. Bubble Card sets `bubble-popup-open` on body while a popup is active; selector fallbacks track WP5a's drift hedges.
+
+## TEST-433: Popup contains a header with text "Kitchen"
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ');location.hash='';return txt.includes('Kitchen');})()
+- expected: true
+- tolerance: 0
+- owner_wp: WP5b
+- status: baseline_known_failure
+
+## TEST-434: Popup contains a "Lights" section with at least 1 brightness slider
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasLightsHeader=txt.includes('LIGHTS');const sliders=WALK_ALL(document,'ha-slider').length+WALK_ALL(document,'input[type=range]').length;location.hash='';return JSON.stringify({hasLightsHeader,sliders});})()
+- expected: "^\\{\"hasLightsHeader\":true,\"sliders\":[1-9][0-9]*\\}$"
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+
+## TEST-435: Popup contains a "Climate" section with current temperature + setpoint controls
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasClimateHeader=txt.includes('CLIMATE');const hasCurrentTemp=/[0-9]{1,2}(\.[0-9])?\s*°/.test(txt);const hasSetpoint=txt.includes('SETPOINT')||/TARGET|HEAT/.test(txt);location.hash='';return JSON.stringify({hasClimateHeader,hasCurrentTemp,hasSetpoint});})()
+- expected: '{"hasClimateHeader":true,"hasCurrentTemp":true,"hasSetpoint":true}'
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Wiser Kitchen zone exists (`climate.kitchen_area`, verified live 2026-04-28 — `heat` mode, current 22 °C / target 20 °C). Regex tolerates integer-only temperature display since Kitchen `current_temperature` is currently 22.
+
+## TEST-436: Popup contains a "Sensors" section with motion sensor state
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasSensorsHeader=txt.includes('SENSORS');const hasMotionState=txt.includes('CLEAR')||txt.includes('MOTION DETECTED');location.hash='';return JSON.stringify({hasSensorsHeader,hasMotionState});})()
+- expected: '{"hasSensorsHeader":true,"hasMotionState":true}'
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Kitchen has a real motion sensor (`binary_sensor.eve_motion_20eby9901_occupancy_2`). The `popup_row` JS template renders 'Clear' when `off`, 'Motion detected' when `on`.
+
+## TEST-437: Popup contains a "Scenes" section with empty-state row
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasScenesHeader=txt.includes('SCENES');const hasEmptyState=txt.includes('NO SCENES DEFINED')||txt.includes('SEE BACKLOG');location.hash='';return JSON.stringify({hasScenesHeader,hasEmptyState});})()
+- expected: '{"hasScenesHeader":true,"hasEmptyState":true}'
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Kitchen has zero scenes defined as of WP5b — Morning Brew / Cooking Mode / Dinner Ambience / Cleaning Mode are blocked on definition (BACKLOG content task). Empty-state row reads 'No scenes defined yet — see BACKLOG'.
+
+## TEST-438: Popup contains an "Automations" section listing Kitchen automations
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const txt=WALK_TEXT(document.body).join(' ').toUpperCase();const hasAutoHeader=txt.includes('AUTOMATIONS');const hasMotionLight=txt.includes('MOTION LIGHT');const hasRemote=txt.includes('REMOTE');location.hash='';return JSON.stringify({hasAutoHeader,hasMotionLight,hasRemote});})()
+- expected: '{"hasAutoHeader":true,"hasMotionLight":true,"hasRemote":true}'
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Kitchen automations rendered as toggle tiles — Kitchen Motion Light, Kitchen Night Motion Light, Kitchen Remote Mapping, Pantry Motion Light.
+
+## TEST-439: Kitchen popup contains an ApexCharts chart for heating (24h temperature trend)
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,1500));const apex=WALK_ALL(document,'apexcharts-card').length;location.hash='';return apex;})()
+- expected: ">=1"
+- tolerance: regex
+- owner_wp: WP5b
+- status: baseline_known_failure
+- notes: Wiser Kitchen zone present, so the chart is part of the popup. 1500ms wait for ApexCharts to fetch its 24h history slice (mirrors TEST-410 timing).
+
 
 ---
 
-## Total: 82 tests
+## Total: 92 tests
 
 | Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
 |----------|-------|--------|
@@ -1046,10 +1158,8 @@ Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure
 **Pre-WP5a-implementation (this WP):** 17 known-failures (2 WP1 sidebar + 15 WP5a popup-not-yet-built). New WP5a tests TEST-400 … TEST-416 must currently fail; once the popup ships and is verified end-to-end, all 17 of WP5a's tests flip from `baseline_known_failure` → `baseline`, leaving only the 2 WP1 sidebar known-failures (still owned by WP3+WP4).
 
 Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 53/53 green.
----
 
-## Total: 82 tests
-
+**WP5b contribution:** 10 new tests (TEST-430 … TEST-439) — kitchen.yaml YAML+entity guards, popup-open hash test, 5 section presence checks (Lights/Climate/Sensors/Scenes/Automations), motion-state row check, ApexCharts presence. All `baseline_known_failure` until kitchen.yaml lands and is verified live; then flip to `baseline`.
 ---
 
 ## Adding tests in subsequent WPs
