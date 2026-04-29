@@ -231,6 +231,12 @@ card:
           template: fusion_room_header
           icon: mdi:sofa
           name: Living Room
+          tap_action:
+            action: navigate
+            navigation_path: '#popup-living-room'
+          styles:
+            card:
+            - cursor: pointer
         - type: custom:button-card
           template: fusion_room_row_lights
           entity: light.living_room_lights
@@ -273,6 +279,12 @@ card:
           template: fusion_room_header
           icon: mdi:silverware-fork-knife
           name: Kitchen
+          tap_action:
+            action: navigate
+            navigation_path: '#popup-kitchen'
+          styles:
+            card:
+            - cursor: pointer
         - type: custom:button-card
           template: fusion_room_row_motion
           entity: binary_sensor.eve_motion_20eby9901_occupancy_2
@@ -319,6 +331,12 @@ card:
           template: fusion_room_header
           icon: mdi:desk
           name: Office
+          tap_action:
+            action: navigate
+            navigation_path: '#popup-office'
+          styles:
+            card:
+            - cursor: pointer
         - type: custom:button-card
           template: fusion_room_row_motion
           entity: binary_sensor.office_motion_sensors
@@ -478,6 +496,12 @@ card:
           template: fusion_room_header
           icon: mdi:tree
           name: Outdoor
+          tap_action:
+            action: navigate
+            navigation_path: '#popup-outdoor'
+          styles:
+            card:
+            - cursor: pointer
         - type: custom:button-card
           template: fusion_room_row_lights
           entity: light.outdoor_lights

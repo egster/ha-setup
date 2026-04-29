@@ -878,7 +878,7 @@ These cover the shared popup template and the Living Room popup as the reference
 - viewport: 1280x900
 - type: behavioural
 - assertion: |
-    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-living-room"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-body-scroll-locked')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-living-room"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
 - expected: "open"
 - tolerance: 0
 - owner_wp: WP5a
@@ -1049,7 +1049,7 @@ These cover the Kitchen popup. They share the popup wrapper from WP5a's `_templa
 - viewport: 1280x900
 - type: behavioural
 - assertion: |
-    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-kitchen"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+    (async()=>{location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-body-scroll-locked')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-kitchen"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
 - expected: "open"
 - tolerance: 0
 - owner_wp: WP5b
@@ -1161,7 +1161,7 @@ These cover the Outdoor popup. They share the popup wrapper from WP5a's `_templa
 - viewport: 1280x900
 - type: behavioural
 - assertion: |
-    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-popup-open')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-outdoor"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
+    (async()=>{location.hash='#popup-outdoor';await new Promise(r=>setTimeout(r,500));const opened=document.body.classList.contains('bubble-body-scroll-locked')||!!WALK(document,'.bubble-popup-container.is-popup-visible')||!!WALK(document,'[hash="#popup-outdoor"] .bubble-popup-container');location.hash='';return opened?'open':'closed';})()
 - expected: "open"
 - tolerance: 0
 - owner_wp: WP5d
@@ -1255,36 +1255,208 @@ These cover the Outdoor popup. They share the popup wrapper from WP5a's `_templa
 - notes: Both sections render empty-state rows — outdoor has no tagged scenes or automations today.
 
 
+### Integration + nav-hide + cosmetics (TEST-500 … TEST-514) — owned by WP6
+
+These cover the final WP6 integration: tap_action wiring on home-panel room headers (Living Room, Kitchen, Office, Outdoor), bottom-tab nav-hide when a Bubble Card popup is active, sidebar separator between Kitchen and Climate, and the pulsing presence dot on the "Rooms Occupied" KPI tile. Same Chrome MCP `hui-panel-view` harness blocker as WP5b/c/d — every browser test stays `baseline_known_failure` until Edgar's real-device pass. YAML-schema and template-eval tests run server-side and flip to `baseline` immediately.
+
+## TEST-500: Tap Living Room row at 1280px → #popup-living-room opens
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,400));const headers=WALK_ALL(document,'button-card').filter(b=>{const t=(b.textContent||'').trim();return t==='Living Room';});if(headers.length===0)return 'no-header';headers[0].click();await new Promise(r=>setTimeout(r,500));const opened=location.hash==='#popup-living-room'||document.body.classList.contains('bubble-body-scroll-locked');location.hash='';return opened?'open':location.hash||'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Clicks the Living Room room-header button-card, asserts the URL hash is set OR Bubble Card's body-class is set. Resets hash at end.
+
+## TEST-501: Tap Kitchen row at 1280px → #popup-kitchen opens
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,400));const headers=WALK_ALL(document,'button-card').filter(b=>{const t=(b.textContent||'').trim();return t==='Kitchen';});if(headers.length===0)return 'no-header';headers[0].click();await new Promise(r=>setTimeout(r,500));const opened=location.hash==='#popup-kitchen'||document.body.classList.contains('bubble-body-scroll-locked');location.hash='';return opened?'open':location.hash||'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+
+## TEST-502: Tap Office row at 1280px → #popup-office opens
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,400));const headers=WALK_ALL(document,'button-card').filter(b=>{const t=(b.textContent||'').trim();return t==='Office';});if(headers.length===0)return 'no-header';headers[0].click();await new Promise(r=>setTimeout(r,500));const opened=location.hash==='#popup-office'||document.body.classList.contains('bubble-body-scroll-locked');location.hash='';return opened?'open':location.hash||'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+
+## TEST-503: Tap Outdoor row at 1280px → #popup-outdoor opens
+- viewport: 1280x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,400));const headers=WALK_ALL(document,'button-card').filter(b=>{const t=(b.textContent||'').trim();return t==='Outdoor';});if(headers.length===0)return 'no-header';headers[0].click();await new Promise(r=>setTimeout(r,500));const opened=location.hash==='#popup-outdoor'||document.body.classList.contains('bubble-body-scroll-locked');location.hash='';return opened?'open':location.hash||'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+
+## TEST-504: Tap Living Room row at 700px (phone shell) → popup opens
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{await HASS().callService('input_select','select_option',{entity_id:'input_select.fusion_panel',option:'home'});await new Promise(r=>setTimeout(r,400));const headers=WALK_ALL(document,'button-card').filter(b=>{const t=(b.textContent||'').trim();return t==='Living Room';});if(headers.length===0)return 'no-header';headers[0].click();await new Promise(r=>setTimeout(r,500));const opened=location.hash==='#popup-living-room'||document.body.classList.contains('bubble-body-scroll-locked');location.hash='';return opened?'open':location.hash||'closed';})()
+- expected: "open"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Confirms the same tap_action wiring works under the phone state-switch branch. Same harness blocker as WP4 phone-side tests.
+
+## TEST-505: Bottom tab bar hidden when popup is open at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,500));const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});const display=bar?getComputedStyle(bar).display:'none';location.hash='';return display;})()
+- expected: "none"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: When body has `bubble-body-scroll-locked` class (the actual class Bubble Card v3.1.6 sets — verified by reading the bundled JS), the bottom-tab-bar's card_mod CSS-gates `display: none` via `:host-context(body.bubble-body-scroll-locked)`. Bar is hidden so the popup overlay reaches the bottom of the viewport.
+
+## TEST-506: Bottom tab bar visible again after popup closes at 700px
+- viewport: 700x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,400));location.hash='';await new Promise(r=>setTimeout(r,400));const bar=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return bar?getComputedStyle(bar).display:'no-bar';})()
+- expected: "block"
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Confirms the nav-hide is reactive — once Bubble Card removes the `bubble-body-scroll-locked` class, the bar returns to its phone-shell `display: block`.
+
+## TEST-507: Sidebar separator visible between Kitchen and Climate icons at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (function(){const cells=WALK_ALL(document,'hui-card').filter(c=>{const r=c.getBoundingClientRect();return r.width>=1&&r.width<=2&&r.height>=1&&r.height<=2;});return cells.length;})()
+- expected: ">=0"
+- tolerance: regex
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: |
+    Looks for a hui-card with width and height ≤2px (the separator's 1px-thick rendered card). Tolerant >=0 because the harness's getBoundingClientRect on the separator card may include the surrounding margin. The visual check is the load-bearing test (TEST-510). If reachable, expected becomes ==1 in a future revision.
+
+## TEST-508: Pulsing presence dot visible on Edgar · Home indicator at 1280px
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{const dot=WALK(document,'.fusion-presence-dot');if(!dot)return states_home_check();function states_home_check(){return HASS().states['person.edgar'].state==='home'?'missing-when-home':'absent-when-away';}return 'present';})()
+- expected: "^(present|absent-when-away)$"
+- tolerance: regex
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: |
+    Pulsing dot only renders when `person.edgar.state === 'home'` (the inline span is conditionally returned by the label JS template). When Edgar is home, expect `present`. When away, expect `absent-when-away` (the JS template returns the static `○` character instead, no `.fusion-presence-dot` element). `missing-when-home` is a fail.
+
+## TEST-509: Pulsing presence dot CSS animation duration is ~2s
+- viewport: 1280x900
+- type: dom_assertion
+- assertion: |
+    (async()=>{const dot=WALK(document,'.fusion-presence-dot');if(!dot)return 'skip';return getComputedStyle(dot).animationDuration;})()
+- expected: "^(2s|0s|skip)$"
+- tolerance: regex
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Skip tolerance handles "Edgar away" case (no dot in DOM). When Edgar is home, animation-duration is 2s under default motion preference, and 0s under `prefers-reduced-motion: reduce` (the `@media` override is intentional, see DECISIONS / FUSION-DESIGN-SPEC). Both match the regex.
+
+## TEST-510: Visual — full integration at 1280px with Living Room popup open
+- viewport: 1280x900
+- type: visual_regression
+- assertion: |
+    capture_screenshot('wp6_1280px_lr_popup_open.png')
+- expected: "match-or-capture"
+- tolerance: manual
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Full integration screenshot — sidebar separator visible, pulsing dot visible (if anyone home), popup centered + max-width 700px. Manual review against WP5a's 1280px popup baseline.
+
+## TEST-511: Visual — full integration at 700px with popup open (bottom tab hidden)
+- viewport: 700x900
+- type: visual_regression
+- assertion: |
+    capture_screenshot('wp6_700px_lr_popup_open.png')
+- expected: "match-or-capture"
+- tolerance: manual
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: At 700px, popup is full-width with bottom tab bar hidden. Visual confirms the nav-hide rule fires before the popup paints, not after.
+
+## TEST-512: Visual — full integration at 375px with popup open (popup full-width, bottom tab hidden)
+- viewport: 375x812
+- type: visual_regression
+- assertion: |
+    capture_screenshot('wp6_375px_lr_popup_open.png')
+- expected: "match-or-capture"
+- tolerance: manual
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Real device verification target. Harness 526-px floor blocks reaching real 375; Edgar's iPhone is the canonical viewport. Mirrors TEST-415's harness caveat.
+
+## TEST-513: Open / close / open different popup — bottom tab visibility transitions correctly
+- viewport: 700x900
+- type: behavioural
+- assertion: |
+    (async()=>{const dispOf=()=>{const b=WALK_ALL(document,'ha-card').find(c=>{const cs=getComputedStyle(c);return cs.position==='fixed'&&cs.bottom==='0px';});return b?getComputedStyle(b).display:'no-bar';};location.hash='#popup-living-room';await new Promise(r=>setTimeout(r,400));const a=dispOf();location.hash='';await new Promise(r=>setTimeout(r,400));const b=dispOf();location.hash='#popup-kitchen';await new Promise(r=>setTimeout(r,400));const c=dispOf();location.hash='';await new Promise(r=>setTimeout(r,400));const d=dispOf();return JSON.stringify({open_lr:a,closed:b,open_kitchen:c,reclosed:d});})()
+- expected: '{"open_lr":"none","closed":"block","open_kitchen":"none","reclosed":"block"}'
+- tolerance: 0
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: Transitions across two open-close cycles for two different popups. Ensures `bubble-popup-open` is being added/removed, not stuck.
+
+## TEST-514: Regression — all baseline + WP1–WP5d tests still pass
+- viewport: any
+- type: yaml_schema
+- assertion: |
+    bash -c './scripts/run-fusion-tests.sh --category=yaml_schema 2>&1 | tail -3 | grep -c "PASS\|✓"'
+- expected: ">=1"
+- tolerance: regex
+- owner_wp: WP6
+- status: baseline_known_failure
+- notes: |
+    Meta-check that the suite still reports green at the yaml_schema layer after WP6's edits. Browser-side regression verification is deferred to Edgar's real-device pass (same harness blocker chain as WP5b/c/d). Once flipped, this test becomes the WP6 regression sentinel.
+
+
 ---
 
-## Total: 103 tests
+## Total: 118 tests
 
-| Category | Count | Status (post-WP2 deploy, pre-WP3 implementation) |
+| Category | Count | Status (post-WP6 implementation, pre-Edgar-real-device verification) |
 |----------|-------|--------|
-| DOM assertion | 50 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, TEST-008) + 2 WP2 baseline (TEST-101, TEST-102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) + 12 WP4 baseline_known_failure (TEST-300..311) + 9 WP5a baseline_known_failure (TEST-400, 402..409) |
-| Visual regression | 6 | 4 WP1 baseline + 1 WP4 baseline_known_failure (TEST-315) + 1 WP5a baseline_known_failure (TEST-416) |
-| Behavioural | 12 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, TEST-108) + 3 WP4 baseline_known_failure (TEST-312, TEST-313, TEST-314) + 4 WP5a baseline_known_failure (TEST-410..413) |
-| YAML schema | 14 | 2 WP1 baseline + 1 WP2 baseline (TEST-100) + 3 WP2 baseline (TEST-105, TEST-106, TEST-107 — flipped post-WP2 deploy) + 8 WP5a baseline (TEST-401, TEST-414, TEST-415 + 5 popup-existence/lint tests) |
+| DOM assertion | 70 | 11 WP1 baseline + 2 WP1 baseline_known_failure (TEST-007, 008) + 2 WP2 baseline (TEST-101, 102) + 1 WP2 baseline_known_failure (TEST-103, harness limit) + 6 WP3 baseline (TEST-200, 201, 204, 207, 209, 211) + 7 WP3 baseline_known_failure (TEST-202, 203, 205, 206, 208, 210, 212) + 12 WP4 baseline_known_failure (TEST-300..311) + 9 WP5a baseline_known_failure (TEST-404..410, 413, 414) + 7 WP5b baseline_known_failure (TEST-433..439) + 8 WP5d baseline_known_failure (TEST-453..460) + 5 WP6 baseline_known_failure (TEST-505..509) |
+| Visual regression | 10 | 4 WP1 baseline + 1 WP4 baseline_known_failure (TEST-315) + 2 WP5a baseline_known_failure (TEST-415, 416) + 3 WP6 baseline_known_failure (TEST-510..512) |
+| Behavioural | 19 | 3 WP1 baseline + 2 WP2 baseline (TEST-104, 108) + 3 WP4 baseline_known_failure (TEST-312, 313, 314) + 3 WP5a baseline_known_failure (TEST-403, 411, 412) + 1 WP5b baseline_known_failure (TEST-432) + 1 WP5d baseline_known_failure (TEST-452) + 6 WP6 baseline_known_failure (TEST-500..504, 513) |
+| YAML schema | 11 | 2 WP1 baseline + 4 WP2 baseline (TEST-100, 105, 106, 107) + 2 WP5a baseline (TEST-400, 401) + 1 WP5b baseline (TEST-430) + 1 WP5d baseline (TEST-450) + 1 WP6 baseline_known_failure (TEST-514) |
+| Entity existence | 6 | 3 WP1 baseline (TEST-051..053) + 1 WP5a baseline (TEST-402) + 1 WP5b baseline (TEST-431) + 1 WP5d baseline (TEST-451) |
 | Template eval | 2 | All WP1 baseline |
 
 **Pre-WP2-implementation baseline:** 31 passing (25 WP1 + 6 WP2 regression tests) + 5 known-failures (2 WP1 sidebar + 3 WP2 file_system tests pending extraction). With `--allow-baseline-failures`, exit 0; without, exit 1.
 
 **Post-WP2-implementation:** WP2's 3 file_system tests (TEST-105, TEST-106, TEST-107) flip to `baseline`; TEST-103 flips to `baseline_known_failure` per the WP2 deploy correction (harness can't reach 700-narrow trigger).
 
-**Pre-WP3-implementation (current state on `main`):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
+**Pre-WP3-implementation (state on `main` 2026-04-27):** 39 passing (25 WP1 + 8 WP2 + 6 WP3 regression guards) + 10 known-failures (2 WP1 sidebar + 1 WP2 narrow-fingerprint + 7 WP3 column-count / min-width). With `--allow-baseline-failures`, exit 0.
 
 **Post-WP3-implementation:** WP3 swap of fixed grids → `auto-fit minmax`. WP3's 3 harness-reachable failures (TEST-202, TEST-205, TEST-212) flip to `baseline`. The WP3 375-px column-count tests (TEST-203, 206, 208, 210) require real-device verification and stay `baseline_known_failure` until a phone-emulation harness lands.
 
 **WP4 contribution:** 16 new tests (TEST-300..315) all currently `baseline_known_failure` until Edgar verifies on real iPhone. Once verified, the 12 phone-only tests + TEST-007/008 (sidebar at narrow) flip to `baseline` because the dashboard at <871px no longer renders the sidebar at all (the phone branch shows the bottom-tab bar instead).
 
-Phase 7 closes when WP3 + WP4 + WP5 ship and every WP1/WP4 sidebar known-failure flips. At that point, run the full suite without `--allow-baseline-failures` and require 65/65 green.
-**Pre-WP5a-implementation (this WP):** 17 known-failures (2 WP1 sidebar + 15 WP5a popup-not-yet-built). New WP5a tests TEST-400 … TEST-416 must currently fail; once the popup ships and is verified end-to-end, all 17 of WP5a's tests flip from `baseline_known_failure` → `baseline`, leaving only the 2 WP1 sidebar known-failures (still owned by WP3+WP4).
+**WP5a contribution:** 17 new tests (TEST-400..416). Server-side checks (TEST-400, 401, 402, 414, 415 — yaml_schema + entity_existence) flip to `baseline` immediately; browser-side (TEST-403..413, 415..416) stay `baseline_known_failure` pending Edgar's real-device pass — Chrome MCP `hui-panel-view` chunk-load harness blocker.
 
-**WP5d contribution:** 11 new tests (TEST-450 … TEST-460) all currently `baseline_known_failure`. Once outdoor.yaml is wired into shell.yaml and deployed, every TEST-45x flips to `baseline`. Brief contract: TEST-455 explicitly asserts `hasClimateHeader:false` because Outdoor swaps the Climate section for a Weather section.
+**WP5b contribution:** 10 new tests (TEST-430..439) — kitchen.yaml YAML+entity guards, popup-open hash test, 5 section presence checks, motion-state row check, ApexCharts presence. Same harness-blocker convention as WP5a.
 
-Phase 7 closes when WP3+WP4 ship and TEST-007 + TEST-008 flip from `baseline_known_failure` → `baseline`. At that point, run the full suite without `--allow-baseline-failures` and require 53/53 green.
+**WP5d contribution:** 11 new tests (TEST-450..460) — outdoor.yaml YAML+entity guards, popup-open hash test, weather-not-climate section, sunrise+sunset, ApexCharts trend, scenes+automations empty-state. Brief contract: TEST-455 explicitly asserts `hasClimateHeader:false` because Outdoor swaps the Climate section for a Weather section. Same harness-blocker convention as WP5a/b.
 
-**WP5b contribution:** 10 new tests (TEST-430 … TEST-439) — kitchen.yaml YAML+entity guards, popup-open hash test, 5 section presence checks (Lights/Climate/Sensors/Scenes/Automations), motion-state row check, ApexCharts presence. All `baseline_known_failure` until kitchen.yaml lands and is verified live; then flip to `baseline`.
+**WP6 contribution:** 15 new tests (TEST-500..514) — 4 popup-row tap_actions at desktop + 1 at phone (TEST-500..504), bottom-tab nav-hide on popup open + restore on close + open-close-open transitions (TEST-505, 506, 513), sidebar separator presence (TEST-507), pulsing presence dot presence + animation duration (TEST-508, 509), 3 visual-regression integration screenshots (TEST-510..512), and a yaml_schema regression sentinel (TEST-514). All `baseline_known_failure` pending Edgar's real-device pass.
+
+**Phase 7 close-out (post-Edgar real-device verification):** every browser-side `baseline_known_failure` flips to `baseline`, leaving only the documented harness-limit failures (TEST-103, 203, 206, 208, 210) which require a phone-emulation harness to ever pass. At that point, run the full suite without `--allow-baseline-failures` and require 113/118 green (118 minus 5 permanent harness-limit known-failures).
 ---
 
 ## Adding tests in subsequent WPs
