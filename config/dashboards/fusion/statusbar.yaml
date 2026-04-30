@@ -23,7 +23,22 @@ cards:
   show_state: false
   show_name: false
   show_label: true
-  label: "[[[\n  const s = states['person.edgar'].state;\n  const dot = s === 'home' ? '●' : '○';\n  return `${dot} Edgar · ${s === 'home' ? 'Home' : 'Away'}`;\n]]]\n"
+  # WP6 — pulsing presence dot (FUSION-DESIGN-SPEC §3, BACKLOG #9). When
+  # person.edgar is home, the leading "●" is rendered as an inline-block
+  # span with a 2s pulse animation; when away, fall back to the "○" hollow
+  # marker (no animation). Inline span + extra_styles is cleaner than the
+  # brief's pulsing_presence_dot template suggestion: that template would
+  # need to be positioned absolutely as a sibling overlay, but the dot
+  # belongs in-line with the "Edgar · Home" text per Edgar's session
+  # direction. Animation only runs when home → no battery hit when away.
+  label: |
+    [[[
+      const s = states['person.edgar'].state;
+      if (s === 'home') {
+        return '<span class="fusion-presence-dot"></span> Edgar · Home';
+      }
+      return '○ Edgar · Away';
+    ]]]
   styles:
     card:
     - background: transparent
@@ -42,6 +57,26 @@ cards:
     styles:
       label:
       - color: '#4caf6e'
+  extra_styles: |
+    .fusion-presence-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4caf6e;
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: fusion-presence-pulse 2s ease-in-out infinite;
+    }
+    @keyframes fusion-presence-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.35); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fusion-presence-dot {
+        animation: none;
+      }
+    }
 - type: custom:button-card
   view_layout:
     grid-area: edphone

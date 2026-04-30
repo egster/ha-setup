@@ -17,7 +17,8 @@
 # cover every fractional CSS-pixel viewport width (including 870.5 on retina
 # / zoom hosts), so no fallback is required.
 #
-# Gate 2 reviewed: 2026-04-27
+# Gate 2 reviewed: 2026-04-27 (WP4 — shell swap)
+# Gate 2 reviewed: 2026-04-29 (WP6 — sidebar separator + bottom-nav-hide + pulsing dot)
 type: custom:mod-card
 card_mod:
   style: |
@@ -115,6 +116,28 @@ card:
                     - border: '1px solid #2a2a2a'
                     icon:
                     - color: '#e8e8e8'
+              # WP6 — sidebar separator between Home/Kitchen group and
+              # Climate/Media/Network/Energy/Automations group, per
+              # FUSION-DESIGN-SPEC §4. 1px-thick divider card, no content,
+              # no tap_action.
+              - type: custom:button-card
+                show_icon: false
+                show_name: false
+                show_label: false
+                show_state: false
+                tap_action:
+                  action: none
+                styles:
+                  card:
+                  - background: '#2a2a2a'
+                  - height: 1px
+                  - min-height: 1px
+                  - margin: 6px 18px
+                  - padding: 0
+                  - border: none
+                  - border-radius: 0
+                  - box-shadow: none
+                  - cursor: default
               - type: custom:button-card
                 template: fusion_nav_icon
                 icon: mdi:thermometer
@@ -294,11 +317,17 @@ card:
               show_state: false
               show_name: false
               show_label: true
+              # WP6 — pulsing presence dot (FUSION-DESIGN-SPEC §3, BACKLOG #9).
+              # Mirrors the desktop statusbar.yaml treatment, just shorter
+              # label ("Home" / "Away" — no "Edgar · " prefix because the
+              # phone statusbar has tighter horizontal space.
               label: |
                 [[[
                   const s = states['person.edgar'].state;
-                  const dot = s === 'home' ? '●' : '○';
-                  return `${dot} ${s === 'home' ? 'Home' : 'Away'}`;
+                  if (s === 'home') {
+                    return '<span class="fusion-presence-dot"></span> Home';
+                  }
+                  return '○ Away';
                 ]]]
               styles:
                 card:
@@ -318,6 +347,26 @@ card:
                 styles:
                   label:
                   - color: '#4caf6e'
+              extra_styles: |
+                .fusion-presence-dot {
+                  display: inline-block;
+                  width: 8px;
+                  height: 8px;
+                  border-radius: 50%;
+                  background: #4caf6e;
+                  margin-right: 6px;
+                  vertical-align: middle;
+                  animation: fusion-presence-pulse 2s ease-in-out infinite;
+                }
+                @keyframes fusion-presence-pulse {
+                  0%, 100% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.5; transform: scale(1.35); }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                  .fusion-presence-dot {
+                    animation: none;
+                  }
+                }
             - type: custom:button-card
               view_layout:
                 grid-area: temp
@@ -441,6 +490,16 @@ card:
                     z-index: 100;
                   }
                 }
+                /* WP6 — Bubble Card sets `bubble-body-scroll-locked` on body
+                   while a popup is active (verified against bubble-card.js
+                   v3.1.6 source). Hide the bottom tab so the popup overlay
+                   reaches viewport-bottom. `:host-context()` lets the shadow-
+                   DOM-scoped card_mod query the body class. Higher specificity
+                   than the @media rule, plus `!important`, so it wins both
+                   above and below the breakpoint. */
+                :host-context(body.bubble-body-scroll-locked) ha-card {
+                  display: none !important;
+                }
             card:
               type: vertical-stack
               cards:
@@ -471,6 +530,13 @@ card:
                           box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
                           z-index: 99;
                         }
+                      }
+                      /* WP6 — also hide the More overlay when a popup is
+                         active. Without this the overlay would float above
+                         the popup at z-index 99 < popup z-index, but it would
+                         still be visible at the screen edge and tap-able. */
+                      :host-context(body.bubble-body-scroll-locked) ha-card {
+                        display: none !important;
                       }
                   card:
                     type: horizontal-stack

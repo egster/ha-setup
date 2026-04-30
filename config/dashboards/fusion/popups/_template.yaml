@@ -16,12 +16,25 @@
 # popup WPs (WP5a … WP5d). Any divergence is a bug.
 #
 # Bubble Card v3.1.6 popup contract:
-#   - `card_type: popup` makes the card a hash-routed slide-up sheet
+#   - `card_type` field intentionally left as `popup` (un-hyphenated) here.
+#     **Bubble Card v3.1.6 source registers `pop-up` (hyphenated)** as the
+#     active key; the un-hyphenated form is a no-op. Edgar plans to add the
+#     real popups via the HA UI manually (storage-mode dashboard or via
+#     dashboard editor), so the YAML-mode popup files are kept here as
+#     reference only — the un-hyphenated form keeps them inert. Do NOT
+#     change to `pop-up` here — that activated popup behaviour but with the
+#     wrong content (the entire dashboard rendered inside the popup wrapper
+#     because of the nested-in-vertical-stack mounting). Verified
+#     2026-04-29 (post-WP6 hotfix revert).
 #   - `hash: '#popup-<slug>'` matches the URL fragment to open the popup
 #   - `button_type: card` controls the appearance of the (offscreen) trigger
 #   - `cards:` array holds the popup's content
-#   - body-level class `bubble-popup-open` is set while any popup is active
-#     (WP6 hooks this for bottom-nav-hide via card-mod)
+#   - body-level class `bubble-body-scroll-locked` is set while any popup is
+#     active (verified against bubble-card.js v3.1.6 source 2026-04-29).
+#     WP6 hooks this for bottom-nav-hide via card-mod
+#     `:host-context(body.bubble-body-scroll-locked)`. Earlier WP5a/b/d
+#     test fixtures used `bubble-popup-open` (the brief's assumed name) —
+#     those will be reconciled in a follow-up doc PR.
 #
 # This file is NOT !included anywhere; it is reference-only. Tests only
 # assert that the file exists and parses with `popup_template:` at the root.
