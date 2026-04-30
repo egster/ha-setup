@@ -152,6 +152,145 @@ Each room popup file ships with a comment block listing every entity it referenc
 
 ---
 
+## Work-package coordination — what cracked under load
+
+The first part of this retro covered "what worked / what broke" inside individual WPs. This section covers **how the WPs interacted with each other** — the layer where most of the pain was. Capturing this is the most useful artifact for the next multi-WP project (Phase 8+).
+
+### Issue 1: WP boundaries didn't map to logical units of work
+
+**WP5a, WP5b, WP5c, WP5d were "same task × 4 rooms," not 4 independent WPs.** Each of WP5b/c/d added one popup YAML file (~300 lines) and one `!include` line in shell.yaml. The popup template was defined in WP5a and copy-pasted 3× verbatim per the popup-pattern recipe. WP5b/c/d could not start until WP5a merged (so the template was stable) — they ran in parallel but had identical structural shape.
+
+**Cost of the split:**
+- 4× Gate 2 reviews instead of 1 (token + reviewer time)
+- 4× CHANGELOG / STATUS / PR overhead per popup
+- 4× rebase-onto-main passes when WP5a merged
+- 4× deploy passes (each session SCPing its own popup file plus a one-line shell.yaml edit)
+- Repeated discovery of the same wrong assumptions in each WP (the `card_type: popup` registry typo and `bubble-popup-open` body-class typo were both inherited verbatim from WP5a — neither WP5b/c/d had the budget to question the inherited contract)
+
+**What drove the split** (in retrospect, not all of these were good reasons):
+- **Capacity / parallelism**: three parallel Claude sessions could each take one popup. Reasonable in isolation but not load-bearing — the popups were tiny and could have been done sequentially in one session in less wall-clock time.
+- **Risk isolation**: a botched popup wouldn't block the others. True, but the actual risk was in the shared template (`_template.yaml`), not the per-room content.
+- **Backlog hygiene**: each room maps to a distinct dashboard panel, making each popup feel like its own unit. Cosmetic — the popups have ~80% identical structure.
+
+**Better split for next time**:
+
+| Phase 7 actual | Better |
+|----------------|--------|
+| WP5a (template + LR), WP5b (Kitchen), WP5c (Office), WP5d (Outdoor) | Single "WP5 — popup template + 4 room popups" with a per-room TODO list inside it |
+| WP3 (grids) + WP4 (shell) as separate WPs | Possibly mergeable — both target responsive viewport behaviour, both touch shell.yaml. WP4 was big enough to stand alone, but the boundary was arbitrary. |
+
+**Rule of thumb for Phase 8+**: only split into separate WPs when the dependencies between them are real (downstream WP genuinely needs upstream WP merged) AND the work units are large enough to justify the overhead (~200+ lines of new YAML, or a non-trivial config change). "Same task × N rooms / panels / entities" should be one WP with an internal checklist, not N WPs.
+
+### Issue 2: `shell.yaml` was a multi-WP hot-spot
+
+**Six WPs touched `shell.yaml` in Phase 7** — WP4 (full rewrite to add state-switch hybrid), WP5a (added LR popup `!include`), WP5b (added Kitchen `!include`), WP5c (added Office `!include`), WP5d (added Outdoor `!include`), WP6 (sidebar separator + bottom-nav-hide CSS + person-card extra_styles).
+
+Every popup WP had a one-line edit in shell.yaml that was structurally a merge conflict waiting to happen. Three of them ran in parallel (Slot 3). The way we worked around it:
+
+- **WP5b's session SCP'd its own kitchen.yaml + `sed -i` injected the kitchen `!include` into HA Green's shell.yaml directly** (sidestepping the local-shell.yaml-vs-other-sessions question).
+- **WP5c committed + deployed locally on its branch but didn't merge until WP5b had merged**, then rebased and merged. This worked but is the "deploy ahead of merge" anti-pattern.
+- **WP5d redeployed `office.yaml` because HA Green was missing it** (lingering effect of the WP5c-deploy-stomp incident — see Issue 4 below). Out-of-scope but necessary for safety.
+
+**Why this is a problem.** Every parallel session that needed to add an `!include` was waiting on the same file. The HARD RULE of one-worktree-per-session prevented filesystem clobbering, but the *logical* contention on shell.yaml's content was unresolved. The same shape will hit any future Phase that has multiple WPs adding lines to the same shared file.
+
+**Better patterns**:
+
+1. **`!include_dir_*` for the popup includes**: WP5a considered and rejected this (DECISIONS 2026-04-27 — "explicit ordering, downstream-WP-friendly"). In retrospect, with 4 parallel popup WPs and the deploy-stomp risk, `!include_dir_list popups/` would have eliminated the per-WP shell.yaml edit entirely. Each popup WP would just drop a file in `popups/`; HA's loader would pick them up. Cost: lose explicit ordering. Benefit: zero shared-file contention. Worth re-evaluating for Phase 8+.
+
+2. **Designate a single WP as the "shell-edit owner" per slot**, with downstream WPs handing their shell.yaml edits to it. Coordinator overhead but no merge conflicts. Awkward in agent-driven workflows.
+
+3. **Make shell.yaml itself smaller** — extract include-list-only sections into their own files. `panels.yaml` (panel includes), `popups.yaml` (popup includes), `nav.yaml` (sidebar nav cards). Each multi-WP edit lands in a smaller, tighter file.
+
+### Issue 3: Brief vs reality drift
+
+The WPN-*.md briefs were authored upfront (WP1 era) and didn't update as reality landed. Three concrete drifts:
+
+1. **WP5a brief said `card_type: popup`** — wrong (registry uses `pop-up`). Propagated through all 4 popup files.
+2. **WP6 brief said body class is `bubble-popup-open`** — wrong (actual class is `bubble-body-scroll-locked`). Propagated into WP5a/b/d test fixtures (TEST-403, TEST-432, TEST-452).
+3. **WP5a brief said "Do not touch shell.yaml"** — but the popup wiring requires a shell.yaml `!include`. Edgar overrode in chat for WP5a; WP5b/c/d's sessions inherited the override implicitly. The brief's scope rule was wrong AND the override pattern was undocumented across WPs.
+
+**The brief was a snapshot of intent, not a contract that survived contact with reality.** This is normal for upfront planning, but in a 6-WP phase with parallel sessions, brief drift compounds. Each WP that copies a wrong assumption from its brief carries that assumption forward.
+
+**Fix forward**:
+
+- **Brief-vs-implementation reconciliation between WPs.** When WP5a finishes and learns "the brief was wrong about X", update the WP5b/c/d briefs in the same PR before they start. This costs 5-10 min of doc work but prevents cascading errors.
+- **"Brief is provisional" marker on every WP brief**, with a "drift log" section the implementing WP fills in at completion. Forces the explicit reconciliation.
+- **For HACS-card-API claims (DOM mutation, registry keys, body classes), Gate 1's research-advisor should grep the bundled card source** before sign-off. The brief is allowed to be wrong; verification should not be downstream of the brief.
+
+### Issue 4: WP5c-deploy-stomp incident — the "deploy ahead of merge" anti-pattern
+
+**What happened**, abbreviated (full chronology in the original retro section above):
+- WP5c's session committed `office.yaml` + shell.yaml `!include` on its branch (`phase7/wp5c-office`) and deployed to HA Green on 2026-04-28.
+- WP5c's PR #13 was NOT yet merged to main — it sat open while Slot-3 verification ran.
+- Meanwhile, WP5b's session was running in parallel and made its own shell.yaml edits.
+- Result: HA Green's shell.yaml referenced both `living-room.yaml` (legitimate, from WP5a) AND `office.yaml` (deployed but not merged). One of the two files (`living-room.yaml`) was actually missing from disk because WP5a's deploy never ran end-to-end.
+- Slot-2 verification on 2026-04-29 morning found the dashboard rendering an empty body. ~30 minutes of `git archive main config/dashboards/fusion/` + per-file md5 diff to recover.
+
+**The anti-pattern**: deploying to HA Green from a branch that hasn't merged to main yet. The HA filesystem becomes a stateful surface that can drift from `main` independently. With multiple parallel sessions doing this, the drift compounds.
+
+**Why it happened**: each WP's Gate 3 pipeline goes "validate → deploy → verify". Edgar's standard workflow merges the PR after Gate 3 verifies. So there's always a gap between "deployed" and "merged to main". Normally this gap is short (Gate 3 → merge in the same session). But in the parallel-session WP5 model, three sessions had simultaneous open Gate-3-deployed-but-not-merged states.
+
+**Fix forward**:
+
+- **Codify "deploy = merge ready"**: only deploy to HA Green from a branch that's about to merge in the same session. If Gate 3 verifies but the PR is going to sit open for any non-trivial duration, **roll back the deploy** and re-deploy after the merge. The branch's HA-Green-side artifact is ephemeral.
+- **Or, less radical**: a `deploy.sh --dashboard` flag that records "deployed-from-branch-X" metadata, and a session-start health check that warns when HA Green's dashboard tree doesn't match `main`. Auto-detect drift instead of rediscovering it via "the dashboard is empty."
+- **The right structural fix is Issue 2's pattern #1** — `!include_dir_*` would eliminate the cross-WP shell.yaml edit, which would eliminate the deploy-stomp risk class entirely.
+
+### Issue 5: Merging-without-real-device-verification compounded across WPs
+
+**What happened**: PR #11 (WP4) merged before Edgar's iPhone hands-on verification. PR #9 (WP5a), #14 (WP5b), #13 (WP5c), #15 (WP5d) all merged the same way. STATUS.md flipped to ✅ for each of them based on server-side checks (`ha_check_config`, `lovelace/config` shape, structural fingerprint tests). None of those signals would have caught the popup `card_type` typo or the mount-geometry bug — both were render-time runtime issues that only surface when a real human opens the dashboard on a real device.
+
+**The deferral chain**:
+- WP4 merge: "iPhone hands-on deferred — does NOT block downstream WPs"
+- WP5a merge: "browser-side hash test deferred (harness blocker) — pending Slot-2 re-verify"
+- WP5b merge: "browser-side hash test deferred — same harness blocker"
+- WP5c merge: "browser hash-test pending Edgar's real-device verification"
+- WP5d merge: "browser-side hash test deferred"
+- WP6 merge: "real-device verification sweep deferred to Edgar"
+
+Six consecutive WPs each shipped with a deferral. The deferrals compounded into a 3-day latent window during which both popup bugs lived undetected on `main`.
+
+**Fix forward**:
+
+- **Gate 4 — real-device verification — between Gate 3 and merge**, for any WP whose Gate 3 ends with "browser-side test deferred." Cost: Edgar's eyeballs for 5-10 min per WP, asynchronous. Benefit: stops the deferral chain at the WP boundary instead of letting it accumulate.
+- **STATUS.md should distinguish "deployed (server-side green)" from "user-verified (real device green)"** — single ✅ hides this distinction. Phase 7 had nine entries that conflated them. Suggested format: `- [x] WPN — ✅ deployed YYYY-MM-DD — 🟡 real-device pending` or `- [x] WPN — ✅ deployed + verified YYYY-MM-DD`. Two checkboxes, two truths.
+- **Hard rule for popup-class work**: no popup WP merges until `location.hash = '#popup-X'` opens the popup on Edgar's screen. The harness blocker is real but it cannot become an excuse to ship un-verified popup behaviour.
+
+### Issue 6: `fusion-tests.md` category-counts table was stale across multiple WPs
+
+Every popup WP from WP5b onward edited `fusion-tests.md` (added new TEST-43X / TEST-44X / TEST-45X entries). The per-category breakdown table at the bottom of the file was last correct at WP4 + WP5a; from WP5b onward, every WP wrote new test totals that didn't match reality. The reviewer caught this at WP5b ("stale category-counts table") but it stayed wrong until WP6 finally refreshed it.
+
+**Why it stayed broken**: each WP added new tests but didn't have its own breakdown table refresh in scope. The table is global (sums across all WPs) but each WP's diff is local. Nobody owned the global rollup.
+
+**Fix forward**: every WP that touches `fusion-tests.md` MUST refresh the category-counts table. Cheap, mechanical, prevents cumulative drift. Add to the WP brief checklist.
+
+### Issue 7: Inter-session stash-pile coordination
+
+WP5b's session noted (CHANGELOG 2026-04-29): "Started on `phase7/wp5d-outdoor` due to a parallel WP5d session leaving a draft in the same working tree. Stashed WP5d's WIP under `WP5d-outdoor-WIP-preserved-by-WP5b-session-2026-04-28` so the parallel session can `git stash pop` it cleanly."
+
+This was after the COORDINATION.md HARD RULE for worktrees was added. So even with the rule, sessions were still observing each other's WIP. The HARD RULE was added 2026-04-27; this entry is dated 2026-04-29. Either the rule was violated, or the rule + worktree weren't enough.
+
+**Likely explanation**: the worktree path for WP5b was set up correctly, but the agent's session start observed a stash from a previous WP5d session that had run in the SAME WP5b directory. Stash entries are not worktree-scoped by default (they live in the shared `.git` repo). So the stash was "leaked" across worktrees.
+
+**Fix forward** (small):
+- Document in COORDINATION.md that `git stash` is shared across worktrees.
+- Each session's start should run `git stash list` and report any stashes that aren't its own. Don't auto-pop.
+- Better: each session names stashes with a session-specific prefix so cross-session stashes are obvious.
+
+### Summary table — coordination issues + recommended fixes
+
+| # | Issue | Fix priority | Cost to fix |
+|---|-------|--------------|-------------|
+| 1 | WP boundaries didn't match logical units (4 WPs for "1 template + 4 popups") | High | Brief authoring discipline — write fewer, larger WPs |
+| 2 | `shell.yaml` as multi-WP hot-spot, every popup WP added a line | High | `!include_dir_*` for collection includes, OR designated shell-owner WP, OR smaller shell files |
+| 3 | Brief-vs-implementation drift across WPs | High | "Brief is provisional" + drift-log + Gate 1 source-introspection for HACS card claims |
+| 4 | Deploy-ahead-of-merge anti-pattern → WP5c-deploy-stomp | High | "Deploy = merge-ready" rule, OR drift-detection at session start |
+| 5 | Merge-without-real-device-verification compounded across 6 WPs | High | Gate 4 (real-device) before merge, OR two-checkbox STATUS.md |
+| 6 | `fusion-tests.md` category-counts table stale across multiple WPs | Medium | Per-WP discipline: every test edit refreshes the rollup |
+| 7 | Cross-session stash-pile leakage despite worktree HARD RULE | Low | Document that stashes are repo-scoped not worktree-scoped + naming convention |
+
+---
+
 ## Process improvements adopted mid-stream (keep these)
 
 - **COORDINATION.md HARD RULE for parallel sessions** (added 2026-04-27 after WP5a stash collisions).
@@ -201,21 +340,33 @@ Each room popup file ships with a comment block listing every entity it referenc
 
 ## Recommendations for Phase 8+
 
-1. **Parallel sessions: keep the worktree HARD RULE.** It's earned its place. Don't soften it to "branch-only" even for "small" WPs.
+These are ranked by leverage — top of the list = biggest improvement per unit of process change.
 
-2. **For HACS cards with DOM-mutating behaviour (popups, slide-overs, modals), introspect the bundled JS source before shipping.** This is the lesson the popup `card_type` typo + mount-geometry bug taught us — twice. Add to the research-advisor's checklist. One extra round of verification at Gate 1 would have saved 2-3 days.
+1. **Author fewer, larger WPs. Match WP boundaries to logical units of work, not to parallel-session capacity.** The "WP5a/b/c/d × 4 rooms" split cost 4× the overhead with no real risk-isolation benefit. A single "WP5 — popup template + 4 room popups" with an internal per-room checklist would have been faster, would have surfaced the brief-drift bugs in one place instead of four, and would have eliminated the shell.yaml multi-WP hot-spot. **Rule of thumb**: only split when downstream WP genuinely depends on upstream merge, AND each piece is ≥200 lines of new content or a non-trivial structural change. "Same task × N entities" is one WP.
 
-3. **Real-device verification per WP, not deferred to phase close.** The browser-side test deferral compounded across five WPs. Each popup WP should require Edgar to confirm "popup opens end-to-end on a real device" before merge — async gate, fine if it's overnight. Cost: ~5 min Edgar time per WP. Benefit: catches the entire class of bugs that surface only at runtime.
+2. **Real-device verification (Gate 4) per WP for any user-facing surface, not deferred to phase close.** The deferral chain across 6 WPs was the single biggest cause of the 3-day latent-bug window. ~5 min of your time per WP, asynchronous. Stops compounding. Add to the standard workflow: **Gate 1 → 2 → 3 → 4 (real-device) → merge.** For popup-class work specifically: hard rule, no merge until `location.hash = '#popup-X'` opens the popup on a real device.
 
-4. **`deploy.sh` should grow `config/dashboards/` support.** The WP5c-deploy-stomp incident was preventable. Add a per-file md5 diff + dashboard-tree integrity check before any partial dashboard SCP.
+3. **Two-checkbox STATUS.md format**: distinguish "deployed (server-side green, ha_check_config passes)" from "user-verified (Edgar opened it on a real device and confirmed)." Phase 7 had nine entries that conflated these. Suggested: `- [x] WPN — ✅ deployed YYYY-MM-DD — 🟡 real-device pending` until both are true. Single ✅ should require BOTH.
 
-5. **Phone-emulation harness for Phase 8+.** Chrome MCP on macOS bottoms out at ~526px effective. iOS Safari + Web Inspector remote debug, OR DevTools mobile-mode emulation via Chrome MCP, would close the verification loop. The cost of NOT having this is what we just paid.
+4. **For HACS cards with DOM-mutating behaviour (popups, slide-overs, modals), introspect the bundled JS source before shipping.** Twice this phase, a brief-level claim about a HACS card's API was wrong (`card_type: popup` vs `pop-up`; body class `bubble-popup-open` vs `bubble-body-scroll-locked`). Each cost a multi-day latent bug window. The fix: at Gate 1, decompress the bundled card JS and grep the registry / classList ops for any claim the brief makes. ~5 min of agent work; stops a whole class of bug. Add to the research-advisor's checklist.
 
-6. **`baseline_known_failure` is the right convention; don't drop it.** It's the honesty bit for tests that are real but harness-blocked. Keep it through Phase 8+. **But also**: when a WP's `baseline_known_failure` count exceeds N (suggested: 3), require a real-device round-trip before merge. Don't let it compound.
+5. **Parallel sessions: keep the worktree HARD RULE.** It earned its place. Don't soften to "branch-only" for "small" WPs. Plus one addition: stashes are repo-scoped, not worktree-scoped — sessions should report any cross-session stashes at start without auto-popping.
 
-7. **Be more precise about what "deployed" means in STATUS.md.** Phase 7 had multiple "deployed and verified" entries that meant "server-side YAML is on HA Green and `ha_check_config` passes." That's a real signal but it's not "the user can use the feature." Going forward: distinguish "deployed" (server-side green) from "user-verified" (Edgar tested on his real device) explicitly. Single ✅ in STATUS.md hid this distinction.
+6. **Brief is provisional; reconcile drift between WPs.** When WP5a learns "the brief was wrong about X", update WP5b/c/d's briefs in the same PR before they start. Cost: 5-10 min per drift. Benefit: prevents cascading. Add a "Drift log" section to every WP brief that the implementing WP fills in at completion.
 
-8. **Keep retros candid.** This retro is longer than the 2026-04-24 FUSION retro because it includes the popup flap honestly. Future retros should match that bar — capture what shipped vs what was claimed, not just the happy path. The bug chronology is the most useful artifact for the next agent.
+7. **`shell.yaml` (or any shared file) is a multi-WP attractor.** Two structural fixes for Phase 8+: (a) `!include_dir_list` for collection-includes (e.g. popups dir auto-includes everything in it — eliminates per-WP `!include` lines and the deploy-stomp risk class entirely); (b) split shared files into smaller, ownership-tighter pieces (panels.yaml, popups.yaml, nav.yaml — each gets one designated owner-WP). Do one or both; the as-is shape will hit again.
+
+8. **"Deploy = merge-ready" rule.** Only deploy from a branch about to merge in the same session. If Gate 3 verifies but the PR will sit open for any non-trivial duration, roll back the deploy. The branch's HA-Green-side artifact is ephemeral. Or: instrument `deploy.sh` to record "deployed-from-branch-X" and detect drift at session start.
+
+9. **`deploy.sh --dashboard` flag** (or separate `deploy-dashboard.sh`): refuses partial syncs / orphan files, runs include-resolution check, would have caught WP5c-deploy-stomp. Phase 7's main deploy.sh handles `config/packages/*.yaml` only. Same shape will hit any future YAML-mode dashboard work.
+
+10. **Phone-emulation harness investigation.** Chrome MCP on macOS bottoms out at ~526px effective. iOS Safari + Web Inspector remote debug, OR DevTools mobile-mode via Chrome MCP, would close the verification loop. The cost of NOT having this in Phase 7 was the popup-bug latent window.
+
+11. **`baseline_known_failure` convention stays, with a hygiene rule.** When a WP's `baseline_known_failure` count exceeds 3, require a real-device round-trip before merge. Don't let it compound across WPs.
+
+12. **Per-WP discipline: every WP that touches `fusion-tests.md` refreshes the category-counts table.** Cheap, mechanical, prevents cumulative drift. Add to the WP brief checklist.
+
+13. **Keep retros candid.** This retro is the longest in the project because it includes the popup flap and the coordination layer honestly. Future retros should match that bar — capture what shipped vs what was claimed, the bug chronology, AND the inter-WP coordination friction (not just per-WP discipline). The cross-WP layer is where Phase 7's biggest losses lived.
 
 ---
 
